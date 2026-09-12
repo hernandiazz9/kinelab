@@ -13,17 +13,33 @@ requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.7",
     "pyyaml>=6.0",
+    # Fase 1 (ADR-015). rtmlib exige a la vez opencv-python y opencv-contrib-python
+    # (los dos instalan el mismo paquete `cv2`): se fijan a la MISMA versión para
+    # que el binario sea uno solo (HERENCIA.md §Gotchas: dos OpenCV a la vez).
+    "numpy>=2.0",
+    "scipy>=1.14",
+    "opencv-python==4.14.0.94",
+    "opencv-contrib-python==4.14.0.94",
+    "onnxruntime>=1.23",
+    "rtmlib==0.0.16",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0"]
+# httpx no está en ADR-015: lo exige el TestClient de FastAPI y sólo se usa en
+# tests. Si se decide no tenerlo, tests/test_service.py se salta solo.
+dev = ["pytest>=8.0", "httpx>=0.27"]
+# La página local del gate (service/). FastAPI + uvicorn están en ADR-015.
+service = ["fastapi>=0.115", "uvicorn>=0.30"]
 
 [project.scripts]
 kinelab-fps-truth = "kinelab.tools.fps_truth:main"
 kinelab-ingest = "kinelab.ingest.__main__:main"
 
 [tool.setuptools.packages.find]
-include = ["kinelab*", "sports*"]
+include = ["kinelab*", "sports*", "service*"]
+
+[tool.setuptools.package-data]
+service = ["static/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

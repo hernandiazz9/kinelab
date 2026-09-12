@@ -11,9 +11,13 @@ dist/
 # datos: sesiones y atletas son del entrenador, no del repo
 data/sessions/
 data/athletes/
+data/incoming/
 
 # pesos de modelos: se descargan una vez y se fijan por hash
 models/
 banco/models/
 
 .DS_Store
+
+# lanzador local del navegador de Claude Code (rutas de esta máquina)
+.claude/launch.json

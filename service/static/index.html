@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>kinelab · gate de ingesta</title>
+<style>
+  :root { --ink:#1b1b1b; --muted:#666; --line:#ddd; --bg:#fafaf8; --card:#fff; --ok:#1e7d3a; --bad:#b3261e; --warn:#8a6d00; --accent:#1d4ed8; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; color:var(--ink); background:var(--bg); }
+  header, main, footer { max-width:960px; margin:0 auto; padding:0 20px; }
+  header { padding-top:28px; }
+  h1 { font-size:24px; margin:0 0 6px; }
+  h1 span { font-weight:400; color:var(--muted); font-size:16px; margin-left:8px; }
+  h2 { font-size:18px; margin:0 0 8px; }
+  .lead { color:var(--muted); margin:0 0 20px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:18px 20px; margin-bottom:18px; }
+  .card > p { margin:0 0 12px; color:var(--muted); font-size:14px; }
+  form { display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:12px 16px; align-items:end; }
+  label { display:flex; flex-direction:column; gap:4px; font-size:13px; color:var(--muted); }
+  label.wide { grid-column:1 / -1; }
+  input, select { font:inherit; padding:7px 9px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink); min-width:0; }
+  input[type=file] { padding:5px 0; }
+  button { font:inherit; font-weight:600; padding:9px 16px; border:0; border-radius:6px; background:var(--accent); color:#fff; cursor:pointer; }
+  button:disabled { background:#9aa3ad; cursor:not-allowed; }
+  button.secondary { background:#e9e9e6; color:var(--ink); font-weight:500; padding:6px 12px; }
+  .warn { grid-column:1 / -1; color:var(--warn); background:#fff8e1; border:1px solid #f0dd8a; border-radius:6px; padding:8px 10px; font-size:14px; }
+  .progress { height:6px; background:#eee; border-radius:3px; margin-top:14px; overflow:hidden; }
+  .progress > div { height:100%; width:0; background:var(--accent); transition:width .15s; }
+  .out { margin-top:16px; }
+  .badge { display:inline-block; padding:4px 10px; border-radius:999px; font-weight:700; font-size:13px; letter-spacing:.02em; }
+  .badge.ok { background:#e3f5e8; color:var(--ok); }
+  .badge.bad { background:#fde8e6; color:var(--bad); }
+  .badge.warn { background:#fff3cd; color:var(--warn); }
+  .reasons { margin:10px 0 0; padding-left:20px; color:var(--bad); }
+  .reasons li { margin-bottom:4px; }
+  .notes { margin:10px 0 0; padding-left:20px; color:var(--muted); font-size:14px; }
+  table { border-collapse:collapse; width:100%; margin-top:12px; font-size:14px; }
+  th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+  .num, .mono { font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:13px; }
+  .st-ok { color:var(--ok); font-weight:700; }
+  .st-bad { color:var(--bad); font-weight:700; }
+  .st-na { color:var(--muted); }
+  video { width:100%; max-height:340px; background:#000; border-radius:6px; margin-top:12px; display:none; }
+  pre { background:#f4f4f2; border:1px solid var(--line); border-radius:6px; padding:10px 12px; overflow:auto; font-size:12.5px; margin:8px 0 0; }
+  details { margin-top:10px; }
+  summary { cursor:pointer; color:var(--muted); font-size:13px; }
+  .error { color:var(--bad); background:#fde8e6; border:1px solid #f3b7b2; border-radius:6px; padding:8px 10px; margin-top:12px; }
+  .summary { color:var(--muted); font-size:14px; margin-top:8px; }
+  .row { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+  .table-wrap { overflow-x:auto; }
+  footer { padding:10px 20px 40px; color:var(--muted); font-size:13px; }
+  code { font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:.92em; }
+</style>
+</head>
+<body>
+<header>
+  <h1>kinelab <span>gate de ingesta · Fase 0</span></h1>
+  <p class="lead">Esto no analiza el swing. Verifica que el clip sirva para medir: codec, tasa de cuadros real, tasa variable, duración. Lo que se ingesta queda en <code id="data-dir">data/</code> con su <code>capture.json</code>, pase o no el gate.</p>
+</header>
+
+<main>
+  <section class="card" id="crono">
+    <h2>1 · Cronómetro: medir la tasa real de un camino de captura</h2>
+    <p>Filmá 10 s de un cronómetro con milésimas, transferilo por AirDrop con "Mantener originales" y subilo acá con los segundos entre la primera y la última lectura que se ven nítidas. Sin esa duración sólo se puede saber a qué tasa reproduce el archivo, no a cuál se capturó.</p>
+    <form id="crono-form">
+      <label class="wide">Clip del cronómetro
+        <input type="file" name="file" accept="video/*,.mov,.MOV,.mp4,.m4v" required>
+      </label>
+      <label>Segundos reales entre las dos lecturas
+        <input type="number" name="real_duration_s" step="0.001" min="0.001" placeholder="9.870">
+      </label>
+      <label>fps nominal del modo
+        <input type="number" name="nominal_fps" step="1" min="1" value="120">
+      </label>
+      <button type="submit">Medir</button>
+    </form>
+    <div class="progress" hidden><div></div></div>
+    <div class="out" id="crono-out"></div>
+  </section>
+
+  <section class="card" id="ingest">
+    <h2>2 · Pasar un clip por el gate</h2>
+    <p>Un clip = una vista = N swings. El camino de captura tiene que estar calibrado en <code>data/capture-paths.yaml</code>; si no lo está, el gate rechaza por <code>capture_path_known</code>.</p>
+    <form id="ingest-form">
+      <label class="wide">Clip
+        <input type="file" name="file" id="ingest-file" accept="video/*,.mov,.MOV,.mp4,.m4v" required>
+      </label>
+      <div class="warn" id="no-paths" hidden>No hay caminos calibrados en <code>capture-paths.yaml</code>. Primero el cronómetro (sección 1) y anotá el resultado en el YAML.</div>
+      <label>Atleta (slug)
+        <input type="text" name="athlete" id="athlete" placeholder="hernan" pattern="[a-z0-9][a-z0-9_-]*" title="minúsculas, dígitos, guion y guion bajo" required>
+      </label>
+      <label>Gesto
+        <select name="gesture" id="gesture" required></select>
+      </label>
+      <label>Vista
+        <select name="view" id="view" required></select>
+      </label>
+      <label class="wide">Camino de captura
+        <select name="capture_path_id" id="capture_path" required></select>
+      </label>
+      <label>Fecha de la sesión (opcional; si no, la del archivo)
+        <input type="date" name="day">
+      </label>
+      <button type="submit" id="ingest-submit">Pasar por el gate</button>
+    </form>
+    <video id="preview" controls muted playsinline></video>
+    <div class="progress" hidden><div></div></div>
+    <div class="out" id="ingest-out"></div>
+  </section>
+
+  <section class="card" id="sessions">
+    <div class="row">
+      <h2>3 · Sesiones en disco</h2>
+      <button class="secondary" id="refresh" type="button">Actualizar</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Toma</th><th>Gate</th><th>Codec</th><th>Captura fps</th><th>Duración real</th><th>Razones</th></tr></thead>
+        <tbody id="sessions-body"><tr><td colspan="6" class="st-na">Cargando…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<footer>Sólo Fase 0: verdad del fps y gate de ingesta. Sin pose, sin métricas, sin visor. Protocolo de filmación en <code>docs/checklist-captura.md</code>.</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  var $ = function (sel, root) { return (root || document).querySelector(sel); };
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function num(v, d) {
+    if (v === null || v === undefined) return '—';
+    if (typeof v !== 'number') return esc(v);
+    return v.toFixed(d === undefined ? 3 : d);
+  }
+  function show(v) {
+    if (v === null || v === undefined) return '';
+    if (Array.isArray(v)) return v.join(', ');
+    return String(v);
+  }
+  function showError(out, message) {
+    out.innerHTML = '<div class="error">' + esc(message) + '</div>';
+  }
+  function setProgress(section, frac) {
+    var bar = $('.progress', section);
+    if (frac === null) { bar.hidden = true; $('div', bar).style.width = '0'; return; }
+    bar.hidden = false;
+    $('div', bar).style.width = Math.round(frac * 100) + '%';
+  }
+
+  // El archivo viaja como cuerpo crudo de un PUT; los campos, en la query.
+  // XMLHttpRequest y no fetch: es lo único que da progreso de subida.
+  function upload(url, file, params, onProgress) {
+    return new Promise(function (resolve, reject) {
+      var q = new URLSearchParams();
+      Object.keys(params).forEach(function (k) {
+        if (params[k] !== '' && params[k] !== null && params[k] !== undefined) q.set(k, params[k]);
+      });
+      q.set('filename', file.name);
+      var xhr = new XMLHttpRequest();
+      xhr.open('PUT', url + '?' + q.toString());
+      xhr.upload.onprogress = function (e) {
+        if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total);
+      };
+      xhr.onload = function () {
+        var body = null;
+        try { body = JSON.parse(xhr.responseText); } catch (_) { /* no JSON */ }
+        if (xhr.status >= 200 && xhr.status < 300) { resolve(body); return; }
+        var detail = body && body.detail;
+        if (detail && typeof detail !== 'string') detail = JSON.stringify(detail);
+        reject(new Error(detail || ('HTTP ' + xhr.status)));
+      };
+      xhr.onerror = function () {
+        reject(new Error('No se pudo conectar con el servicio. ¿Está corriendo `python -m service`?'));
+      };
+      xhr.send(file);
+    });
+  }
+
+  // --- 1 · cronómetro -------------------------------------------------------
+
+  var VERDICT_LABEL = {
+    cfr_a_tasa_de_captura: ['CFR a tasa de captura', 'ok'],
+    estirado: ['Estirado: los cuadros están, los timestamps no', 'warn'],
+    destruido: ['Destruido: se perdieron cuadros', 'bad'],
+    vfr: ['Tasa variable', 'bad'],
+    sin_duracion_real: ['Sin duración real: sólo se sabe la reproducción', 'warn']
+  };
+
+  function yamlSnippet(t) {
+    var d = t.declared, c = t.counted;
+    var stretch = t.fps_capture / c.fps_playback;
+    var today = new Date().toISOString().slice(0, 10);
+    var nominal = t.nominal_fps || Math.round(t.fps_capture);
+    return [
+      '  - id: CAMBIAR-dispositivo-' + (stretch > 1.5 ? 'slomo' : 'video') + '-' + nominal + '-airdrop',
+      '    device: "CAMBIAR: modelo exacto del teléfono"',
+      '    mode: ' + (stretch > 1.5 ? 'slomo' : 'video'),
+      '    nominal_fps: ' + nominal,
+      '    codec_expected: ' + d.codec,
+      '    transfer: airdrop-keep-originals',
+      '    fps_real: ' + t.fps_capture.toFixed(2),
+      '    fps_playback: ' + c.fps_playback.toFixed(2),
+      '    stretch_factor: ' + stretch.toFixed(3),
+      '    fps_method: "cronómetro ' + t.real_duration_s + ' s, ' + c.frames_decoded + ' cuadros entre la primera y la última lectura"',
+      '    calibrated_on: ' + today,
+      '    calibrated_by: CAMBIAR',
+      '    notes: "delta_max/delta_min = ' + c.vfr_ratio.toFixed(3) + '"'
+    ].join('\n');
+  }
+
+  function renderTruth(t) {
+    var d = t.declared, c = t.counted;
+    var lab = VERDICT_LABEL[t.verdict] || [t.verdict, 'warn'];
+    var html = '<span class="badge ' + lab[1] + '">' + esc(lab[0]) + '</span> <span class="summary mono">' + esc(t.path) + '</span>';
+    html += '<div class="table-wrap"><table>' +
+      '<tr><th></th><th>Declarado por el contenedor</th><th>Medido de los cuadros</th></tr>' +
+      '<tr><td>Codec</td><td class="num">' + esc(d.codec) + '</td><td class="num">—</td></tr>' +
+      '<tr><td>Tamaño</td><td class="num">' + d.display_size[0] + '×' + d.display_size[1] + ' (rot ' + d.rotation_deg + '°)</td><td class="num">—</td></tr>' +
+      '<tr><td>Cuadros</td><td class="num">' + num(d.nb_frames_declared, 0) + '</td><td class="num">' + c.frames_decoded + '</td></tr>' +
+      '<tr><td>fps</td><td class="num">r_frame_rate ' + num(d.r_frame_rate) + ' · avg_frame_rate ' + num(d.avg_frame_rate) + '</td><td class="num">reproducción ' + num(c.fps_playback) + '</td></tr>' +
+      '<tr><td>Duración</td><td class="num">' + num(d.duration_s) + ' s</td><td class="num">' + num(c.playback_span_s) + ' s entre el primer y el último PTS</td></tr>' +
+      '<tr><td>Deltas de PTS</td><td class="num">—</td><td class="num">' + num(c.delta_min_s, 5) + '–' + num(c.delta_max_s, 5) + ' s · ratio ' + num(c.vfr_ratio) + (c.vfr_ratio > 1.10 ? ' <span class="st-bad">(> 1,10)</span>' : '') + '</td></tr>';
+    if (t.real_duration_s !== null && t.real_duration_s !== undefined) {
+      html += '<tr><td>Con duración real ' + num(t.real_duration_s) + ' s</td><td class="num">—</td><td class="num"><b>captura ' + num(t.fps_capture, 2) + ' fps</b> · factor de estiramiento ' + num(t.stretch_factor) + '</td></tr>';
+    }
+    html += '</table></div>';
+    if (t.notes && t.notes.length) {
+      html += '<ul class="notes">' + t.notes.map(function (n) { return '<li>' + esc(n) + '</li>'; }).join('') + '</ul>';
+    }
+    if (t.fps_capture && t.verdict !== 'vfr' && t.verdict !== 'destruido') {
+      html += '<details open><summary>Para pegar en data/capture-paths.yaml (completar los CAMBIAR)</summary><pre>' + esc(yamlSnippet(t)) + '</pre></details>';
+    }
+    return html;
+  }
+
+  $('#crono-form').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var form = ev.target, section = $('#crono'), out = $('#crono-out');
+    var file = form.file.files[0];
+    if (!file) return;
+    var btn = $('button[type=submit]', form);
+    btn.disabled = true;
+    out.innerHTML = '';
+    setProgress(section, 0);
+    upload('/api/fps-truth', file, {
+      real_duration_s: form.real_duration_s.value,
+      nominal_fps: form.nominal_fps.value
+    }, function (f) { setProgress(section, f); })
+      .then(function (t) { out.innerHTML = renderTruth(t); })
+      .catch(function (e) { showError(out, e.message); })
+      .then(function () { setProgress(section, null); btn.disabled = false; });
+  });
+
+  // --- 2 · gate --------------------------------------------------------------
+
+  function renderCapture(res) {
+    var c = res.capture, g = c.gate, ok = g.verdict === 'ok';
+    var html = '<span class="badge ' + (ok ? 'ok' : 'bad') + '">' + (ok ? 'Pasó el gate' : 'Rechazado') + '</span> <span class="summary mono">' + esc(res.take_dir) + '</span>';
+    if (!ok) {
+      html += '<ul class="reasons">' + g.reasons.map(function (r) { return '<li>' + esc(r) + '</li>'; }).join('') + '</ul>';
+    }
+    html += '<p class="summary">' + esc(c.codec) + ' ' + c.width + '×' + c.height + ' · ' + c.frames_decoded + ' cuadros · reproducción ' + num(c.fps_playback, 2) + ' fps · captura ' + (c.fps_real === null ? '?' : c.fps_real) + ' fps · ' + num(c.duration_s, 2) + ' s reales · ratio de deltas ' + num(c.vfr_ratio) + '</p>';
+    html += '<div class="table-wrap"><table><tr><th>Chequeo</th><th>Estado</th><th>Valor</th><th>Esperado</th></tr>' +
+      g.checks.map(function (ch) {
+        var st = ch.passed === true ? '<span class="st-ok">✓</span>'
+          : ch.passed === false ? '<span class="st-bad">✗</span>'
+          : '<span class="st-na">– no evaluado</span>';
+        var expected = show(ch.expected) + (ch.tolerance !== null && ch.tolerance !== undefined ? ' ± ' + (ch.tolerance * 100) + ' %' : '');
+        return '<tr><td class="mono">' + esc(ch.id) + '</td><td>' + st + '</td><td class="num">' + esc(show(ch.value)) + '</td><td class="num">' + esc(expected) + '</td></tr>';
+      }).join('') + '</table></div>';
+    html += '<details><summary>capture.json</summary><pre>' + esc(JSON.stringify(c, null, 2)) + '</pre></details>';
+    return html;
+  }
+
+  $('#ingest-file').addEventListener('change', function (ev) {
+    var file = ev.target.files[0], video = $('#preview');
+    if (video.src) URL.revokeObjectURL(video.src);
+    if (!file) { video.style.display = 'none'; return; }
+    video.src = URL.createObjectURL(file);
+    video.style.display = 'block';
+  });
+
+  $('#ingest-form').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var form = ev.target, section = $('#ingest'), out = $('#ingest-out');
+    var file = form.file.files[0];
+    if (!file) return;
+    var btn = $('#ingest-submit');
+    btn.disabled = true;
+    out.innerHTML = '';
+    setProgress(section, 0);
+    upload('/api/ingest', file, {
+      athlete: form.athlete.value.trim(),
+      gesture: form.gesture.value,
+      view: form.view.value,
+      capture_path_id: form.capture_path_id.value,
+      day: form.day.value
+    }, function (f) { setProgress(section, f); })
+      .then(function (res) { out.innerHTML = renderCapture(res); return loadSessions(); })
+      .catch(function (e) { showError(out, e.message); })
+      .then(function () { setProgress(section, null); btn.disabled = false; });
+  });
+
+  // --- 3 · sesiones ----------------------------------------------------------
+
+  function loadSessions() {
+    return fetch('/api/sessions').then(function (r) { return r.json(); }).then(function (rows) {
+      var body = $('#sessions-body');
+      if (!rows.length) {
+        body.innerHTML = '<tr><td colspan="6" class="st-na">Todavía no hay sesiones en disco.</td></tr>';
+        return;
+      }
+      body.innerHTML = rows.slice().reverse().map(function (s) {
+        if (s.error) return '<tr><td class="mono">' + esc(s.take_dir) + '</td><td colspan="5" class="st-bad">' + esc(s.error) + '</td></tr>';
+        return '<tr><td class="mono">' + esc(s.take_dir) + '</td>' +
+          '<td>' + (s.verdict === 'ok' ? '<span class="st-ok">ok</span>' : '<span class="st-bad">rechazado</span>') + '</td>' +
+          '<td class="num">' + esc(s.codec) + '</td>' +
+          '<td class="num">' + (s.fps_real === null ? '?' : s.fps_real) + '</td>' +
+          '<td class="num">' + num(s.duration_s, 1) + ' s</td>' +
+          '<td>' + esc((s.reasons || []).join(' · ')) + '</td></tr>';
+      }).join('');
+    }).catch(function (e) {
+      $('#sessions-body').innerHTML = '<tr><td colspan="6" class="st-bad">' + esc(e.message) + '</td></tr>';
+    });
+  }
+  $('#refresh').addEventListener('click', loadSessions);
+
+  // --- config ------------------------------------------------------------------
+
+  function fill(select, values) {
+    select.innerHTML = values.map(function (v) { return '<option value="' + esc(v) + '">' + esc(v) + '</option>'; }).join('');
+  }
+
+  function loadConfig() {
+    return fetch('/api/config').then(function (r) {
+      return r.json().then(function (body) {
+        if (!r.ok) throw new Error(body.detail || ('HTTP ' + r.status));
+        return body;
+      });
+    }).then(function (cfg) {
+      $('#data-dir').textContent = cfg.data_dir;
+      fill($('#gesture'), cfg.sport.gestures);
+      fill($('#view'), cfg.sport.views);
+      var sel = $('#capture_path');
+      if (!cfg.capture_paths.length) {
+        $('#no-paths').hidden = false;
+        $('#ingest-submit').disabled = true;
+        sel.innerHTML = '<option value="">(ninguno calibrado)</option>';
+        return;
+      }
+      sel.innerHTML = cfg.capture_paths.map(function (p) {
+        return '<option value="' + esc(p.id) + '">' + esc(p.id) + ' · ' + esc(p.device) + ' · ' + esc(p.mode) + ' ' + p.nominal_fps + ' → captura ' + p.fps_real + ' fps</option>';
+      }).join('');
+    }).catch(function (e) {
+      showError($('#ingest-out'), e.message);
+      $('#ingest-submit').disabled = true;
+    });
+  }
+
+  loadConfig();
+  loadSessions();
+})();
+</script>
+</body>
+</html>
