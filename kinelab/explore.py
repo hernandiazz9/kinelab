@@ -150,21 +150,23 @@ def _draw(frame: np.ndarray, kp: np.ndarray, sc: np.ndarray, row: dict, label: s
     return img
 
 
-def render(take_dir: Path, pose, rows: list[dict], events: dict[str, int], fps: float, capture: CaptureJson) -> tuple[Path, list[Path]]:
+def render(take_dir: Path, pose, rows: list[dict], events: dict[str, int], fps: float, capture: CaptureJson, progress_cb=None) -> tuple[Path, list[Path]]:
     original = next(take_dir.glob("original.*"))
     frame_events = {f: name for name, f in events.items()}
     out = take_dir / "overlay.mp4"
     proc = None
     snaps: list[Path] = []
     try:
-        for i, frame in iter_frames(original, rotation_deg=capture.rotation_deg, display_size=(capture.width, capture.height)):
+        for i, frame in iter_frames(original, rotation_deg=capture.rotation_deg, display_size=(capture.width, capture.height), progress_cb=progress_cb):
             if i >= len(rows):
                 break
             label = frame_events.get(i)
             img = _draw(frame, pose.keypoints[i], pose.scores[i], rows[i], label, float(pose.timestamps_s[i]))
             if proc is None:
                 hh, ww = img.shape[:2]
-                proc = subprocess.Popen([ffmpeg_bin(), "-y", "-v", "error", "-nostdin", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{ww}x{hh}", "-r", f"{fps:.4f}", "-i", "-", "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2", "-movflags", "+faststart", str(out)], stdin=subprocess.PIPE)
+                # `-g 12`: GOP corto, como el master.mp4 de la Fase 4. Con el GOP por defecto (250),
+                # retroceder un cuadro en el navegador decodifica hasta 250 cuadros por paso.
+                proc = subprocess.Popen([ffmpeg_bin(), "-y", "-v", "error", "-nostdin", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{ww}x{hh}", "-r", f"{fps:.4f}", "-i", "-", "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-g", "12", "-pix_fmt", "yuv420p", "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2", "-movflags", "+faststart", str(out)], stdin=subprocess.PIPE)
             proc.stdin.write(img.tobytes())
             if label:
                 p = take_dir / f"evento-{label}.png"
@@ -177,10 +179,20 @@ def render(take_dir: Path, pose, rows: list[dict], events: dict[str, int], fps: 
     return out, snaps
 
 
-def explore(video: Path, out_dir: Path, sport: SportConfig, *, height_m: float | None, view: str = "face_on", cpu: bool = False, progress=None, estimator=None) -> dict:
+def explore(video: Path, out_dir: Path, sport: SportConfig, *, height_m: float | None, view: str = "face_on", cpu: bool = False, progress=None, estimator=None, stage=None) -> dict:
+    """`progress(i)` recibe el índice del cuadro que se está procesando (en la pose y
+    después en el dibujo); `stage(nombre, info)` avisa el cambio de etapa:
+    `detectando_pose` (info: total de cuadros), `calculando`, `dibujando` (total)."""
+
+    def _stage(name: str, **info) -> None:
+        if stage is not None:
+            stage(name, info)
+
     take = prepare_take(video, out_dir, view=view)
+    _stage("detectando_pose", total=CaptureJson.model_validate_json((take / "capture.json").read_text(encoding="utf-8")).frames_decoded)
     cfg = EstimatorConfig(providers=("CPUExecutionProvider",)) if cpu else EstimatorConfig()
     run_perception(take, sport, cfg, overwrite=True, progress_cb=progress, estimator=estimator)
+    _stage("calculando")
     capture = CaptureJson.model_validate_json((take / "capture.json").read_text(encoding="utf-8"))
     gate_notes = [c.reason for c in capture.gate.checks if c.passed is False and c.reason]
     pose = load_pose(take)
@@ -215,6 +227,7 @@ def explore(video: Path, out_dir: Path, sport: SportConfig, *, height_m: float |
     peaks = {k: (None if not np.isfinite(v := np.nanmax([r[k] for r in rows if r[k] is not None] or [np.nan])) else round(float(v), 2)) for k in ("hands_speed_bh_s", "hands_speed_cm_s", "shoulder_line_rate_deg_s", "hip_line_rate_deg_s", "arm_left_rate_deg_s") if k in names}
     summary = {"aviso": AVISO, "video": video.name, "fps_archivo": fps, "cuadros": len(rows), "altura_m": height_m, "gate_diria": gate_notes, "eventos_frame": events, "eventos_t_s": {k: round(f / fps, 3) for k, f in events.items()}, "duraciones": durations, "picos": peaks, "en_cada_evento": finite_or_none(at), "diferencias_vs_address": deltas, "calidad": analysis["quality"], "columnas": names}
     (take / "datos-eventos.json").write_text(json.dumps(finite_or_none(summary), ensure_ascii=False, indent=2), encoding="utf-8")
-    overlay, snaps = render(take, pose, rows, events, fps, capture)
+    _stage("dibujando", total=len(rows))
+    overlay, snaps = render(take, pose, rows, events, fps, capture, progress_cb=progress)
     summary["archivos"] = [str(take / "datos-por-cuadro.csv"), str(take / "datos-eventos.json"), str(overlay), *map(str, snaps)]
     return summary

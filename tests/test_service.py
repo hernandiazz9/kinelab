@@ -255,3 +255,129 @@ def test_sessions_reports_unreadable_capture_json(client, data_dir):
     rows = client.get("/api/sessions").json()
     assert len(rows) == 1
     assert "ilegible" in rows[0]["error"]
+
+
+# --- exploración: PUT /api/datos → GET /api/datos/{id} → archivos ------------------
+
+
+@pytest.fixture
+def client_datos(data_dir: Path):
+    from tests.test_perception import FakeEstimator
+
+    with TestClient(create_app(data_dir=data_dir, estimator=FakeEstimator(True))) as c:
+        yield c
+
+
+def _wait(client: TestClient, job_id: str, timeout_s: float = 120.0) -> dict:
+    import time
+
+    t0 = time.monotonic()
+    while True:
+        j = client.get(f"/api/datos/{job_id}").json()
+        if j["estado"] in ("listo", "error"):
+            return j
+        assert time.monotonic() - t0 < timeout_s, f"el trabajo no terminó: {j}"
+        time.sleep(0.2)
+
+
+def test_datos_end_to_end(client_datos, clips, data_dir):
+    src = _need(clips, "hevc120")
+    r = _put(client_datos, "/api/datos", src, altura_m=1.8)
+    assert r.status_code == 202, r.text
+    j0 = r.json()
+    assert j0["estado"] == "en_cola" and j0["video"] == "hevc120.mov" and j0["altura_m"] == 1.8 and j0["resumen"] is None
+    j = _wait(client_datos, j0["id"])
+    assert j["estado"] == "listo", j["error"]
+    assert j["progreso"]["total"] == 480 and j["progreso"]["cuadros"] == 480, "el dibujo reporta su progreso hasta el último cuadro"
+    assert j["segundos"] is not None and j["terminado"] is not None
+    res = j["resumen"]
+    assert res["cuadros"] == 480 and res["fps_archivo"] == 120.0 and res["altura_m"] == 1.8
+    assert "EXPLORACIÓN" in res["aviso"]
+    assert "elbow_left_deg" in res["columnas"]
+    assert set(j["archivos"]) >= {"overlay.mp4", "datos-por-cuadro.csv", "datos-eventos.json", "analysis.json", "capture.json"}
+    assert j["archivos"]["overlay.mp4"] == f"/api/datos/{j['id']}/archivos/overlay.mp4"
+    job_dir = data_dir / "exploracion" / j["id"]
+    assert (job_dir / "trabajo.json").is_file()
+    assert not (job_dir / "subida").exists(), "la subida temporal se borra"
+    assert not list((data_dir / "incoming").glob("*"))
+
+
+def test_datos_files_are_served_with_range(client_datos, clips):
+    src = _need(clips, "hevc120")
+    j = _wait(client_datos, _put(client_datos, "/api/datos", src).json()["id"])
+    assert j["estado"] == "listo", j["error"]
+    base = f"/api/datos/{j['id']}/archivos"
+
+    full = client_datos.get(f"{base}/overlay.mp4")
+    assert full.status_code == 200 and full.headers["content-type"] == "video/mp4"
+    assert full.headers.get("accept-ranges") == "bytes"
+    size = int(full.headers["content-length"])
+
+    part = client_datos.get(f"{base}/overlay.mp4", headers={"Range": "bytes=10-19"})
+    assert part.status_code == 206, "arrastrar la línea de tiempo necesita 206"
+    assert part.headers["content-range"] == f"bytes 10-19/{size}"
+    assert part.content == full.content[10:20]
+
+    csv = client_datos.get(f"{base}/datos-por-cuadro.csv")
+    assert csv.status_code == 200 and csv.headers["content-type"].startswith("text/csv")
+    assert csv.text.splitlines()[0].startswith("frame,t_s,")
+    assert len(csv.text.splitlines()) == 481
+
+    dl = client_datos.get(f"{base}/datos-eventos.json", params={"descargar": "true"})
+    assert dl.status_code == 200
+    assert dl.headers["content-disposition"].startswith("attachment")
+    assert "hevc120-datos-eventos.json" in dl.headers["content-disposition"]
+    assert dl.json()["cuadros"] == 480
+
+
+def test_datos_unknown_file_and_traversal_are_404(client_datos, clips):
+    src = _need(clips, "hevc120")
+    j = _wait(client_datos, _put(client_datos, "/api/datos", src).json()["id"])
+    base = f"/api/datos/{j['id']}/archivos"
+    assert client_datos.get(f"{base}/pose.npz").status_code == 404, "sólo la lista blanca se sirve"
+    assert client_datos.get(f"{base}/trabajo.json").status_code == 404
+    assert client_datos.get(f"{base}/..%2Ftrabajo.json").status_code == 404
+    assert client_datos.get(f"{base}/../../capture-paths.yaml").status_code == 404
+
+
+def test_datos_unknown_job_is_404(client_datos):
+    assert client_datos.get("/api/datos/no-existe").status_code == 404
+    assert client_datos.get("/api/datos/" + "0" * 32).status_code == 404
+    assert client_datos.get("/api/datos/" + "0" * 32 + "/archivos/overlay.mp4").status_code == 404
+
+
+def test_datos_bad_input_leaves_nothing(client_datos, clips, data_dir):
+    src = _need(clips, "hevc120")
+    assert _put(client_datos, "/api/datos", src, altura_m=0.1).status_code == 422
+    assert _put(client_datos, "/api/datos", src, vista="side").status_code == 400
+    assert client_datos.put("/api/datos", params={"filename": "vacio.mov"}, content=b"").status_code == 400
+    assert _put(client_datos, "/api/datos", src, filename="sinextension").status_code == 400
+    assert not list((data_dir / "exploracion").glob("*")) if (data_dir / "exploracion").exists() else True
+
+
+def test_datos_error_is_reported_not_raised(client_datos, tmp_path):
+    bogus = tmp_path / "texto.mov"
+    bogus.write_text("esto no es un video", encoding="utf-8")
+    r = _put(client_datos, "/api/datos", bogus)
+    assert r.status_code == 202
+    j = _wait(client_datos, r.json()["id"])
+    assert j["estado"] == "error" and j["error"]
+    assert j["resumen"] is None
+
+
+def test_datos_survive_a_restart(client_datos, clips, data_dir):
+    from tests.test_perception import FakeEstimator
+
+    src = _need(clips, "hevc120")
+    j = _wait(client_datos, _put(client_datos, "/api/datos", src).json()["id"])
+    assert j["estado"] == "listo"
+    # Un trabajo a medias al reiniciar queda en error con una razón legible.
+    half = data_dir / "exploracion" / ("a" * 32)
+    half.mkdir()
+    (half / "trabajo.json").write_text('{"id": "%s", "video": "x.mov", "creado": "2026-09-12T00:00:00+00:00", "estado": "detectando_pose"}' % ("a" * 32), encoding="utf-8")
+    with TestClient(create_app(data_dir=data_dir, estimator=FakeEstimator(True))) as c2:
+        again = c2.get(f"/api/datos/{j['id']}").json()
+        assert again["estado"] == "listo" and again["resumen"]["cuadros"] == 480
+        assert c2.get(f"/api/datos/{j['id']}/archivos/overlay.mp4").status_code == 200
+        h = c2.get("/api/datos/" + "a" * 32).json()
+        assert h["estado"] == "error" and "reinició" in h["error"]

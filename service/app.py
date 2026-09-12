@@ -1,12 +1,17 @@
-"""La API detrás de `service/static/index.html`.
-
-Tres cosas, y nada más:
+"""La API local. La usan la app Next.js de `web/` y la página vieja del gate
+en `service/static/index.html`.
 
 - `PUT /api/fps-truth`  sube un clip y devuelve lo que imprime
   `kinelab.tools.fps_truth` (para calibrar el cronómetro).
 - `PUT /api/ingest`     sube un clip, lo pasa por el gate y deja la sesión en
   disco con su `capture.json`, pase o no.
 - `GET /api/sessions`   lista los `capture.json` que hay en `data/sessions/`.
+- `PUT /api/datos`      sube un video y encola el modo exploración
+  (`kinelab.explore`): 202 con el id del trabajo. Ver `service/exploracion.py`.
+- `GET /api/datos/{id}` estado del trabajo; cuando está `listo`, trae el
+  contenido de `datos-eventos.json` y las URLs de sus archivos.
+- `GET /api/datos/{id}/archivos/{nombre}` sirve `overlay.mp4` (con `Range`/206:
+  lo hace solo el `FileResponse` de Starlette 1.6), las fotos, el CSV y los JSON.
 
 El archivo viaja como cuerpo crudo de un PUT (no multipart): así no hace falta
 ninguna dependencia fuera de FastAPI. Se escribe por chunks a `data/incoming/`
@@ -19,6 +24,7 @@ import os
 import re
 import shutil
 import uuid
+from contextlib import asynccontextmanager
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -32,6 +38,7 @@ from kinelab.ingest.capture_paths import CapturePaths, load_capture_paths
 from kinelab.ingest.gate import CaptureJson
 from kinelab.ingest.session import validate_slug
 from kinelab.tools.fps_truth import FfprobeError, analyze
+from service.exploracion import ARCHIVOS, Exploracion
 from sports import get_sport
 
 STATIC = Path(__file__).resolve().parent / "static"
@@ -98,14 +105,22 @@ def _session_row(data_dir: Path, capture_json: Path) -> dict[str, Any]:
     return row
 
 
-def create_app(data_dir: Path | None = None, sport_id: str = "golf") -> FastAPI:
+def create_app(data_dir: Path | None = None, sport_id: str = "golf", estimator: Any | None = None) -> FastAPI:
+    """`estimator`: sólo para tests, un estimador falso para la cola de exploración."""
     data = (data_dir or default_data_dir()).resolve()
     sport = get_sport(sport_id)
     incoming = data / "incoming"
+    exploracion = Exploracion(data, sport, estimator=estimator)
 
-    app = FastAPI(title="kinelab · gate de ingesta", docs_url=None, redoc_url=None, openapi_url=None)
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI):
+        yield
+        exploracion.close()
+
+    app = FastAPI(title="kinelab · servicio local", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
     app.state.data_dir = data
     app.state.sport = sport
+    app.state.exploracion = exploracion
 
     def capture_paths() -> CapturePaths:
         f = data / "capture-paths.yaml"
@@ -207,6 +222,50 @@ def create_app(data_dir: Path | None = None, sport_id: str = "golf") -> FastAPI:
         # sessions/<atleta>/<fecha>/<gesto>/<vista>/take-NN/capture.json
         files = sorted(root.glob("*/*/*/*/take-*/capture.json"))
         return [_session_row(data, f) for f in files]
+
+    # --- exploración: un video → palitos + toda la data ------------------------------
+
+    def trabajo_or_404(job_id: str):
+        job = exploracion.get(job_id)
+        if job is None:
+            raise HTTPException(404, f"No hay ningún trabajo de exploración con id '{job_id}'.")
+        return job
+
+    @app.put("/api/datos", status_code=202)
+    async def datos_put(
+        request: Request,
+        filename: str = Query(...),
+        altura_m: float | None = Query(None, gt=0.5, lt=2.6, description="altura del atleta en metros; sin ella no hay cm"),
+        vista: str = Query("face_on"),
+    ) -> dict[str, Any]:
+        base, _suffix = safe_filename(filename)
+        if vista not in sport.views:
+            raise HTTPException(400, f"Vista '{vista}' desconocida. Válidas: {', '.join(sport.views)}.")
+        job = exploracion.new(base, altura_m, vista)
+        upload = job.dir / "subida" / base
+        try:
+            await _receive_to(request, upload)
+        except BaseException:
+            exploracion.discard(job)
+            raise
+        exploracion.submit(job, upload)
+        return job.to_dict()
+
+    @app.get("/api/datos/{job_id}")
+    async def datos_get(job_id: str) -> dict[str, Any]:
+        return trabajo_or_404(job_id).to_dict()
+
+    @app.get("/api/datos/{job_id}/archivos/{nombre}")
+    async def datos_archivo(job_id: str, nombre: str, descargar: bool = Query(False)) -> FileResponse:
+        job = trabajo_or_404(job_id)
+        media = ARCHIVOS.get(nombre)
+        if media is None:
+            raise HTTPException(404, f"'{nombre}' no es un archivo de exploración. Hay: {', '.join(ARCHIVOS)}.")
+        path = job.dir / nombre
+        if not path.is_file():
+            raise HTTPException(404, f"'{nombre}' todavía no existe para este trabajo (estado: {job.estado}).")
+        # `filename` pone Content-Disposition: attachment → el navegador descarga en vez de mostrar.
+        return FileResponse(path, media_type=media, filename=f"{Path(job.video).stem}-{nombre}" if descargar else None)
 
     return app
 

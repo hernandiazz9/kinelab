@@ -1,0 +1,223 @@
+"use client";
+
+// Una sola pantalla: subir un video → el overlay con los palitos en un
+// reproductor con cámara lenta, cuadro a cuadro y zoom; las fotos por evento;
+// y toda la data que el motor produce, en tablas. Sin login, sin sesiones, sin
+// gate, sin puntaje.
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import Reproductor, { COLOR_EVENTO, type ReproductorHandle } from "@/components/Reproductor";
+import Subida from "@/components/Subida";
+import TablaCuadros from "@/components/TablaCuadros";
+import TablaEventos from "@/components/TablaEventos";
+import { ETAPA, archivoUrl, getTrabajo, olvidarUltimoTrabajo, subirVideo, ultimoTrabajoId, type EventoId, type Trabajo } from "@/lib/api";
+import { EVENTOS, fmt } from "@/lib/etiquetas";
+
+type Fase =
+  | { tipo: "inicio" }
+  | { tipo: "subiendo"; pct: number; nombre: string }
+  | { tipo: "procesando"; trabajo: Trabajo }
+  | { tipo: "listo"; trabajo: Trabajo }
+  | { tipo: "error"; mensaje: string };
+
+const SONDEO_MS = 500;
+
+function faseDe(t: Trabajo): Fase {
+  if (t.estado === "listo" && t.resumen) return { tipo: "listo", trabajo: t };
+  if (t.estado === "error") return { tipo: "error", mensaje: t.error ?? "el trabajo falló sin detalle" };
+  return { tipo: "procesando", trabajo: t };
+}
+
+export default function Pagina() {
+  const [fase, setFase] = useState<Fase>({ tipo: "inicio" });
+  const [cuadro, setCuadro] = useState(0);
+  const reproductor = useRef<ReproductorHandle>(null);
+
+  // Al volver a la página se recupera el último trabajo (queda en localStorage).
+  useEffect(() => {
+    const id = ultimoTrabajoId();
+    if (!id) return;
+    let vivo = true;
+    getTrabajo(id)
+      .then((t) => {
+        if (vivo) setFase(faseDe(t));
+      })
+      .catch(() => olvidarUltimoTrabajo());
+    return () => {
+      vivo = false;
+    };
+  }, []);
+
+  // Sondeo mientras el backend trabaja.
+  const idEnCurso = fase.tipo === "procesando" ? fase.trabajo.id : null;
+  useEffect(() => {
+    if (!idEnCurso) return;
+    const timer = setInterval(() => {
+      getTrabajo(idEnCurso)
+        .then((t) => setFase(faseDe(t)))
+        .catch((e: Error) => setFase({ tipo: "error", mensaje: e.message }));
+    }, SONDEO_MS);
+    return () => clearInterval(timer);
+  }, [idEnCurso]);
+
+  const subir = useCallback(async (archivo: File, alturaM: number | null) => {
+    setFase({ tipo: "subiendo", pct: 0, nombre: archivo.name });
+    try {
+      const t = await subirVideo(archivo, alturaM, (p) => setFase({ tipo: "subiendo", pct: p, nombre: archivo.name }));
+      setCuadro(0);
+      setFase({ tipo: "procesando", trabajo: t });
+    } catch (e) {
+      setFase({ tipo: "error", mensaje: (e as Error).message });
+    }
+  }, []);
+
+  const ir = useCallback((n: number) => reproductor.current?.irACuadro(n), []);
+  const irArriba = useCallback(
+    (n: number) => {
+      ir(n);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    },
+    [ir],
+  );
+
+  const ocupado = fase.tipo === "subiendo" || fase.tipo === "procesando";
+
+  return (
+    <main className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-6">
+      <header className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        <h1 className="text-xl font-semibold">kinelab · exploración</h1>
+        <p className="text-sm text-zinc-400">Subí un video de un swing: los palitos y toda la data que el motor produce. Sin gate, sin puntaje: números para mirar, no para juzgar.</p>
+      </header>
+
+      <section className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
+        <Subida ocupado={ocupado} onSubir={subir} />
+      </section>
+
+      {fase.tipo === "subiendo" && (
+        <Progreso titulo={`subiendo ${fase.nombre}`} fraccion={fase.pct} detalle={`${Math.round(fase.pct * 100)} %`} />
+      )}
+      {fase.tipo === "procesando" && (
+        <Progreso
+          titulo={`${fase.trabajo.video} · ${ETAPA[fase.trabajo.estado]}`}
+          fraccion={fase.trabajo.progreso.total ? fase.trabajo.progreso.cuadros / fase.trabajo.progreso.total : null}
+          detalle={fase.trabajo.progreso.total ? `${fase.trabajo.progreso.cuadros} / ${fase.trabajo.progreso.total} cuadros` : ""}
+        />
+      )}
+      {fase.tipo === "error" && (
+        <section className="rounded-lg border border-red-800 bg-red-950/40 p-4 text-sm">
+          <strong>No salió.</strong> {fase.mensaje}
+        </section>
+      )}
+
+      {fase.tipo === "listo" && <Resultado trabajo={fase.trabajo} cuadro={cuadro} onCuadro={setCuadro} ir={ir} irArriba={irArriba} reproductor={reproductor} />}
+    </main>
+  );
+}
+
+function Progreso({ titulo, fraccion, detalle }: { titulo: string; fraccion: number | null; detalle: string }) {
+  return (
+    <section className="rounded-lg border border-zinc-800 p-4 text-sm">
+      <div className="flex justify-between">
+        <span>{titulo}</span>
+        <span className="tabular-nums text-zinc-400">{detalle}</span>
+      </div>
+      <div className="mt-2 h-2 overflow-hidden rounded bg-zinc-800">
+        {fraccion === null ? <div className="h-full w-1/3 animate-pulse bg-sky-600" /> : <div className="h-full bg-sky-500 transition-[width]" style={{ width: `${Math.round(fraccion * 100)}%` }} />}
+      </div>
+    </section>
+  );
+}
+
+function Resultado({
+  trabajo,
+  cuadro,
+  onCuadro,
+  ir,
+  irArriba,
+  reproductor,
+}: {
+  trabajo: Trabajo;
+  cuadro: number;
+  onCuadro: (n: number) => void;
+  ir: (n: number) => void;
+  irArriba: (n: number) => void;
+  reproductor: React.RefObject<ReproductorHandle | null>;
+}) {
+  const r = trabajo.resumen!;
+  const overlay = archivoUrl(trabajo, "overlay.mp4");
+  const csv = archivoUrl(trabajo, "datos-por-cuadro.csv");
+  const fotos = (Object.keys(EVENTOS) as EventoId[]).filter((ev) => archivoUrl(trabajo, `evento-${ev}.png`));
+  const descargas: [string, string][] = [
+    ["datos-por-cuadro.csv", "CSV por cuadro"],
+    ["datos-eventos.json", "JSON por evento"],
+    ["analysis.json", "analysis.json"],
+    ["capture.json", "capture.json"],
+    ["overlay.mp4", "video con palitos"],
+  ];
+
+  return (
+    <>
+      <section className="rounded-lg border border-amber-800/60 bg-amber-950/20 p-3 text-sm">
+        <p>{r.aviso}</p>
+        {r.gate_diria.length > 0 && (
+          <p className="mt-1 text-amber-200">
+            El gate diría: {r.gate_diria.join(" · ")}
+          </p>
+        )}
+        <p className="mt-1 text-zinc-400">
+          {r.video} · {r.cuadros} cuadros a {fmt(r.fps_archivo, 3)} fps del archivo · altura {r.altura_m ? `${fmt(r.altura_m, 2)} m` : "sin declarar (sin cm)"} · procesado en {fmt(trabajo.segundos, 1)} s
+        </p>
+      </section>
+
+      {overlay ? (
+        <section>
+          <Reproductor ref={reproductor} src={overlay} fps={r.fps_archivo} cuadros={r.cuadros} eventos={r.eventos_frame} onCuadro={onCuadro} />
+        </section>
+      ) : (
+        <p className="text-sm text-red-300">No hay overlay.mp4 en este trabajo.</p>
+      )}
+
+      {fotos.length > 0 && (
+        <section className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+          {fotos.map((ev) => {
+            const f = r.eventos_frame[ev];
+            return (
+              <figure key={ev} className="cursor-pointer rounded-lg border border-zinc-800 bg-black p-1" onClick={() => f !== undefined && irArriba(f)} title="ver ese cuadro en el reproductor">
+                {/* eslint-disable-next-line @next/next/no-img-element -- PNG grande servido por el backend, sin optimizar */}
+                <img src={archivoUrl(trabajo, `evento-${ev}.png`)!} alt={`cuadro del evento ${EVENTOS[ev]}`} loading="lazy" className="mx-auto max-h-96 object-contain" />
+                <figcaption className="mt-1 text-center text-sm" style={{ color: COLOR_EVENTO[ev] }}>
+                  {EVENTOS[ev]}
+                  {f !== undefined && <span className="text-zinc-400"> · cuadro {f} · {fmt(r.eventos_t_s[ev], 3)} s</span>}
+                </figcaption>
+              </figure>
+            );
+          })}
+        </section>
+      )}
+
+      <section>
+        <TablaEventos resumen={r} onIr={irArriba} />
+      </section>
+
+      <section>
+        <div className="mt-6 mb-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <h2 className="text-base font-semibold">Todos los cuadros</h2>
+          <span className="text-sm text-zinc-400">
+            descargar:{" "}
+            {descargas
+              .filter(([n]) => archivoUrl(trabajo, n))
+              .map(([n, texto], i) => (
+                <span key={n}>
+                  {i > 0 && " · "}
+                  <a className="text-sky-400 hover:underline" href={archivoUrl(trabajo, n, true)!} download>
+                    {texto}
+                  </a>
+                </span>
+              ))}
+          </span>
+        </div>
+        {csv ? <TablaCuadros url={csv} cuadroActual={cuadro} onIr={ir} /> : <p className="text-sm text-red-300">No hay datos-por-cuadro.csv en este trabajo.</p>}
+      </section>
+    </>
+  );
+}

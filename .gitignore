@@ -12,6 +12,7 @@ dist/
 data/sessions/
 data/athletes/
 data/incoming/
+data/exploracion/
 
 # pesos de modelos: se descargan una vez y se fijan por hash
 models/
