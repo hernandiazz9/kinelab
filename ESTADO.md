@@ -3,6 +3,73 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 12 de septiembre de 2026 — quinta sesión (en curso): el impacto entre dos cuadros
+
+Pedido de Hernán: en `cortado.mp4` (30 fps) el cuadro marcado como impacto (44)
+es anterior al contacto y el 45 ya pasó la bola. Tres pasos en orden, parando
+entre cada uno: (1) diagnóstico de captura, (2) impacto sub-cuadro desde la
+señal, (3) experimento etiquetado con `minterpolate` de ffmpeg para MIRAR.
+Paso 1 hecho; 2 y 3 sin empezar.
+
+### Paso 1 — diagnóstico (hecho)
+
+- `~/Desktop/cortado.mp4`: H.264, 1080×2320 (rot 90), 76 cuadros CFR a
+  30,00 fps (deltas 0,03333–0,03335). Sin duración real no hay tasa de
+  captura; pero el original está y cierra la pregunta.
+- **Original: `~/Desktop/20260907_170638.mp4`, Samsung Galaxy S22 Ultra, modo
+  Video 30 fps** (`com.android.capture.fps: 30`, `handler_name: VideoHandle`,
+  `com.android.version: 16`). 2320×1080 es la relación "Full" (19,3:9) de la
+  cámara de Samsung, no un recorte. 265 cuadros en 8,97 s.
+- **`cortado.mp4` es una copia bit a bit de los cuadros 103–178 del original**
+  (PSNR infinito cuadro a cuadro; `cortado i = original i + 103`). El recorte en
+  la Mac fue *passthrough*: re-envolvió con `Core Media Video`, dejó 89
+  muestras con una edit list que esconde las 13 primeras, y conservó intacto
+  el `udta` de Samsung (557.940 bytes). Ninguna de las "señales de
+  re-compresión" que se listaron antes de ver el original lo era: H.264,
+  `mp42`, 2320×1080 y ~16 Mb/s son la cámara de Samsung tal cual.
+- Conclusión: entre el 44 y el 45 (original 147 y 148, donde el motor también
+  puso el impacto) **nunca hubo cuadros**. No hay nada que recuperar de este
+  material; sólo estimar el instante (paso 2) o interpolar para mirar (paso 3).
+- **Falsa alarma de VFR en Android, medida:** el original tiene 263 deltas de
+  0,0333 s y UNO de 0,2015 s, el primero (arranque de la cámara). `fps_truth`
+  lo declara `VFR` (ratio 6,04) y calcula `fps_playback = 29,436` con
+  `(n−1)/span`; `explore` usa ese número como fps y todos los `t_s` y
+  duraciones del original quedan 1,9 % largos. Propuesta, sin hacer: que
+  `fps_truth` reporte el ratio excluyendo el primer delta y lo diga en una
+  nota; qué hace el gate con eso es una decisión (CAPTURA.md
+  `vfr_ratio_le_1_10`), no un arreglo.
+- Overlay de exploración: la fuente se escala también por el ancho
+  (`45809a2`); en vertical la tercera línea se cortaba.
+
+### Lo que le toca filmar a Hernán (S22 Ultra)
+
+Android está fuera del POC por ADR-003 ("hornea la ralentización"). Usarlo
+en serio exige reabrir ese ADR con evidencia del cronómetro, no rodearlo. Lo
+que se pidió: cronómetro de 10 s en cada modo con más de 30 fps que ofrezca la
+cámara (Video FHD 60 y Slow motion FHD 240; verificar en la app si hay
+FHD 120), transferido **por cable** (archivo crudo de `DCIM/Camera`) y, aparte,
+el mismo clip compartido desde Galería, para medir qué hace cada camino.
+`Auto FPS` apagado. Después un swing `face_on` en el modo que el cronómetro
+apruebe. Con eso se llena `data/capture-paths.yaml` (vacío) o se descarta el
+teléfono con números.
+
+### Pasos 2 y 3 (pendientes, definidos)
+
+- **2.** En `sports/golf/events.py`, además del cuadro entero (que no cambia):
+  instante en que la trayectoria de las manos cruza su posición de address,
+  interpolando entre el cuadro anterior y el posterior; en el evento como
+  `t_sub_s` y `fraccion` (0–1 entre `frame` y `frame + 1`) con incertidumbre.
+  Test con swing sintético de cruce conocido. En `datos-eventos.json` y en la
+  pantalla: "impacto entre el cuadro 44 y el 45 (0,6)" y un botón para ver
+  los dos cuadros lado a lado en el reproductor.
+- **3.** Sólo con 1 y 2 hechos: `minterpolate` de ffmpeg a 120 fps, rótulo
+  "cuadros interpolados, no medidos" quemado en cada cuadro sintético,
+  archivo aparte que ninguna métrica lee; lámina de los cuadros entre 44 y 45
+  para decidir si sirve o si el shaft sale fantasma. Sin RIFE ni FILM
+  (ADR-010).
+
+---
+
 ## 12 de septiembre de 2026 — cuarta sesión: interfaz de exploración (`web/` + `/api/datos`)
 
 Una pantalla: subir un video → el `overlay.mp4` con los palitos en un
