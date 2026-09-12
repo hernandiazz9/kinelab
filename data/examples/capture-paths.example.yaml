@@ -1,0 +1,45 @@
+# Ejemplo comentado de `data/capture-paths.yaml`. Los números son ilustrativos:
+# los reales salen de `kinelab.tools.fps_truth` sobre un cronómetro filmado.
+#
+# Cómo se llena cada camino (CAPTURA.md §Calibración con cronómetro):
+#   1. Filmar 10 s de un cronómetro con milisegundos con ese modo.
+#   2. Transferir por ese camino (AirDrop con "Mantener originales").
+#   3. python -m kinelab.tools.fps_truth clip.mov --duracion-real <s> --nominal <fps>
+#      donde <s> son los segundos entre la primera y la última lectura del
+#      cronómetro que se ven en el clip.
+#   4. Copiar acá lo que imprime: fps de captura, fps de reproducción, factor
+#      de estiramiento, codec, ratio delta_max/delta_min.
+
+schema_version: "1.0.0"
+paths:
+  # El camino por defecto del protocolo: modo Video normal, sin retiming.
+  - id: iphone17pro-video-1080p120-airdrop      # minúsculas, dígitos y guiones; es lo que se pasa en --camino
+    device: "iPhone 17 Pro"                      # modelo exacto; otro modelo es otro camino
+    mode: video                                  # video | slomo
+    nominal_fps: 120                             # lo que dice el ajuste de la cámara
+    codec_expected: hevc                         # hevc | h264. "Alta eficiencia" = hevc; H.264 delata "Más compatible" o un transcodificador
+    transfer: airdrop-keep-originals             # cómo llegó a la Mac; otro camino de transferencia es otro camino
+    fps_real: 119.88                             # tasa de CAPTURA: cuadros decodificados / segundos reales del cronómetro
+    fps_playback: 119.88                         # tasa a la que el archivo REPRODUCE, medida de los PTS
+    stretch_factor: 1.0                          # fps_real / fps_playback; 1.0 en video normal
+    fps_method: "cronómetro 10 s, 1199 cuadros entre 00:00.000 y 00:10.000"
+    calibrated_on: 2026-09-14                    # fecha ISO
+    calibrated_by: hernan
+    notes: "delta_max/delta_min = 1.004"         # opcional
+
+  # Un Slo-Mo: el iPhone captura a 240 y el archivo reproduce a 30. Los cuadros
+  # están todos; los timestamps los estiran ×8. El motor convierte a tiempo real
+  # con stretch_factor. Sólo para un bloque de impacto marcado como tal.
+  - id: iphone17pro-slomo-1080p240-airdrop
+    device: "iPhone 17 Pro"
+    mode: slomo
+    nominal_fps: 240
+    codec_expected: hevc
+    transfer: airdrop-keep-originals
+    fps_real: 239.76
+    fps_playback: 29.97
+    stretch_factor: 8.0
+    fps_method: "cronómetro 10 s, 2398 cuadros entre 00:00.000 y 00:10.000; el archivo dura 80 s"
+    calibrated_on: 2026-09-14
+    calibrated_by: hernan
+    notes: "delta_max/delta_min = 1.001; verificar que AirDrop no recorte la ralentización"

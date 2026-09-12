@@ -1,0 +1,11 @@
+# Caminos de captura calibrados (CONTRATO.md §capture-paths.yaml, CAPTURA.md
+# §Calibración con cronómetro). Un camino = dispositivo + modo + transferencia,
+# con las dos tasas medidas: la de captura (fps_real, del cronómetro filmado) y
+# la de reproducción (fps_playback, de los PTS). Es configuración, no
+# inferencia: un clip cuyo camino no está acá se rechaza en la ingesta.
+#
+# Se llena con `python -m kinelab.tools.fps_truth clip.mov --duracion-real S`,
+# nunca desde el fps nominal del modo. Ejemplo comentado, campo por campo:
+# data/examples/capture-paths.example.yaml
+schema_version: "1.0.0"
+paths: []

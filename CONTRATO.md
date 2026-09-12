@@ -32,7 +32,9 @@ data/
     events-manual.json               correcciones humanas (opcional)
 ```
 
-`data/` está en `.gitignore` salvo `schemas/` y `examples/`.
+`data/` está en `.gitignore` salvo `capture-paths.yaml`, `schemas/` y
+`examples/`: los caminos calibrados son configuración y viajan con el repo;
+las sesiones y los atletas son del entrenador y no.
 
 ---
 
@@ -87,22 +89,36 @@ Escrito por `kinelab.ingest`. Nunca a mano después de la Fase 0.
   "height": 1080,
   "rotation_deg": 0,
   "frames_decoded": 2398,
-  "duration_s": 20.008,
+  "duration_s": 20.003,
+  "duration_playback_s": 20.0,
   "vfr_ratio": 1.004,
-  "recorded_at": "2026-09-14T10:32:11+10:00",
+  "recorded_at": "2026-09-14T10:32:11.000000Z",
   "sha256_original": "…",
+  "original_name": "IMG_0412.MOV",
   "gate": {
     "verdict": "ok",
     "checks": [
-      {"id": "codec_matches_path", "pass": true, "value": "hevc", "expected": "hevc"},
-      {"id": "vfr_ratio_le_1_10", "pass": true, "value": 1.004},
-      {"id": "fps_matches_path", "pass": true, "value": 119.85, "expected": 119.88, "tolerance": 0.02},
-      {"id": "duration_plausible", "pass": true}
+      {"id": "capture_path_known", "passed": true, "value": "iphone17pro-video-1080p120-airdrop"},
+      {"id": "codec_matches_path", "passed": true, "value": "hevc", "expected": "hevc"},
+      {"id": "vfr_ratio_le_1_10", "passed": true, "value": 1.004, "expected": "<= 1.1"},
+      {"id": "fps_matches_path", "passed": true, "value": 119.85, "expected": 119.88, "tolerance": 0.02},
+      {"id": "fps_min_for_gesture", "passed": true, "value": 119.88, "expected": ">= 100"},
+      {"id": "duration_plausible", "passed": true, "value": 20.003, "expected": "3–180 s"},
+      {"id": "rotation_normalized", "passed": true, "value": 0},
+      {"id": "view_declared", "passed": true, "value": "face_on", "expected": ["face_on", "down_the_line"]},
+      {"id": "gesture_known", "passed": true, "value": "driver", "expected": ["driver", "iron", "wedge"]}
     ],
     "reasons": []
   }
 }
 ```
+
+`duration_s` es la duración **real** (`frames_decoded / fps_real`);
+`duration_playback_s`, la del contenedor. En un Slo-Mo estirado ×8 difieren ×8.
+`passed` puede ser `null`: el chequeo no se pudo evaluar (por ejemplo, sin
+camino calibrado no hay contra qué comparar el codec); no cuenta como fallo,
+pero queda visible. `rotation_deg` es en sentido horario: un iPhone filmando en
+vertical da 90.
 
 Cuando `verdict` es `reject`, `reasons` es una lista de frases que el
 entrenador puede leer: *"El clip está en H.264: pasó por 'Más compatible' o

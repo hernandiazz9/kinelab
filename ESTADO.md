@@ -3,181 +3,140 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
-## 12 de septiembre de 2026 — sesión que sembró el repo
+## 12 de septiembre de 2026 — segunda sesión: Fase 0 de agente, cerrada
 
 ### Hecho y commiteado
 
-- `65fb73b` — la semilla: `AGENTS.md`, `CONTEXTO.md`, `DECISIONES.md`,
-  `ESPECIFICACION.md`, `CONTRATO.md`, `CAPTURA.md`, `HERENCIA.md`, `ARRANQUE.md`
-  y `banco/` (scripts de medición con rutas parametrizadas por
-  `KINELAB_BENCH_DIR`).
-- Este commit — el código de la Fase 0 (parte de agente) **escrito pero nunca
-  ejecutado**. Pasó sólo `python3.12 -m py_compile`. No se creó el venv, no se
-  instaló nada, no hay tests. Tratarlo como código no confiable hasta que los
-  tests digan otra cosa.
+- `65fb73b` — la semilla: los seis documentos, `ARRANQUE.md` y `banco/`.
+- `1638b7e` — el código de la Fase 0, escrito sin probar.
+- `2508edc` — mensaje de arranque.
+- **Este commit** — la Fase 0 de agente cerrada (ESPECIFICACION.md 0.1–0.5):
+  venv, 94 tests en verde, tres bugs corregidos en el código sin probar, los
+  fixtures de ffmpeg arreglados, `data/capture-paths.yaml` vacío con su
+  ejemplo comentado, `docs/checklist-captura.md`, `README.md`.
 
-| Archivo | Qué es |
+| Qué | Estado |
 |---|---|
-| `pyproject.toml` | deps Fase 0: pydantic, pyyaml; dev: pytest. Scripts `kinelab-fps-truth`, `kinelab-ingest`. |
-| `kinelab/sport.py` | `SportConfig` (gestures, views, fps_min). El motor define la forma; `sports/` la instancia. |
-| `kinelab/tools/fps_truth.py` | `probe_declared`, `count_frames`, `analyze(path, real_duration_s, nominal_fps)`, CLI. Veredictos: `cfr_a_tasa_de_captura` · `estirado` · `destruido` · `vfr` · `sin_duracion_real`. |
-| `kinelab/ingest/capture_paths.py` | modelos pydantic `CapturePath` / `CapturePaths` + `load_capture_paths`. Valida ids únicos y `stretch_factor ≈ fps_real / fps_playback`. |
-| `kinelab/ingest/gate.py` | `run_gate` con 9 chequeos en orden fijo, `Check.passed: bool | None`, `CaptureJson`, `build_capture_json`. |
-| `kinelab/ingest/session.py` | `take-NN` con mkdir atómico, sha256, copia del original, fecha de la sesión. |
-| `kinelab/ingest/__main__.py` | `ingest_clip(...)` + CLI. Salida 0 ok · 2 rechazado · 1 error previo al gate. |
-| `sports/golf/config.py` | `GOLF`: gestos driver/iron/wedge · vistas face_on/down_the_line · fps_min 100. |
-| `tests/conftest.py` | fixture `clips` (7 clips sintéticos con ffmpeg) y `capture_paths_yaml` (4 caminos de prueba). |
+| `.venv` con `python3.12`, `pip install -e ".[dev]"` | hecho; `kinelab-fps-truth --help` y `kinelab-ingest --help` corren |
+| `tests/test_fps_truth.py` | 20 tests. El central: `test_declared_fields_do_not_separate_slowed_from_resampled` |
+| `tests/test_capture_paths.py` | 27 tests, incluidos los dos YAML del repo |
+| `tests/test_gate.py` | 47 tests: los 9 chequeos, la sesión en disco (`take-01` → `take-02`), el CLI |
+| `pytest -q` | 94 pasan, 0 skips, ~3 s (los clips sintéticos son de 96×96) |
+| `data/capture-paths.yaml` | `schema_version: "1.0.0"`, `paths: []`. Lo llena el cronómetro. |
+| `data/examples/capture-paths.example.yaml` | dos caminos comentados campo por campo: Video 1080p120 y Slo-Mo 1080p240 |
+| `docs/checklist-captura.md` | imprimible; secciones A–G de configuración a verificación |
 
-### Decisiones tomadas al codificar (los documentos ya las reflejan)
+### Bugs encontrados en el código sin probar (corregidos, con test)
 
-- Un camino de captura registra **dos tasas**: `fps_real` (captura, del
-  cronómetro) y `fps_playback` (reproducción, de los PTS), más
-  `stretch_factor`. El gate compara la reproducción del clip contra la del
-  camino; el motor pasa a tiempo real con el factor. `CONTRATO.md` y
-  `CAPTURA.md` actualizados.
-- El chequeo de codec es `codec_matches_path` (contra `camino.codec_expected`),
-  no `codec_hevc`. Se agregó `gesture_known`.
-- `Check.passed` puede ser `None` = no evaluable (por ejemplo, camino
-  desconocido). No cuenta como fallo, pero queda visible.
-- `capture.json.duration_s` es la duración **real** (`frames / fps_real`);
-  `duration_playback_s` es la del contenedor. En un Slo-Mo estirado ×8 difieren
-  ×8.
-- El motor no importa `sports`; sólo el CLI (`kinelab/ingest/__main__.py`)
-  resuelve el deporte por id.
+1. **`validate_slug` rechazaba el guion bajo**, así que `--vista face_on` y
+   `down_the_line` eran imposibles de ingestar: ningún clip de golf podía
+   entrar. Ahora `^[a-z0-9][a-z0-9_-]*$`. El id de camino de captura conserva
+   su patrón propio (sólo guiones).
+2. **La rotación tenía dos convenciones a la vez.** La rama de `side_data_list`
+   tomaba el número de ffprobe tal cual (antihorario: un iPhone en vertical da
+   `-90` → 270) y la rama del tag `rotate` lo tomaba horario (el mismo clip da
+   90). Convención fijada y documentada en `Declared` y en `CONTRATO.md`:
+   **horaria, iPhone en vertical = 90**; el valor de ffprobe se invierte.
+3. **`count_frames` leía el CSV por posición.** Ahora pide
+   `-of compact=p=0:nk=0` y lee `pts_time` por clave, con
+   `best_effort_timestamp_time` de respaldo.
 
-### Falta para cerrar la Fase 0 (agente)
+### Riesgos de la sesión anterior: confirmados y descartados (ffmpeg 9.0.1)
 
-1. Venv con `python3.12` (el `python3` del sistema es **3.9**), `pip install -e ".[dev]"`.
-2. Los tests, contra los fixtures de `conftest.py`:
+- **Orden de columnas del CSV** — descartado como riesgo: ffprobe 9 pone
+  `pts_time` antes que `best_effort_timestamp_time`, así que la heurística
+  funcionaba. Se endureció igual (bug 3).
+- **`setpts=8*PTS` + `-fps_mode passthrough` + libx264** — confirmado que
+  funciona: 960 cuadros, `r_frame_rate=30/1`, `avg_frame_rate=230400/7673`
+  (30,03), deltas uniformes de 33,3 ms. `-r 30` da **122** cuadros, no 120.
+  La tesis de CAPTURA.md se reproduce en el test central.
+- **`-metadata:s:v:0 rotate=90` con `-c copy`** — confirmado que ffmpeg 9 no
+  escribe nada: ni matriz de display ni tag. Reemplazado en el fixture por
+  `-display_rotation -90 -i clip -c copy`, que escribe la matriz
+  (`rotation: -90` en ffprobe = 90° horario). El fixture ahora es 64×96 para
+  que la inversión de `display_size` sea visible.
+- **La coma dentro de `setpts='PTS+(mod(N,2)*0.003)/TB'`** — no molesta: las
+  comillas simples son el quoting del filtergraph. Pero **el fixture VFR no
+  producía tasa variable**: `showinfo` tras el filtro muestra el jitter y el
+  archivo sale con deltas uniformes, con libx264, libx265, `hevc_videotoolbox`
+  y hasta `rawvideo`, en `.mov`, `.mp4` y `.mkv`. Causa medida: aun con
+  `-fps_mode passthrough`, ffmpeg 9 usa `1/fps` como time base del encoder y
+  redondea cada PTS a la grilla del cuadro; `-enc_time_base 1/90000` lo
+  conserva. El fixture se reemplazó por dos tramos (120 fps + 60 fps)
+  concatenados con `-c copy`: ratio 2,0, 480 cuadros. **Lección para la Fase
+  4:** cualquier retiming con `setpts` que deba conservar timestamps no
+  uniformes necesita `-enc_time_base`; `-fps_mode passthrough` solo no alcanza.
+- **`nb_frames` como string de dígitos** — confirmado en `.mov` y `.mp4`.
+- **`recording_date` con fecha QuickTime** — `2026-09-14T10:32:11.000000Z`
+  parsea (test). Los clips sintéticos no traen `creation_time`; cae a la fecha
+  de modificación. Lo que escribe un `.MOV` real de iPhone queda por ver.
 
-   **`tests/test_fps_truth.py`**
-   - `real240_h264`: 960 cuadros, `fps_playback ≈ 240` (±1), `vfr_ratio ≤ 1,10`.
-   - `slowed30_h264`: **960** cuadros, `fps_playback ≈ 30`, `declared.r_frame_rate ≈ 30`.
-   - `resampled30_h264`: **≈120** cuadros (±2), `fps_playback ≈ 30`, `declared.r_frame_rate ≈ 30`.
-   - El test central: estirado y remuestreado son **indistinguibles** por
-     `r_frame_rate`, `avg_frame_rate` y `delta_median` (diferencias < 0,5 fps
-     y < 1e-4 s), y ambos con `vfr_ratio ≤ 1,10` — y el conteo de cuadros
-     (960 vs ≈120) sí los distingue.
-   - `analyze(real_duration_s=4.0)`: real → `cfr_a_tasa_de_captura`,
-     captura ≈ 240, factor ≈ 1; estirado → `estirado`, captura ≈ 240, factor
-     ≈ 8; remuestreado con `nominal_fps=240` → `destruido`, captura ≈ 30.
-   - Sin duración real → `sin_duracion_real`.
-   - `hevc120_vfr` → `vfr_ratio > 1,10`, veredicto `vfr` (skip si no hay encoder HEVC).
-   - `hevc120_rot90` → `rotation_deg == 90` y `display_size` invertido (skip
-     si el fixture no existe o ffprobe no reporta rotación).
-   - `main([..., "--json"])` → 0 y JSON parseable; clip inexistente → 2.
+### Huecos encontrados en los documentos
 
-   **`tests/test_capture_paths.py`**: carga del YAML de fixture (4 caminos,
-   `get`); `paths:` vacío o `None` → 0 caminos sin error; id repetido →
-   `ValueError`; `stretch_factor` inconsistente → `ValueError`; campo extra →
-   error (`extra="forbid"`).
+- `CONTRATO.md` decía `data/` ignorado salvo `schemas/` y `examples/`, pero
+  `capture-paths.yaml` tiene que viajar con el repo (el `.gitignore` ya lo
+  hacía). Corregido el texto. El ejemplo de `capture.json` no tenía
+  `duration_playback_s`, `original_name` ni los nueve chequeos: actualizado
+  con la salida real, y documentados `passed: null` y la convención de
+  rotación.
+- `DECISIONES.md` ADR-003 etiqueta la spec de Apple como **[pares]**; por la
+  leyenda del propio archivo es **[fabricante]**. No se tocó: es una decisión.
+- ESPECIFICACION.md 0.4 dice "codec HEVC" y el gate implementa
+  `codec_matches_path` (contra el camino). Ya estaba anotado; los tests
+  necesitan la segunda forma para los caminos sintéticos en H.264.
 
-   **`tests/test_gate.py`**
-   - `hevc120` en `test-hevc-120-cfr`, `driver`, `face_on` → `ok`;
-     `capture.json` escrito y parsea a `CaptureJson`; `sha256` coincide con el
-     original copiado; `fps_real 120`; `duration_s ≈ 4`.
-   - `real240_h264` en `test-hevc-120-cfr` → `reject`, `codec_matches_path`,
-     "H.264" en la razón.
-   - `real240_h264` en `test-h264-240-cfr` → `ok`.
-   - `slowed30_h264` en `test-h264-240-cfr` → `reject`, `fps_matches_path`.
-   - `slowed30_h264` en `test-h264-slomo-240-to-30` → `ok`, `stretch_factor 8`,
-     `duration_s ≈ 4` (no 32).
-   - `real30_h264` en `test-h264-30-cfr` → `reject`, `fps_min_for_gesture`,
-     "tiempos" en la razón.
-   - camino desconocido → `reject`, `capture_path_known`; los chequeos que
-     dependen del camino con `passed is None`.
-   - `hevc120_short` → `reject`, `duration_plausible`.
-   - `hevc120_vfr` → `reject`, `vfr_ratio_le_1_10`.
-   - vista inválida → `view_declared`; gesto inválido → `gesture_known`.
-   - `ingest_clip` dos veces → `take-01` y `take-02`; el original copiado con
-     extensión en minúsculas; un rechazo también deja carpeta y `capture.json`.
-   - `main()` del CLI: 0 en ok, 2 en rechazo, 1 si el clip no existe.
+### Lo que sólo un clip real puede verificar
 
-3. `data/capture-paths.yaml` (vacío: `schema_version` y `paths: []`),
-   `data/examples/capture-paths.example.yaml` comentado con el ejemplo de
-   `CONTRATO.md`, `docs/checklist-captura.md` imprimible derivado de
-   `CAPTURA.md`, `README.md` corto que apunte a `AGENTS.md`.
-4. `pytest` en verde. Commit. Actualizar este archivo.
-5. **Parar** y decirle al humano qué filmar, con qué ajustes, cómo transferir y
-   qué comando corre para verificar cada clip.
-
-### Riesgos conocidos del código sin probar
-
-- `count_frames` pide `frame=pts_time,best_effort_timestamp_time` en CSV; el
-  orden de columnas lo decide ffprobe. El parser toma el primer valor numérico
-  de cada línea. Verificar con un clip real que no mezcle columnas.
-- `setpts=8*PTS` + `-fps_mode passthrough` + libx264: confirmar que salen 960
-  cuadros y `r_frame_rate ≈ 30`. Si libx264 reordena o descarta, ajustar.
-- `-metadata:s:v:0 rotate=90` con `-c copy` en `.mov`: en ffmpeg 9 puede no
-  producir side data de rotación. El fixture lo tolera; el test tiene que
-  skipear si `rotation_deg == 0`.
-- El filtro `setpts='PTS+(mod(N,2)*0.003)/TB'` va entre comillas simples y se
-  pasa sin shell; si ffmpeg se queja de la coma, escaparla como `\,`.
-- `Declared.nb_frames_declared` asume que ffprobe devuelve `nb_frames` como
-  string de dígitos; en `.mov` suele venir, en otros contenedores puede faltar
-  (queda `None`, que es lo esperado).
-- `recording_date` usa `datetime.fromisoformat` sobre `creation_time`; el
-  formato de QuickTime (`2026-09-14T10:32:11.000000Z`) tiene seis decimales y
-  `Z`: se reemplaza `Z` por `+00:00`, debería parsear en 3.12. Probarlo.
+- La firma de ffprobe de un `.MOV` de iPhone: edit list, `creation_time`,
+  matriz de display en vertical (y que la convención horaria dé 90).
+- Que el gate rechace el File → Export del mismo swing (aceptación de Fase 0).
+- Los bitrates reales de 1080p120 (el presupuesto viene de un sitio comercial).
+- Si el iPhone cambia campo de visión o estabilización entre modos.
 
 ### Entorno verificado
 
-`python3.12` = 3.12.14 · `python3` = 3.9.6 (no usar) · ffmpeg / ffprobe 9.0.1 ·
-encoders `libx264`, `libx265`, `h264_videotoolbox`, `hevc_videotoolbox` ·
-`-fps_mode` disponible. Mac Apple M3 Pro (arm64).
+`python3.12` = 3.12.14 · `python3` = 3.9.6 (no usar) · ffmpeg / ffprobe 9.0.1
+con `libx264`, `libx265`, `hevc_videotoolbox` · pydantic 2.13.5 · pytest 9.1.1
+· Mac Apple M3 Pro (arm64).
 
 ### Pendiente del humano (Fase 0, pasos 0.6–0.8)
 
-- Confirmar el teléfono. El protocolo asume iPhone 17 Pro / 18 Pro (Video
-  normal a 1080p120). Con otro modelo, el cronómetro decide.
-- Un golfista, un trípode, un cronómetro con milisegundos, una mañana al aire
-  libre. Dos vistas, 10–20 swings por vista.
+Todo está en `docs/checklist-captura.md`. En resumen:
+
+1. Teléfono: HEVC, 1080p120, Mantener originales.
+2. Cronómetro: 10 s, AirDrop, `fps_truth --duracion-real <s> --nominal 120`,
+   anotar en `data/capture-paths.yaml`.
+3. Sesión: un golfista, `face_on` y `down_the_line`, 10–20 swings por vista,
+   80–90% del alto, 2–3 s quieto en address antes de cada swing. Más un clip
+   exportado con File → Export para que el gate lo rechace.
+4. `python -m kinelab.ingest` por clip. Aceptación: `gate: OK` en los buenos,
+   `RECHAZADO` con razón en el exportado.
 
 ---
 
 ## Mensaje de arranque para la próxima sesión
 
-Pegar en una sesión nueva de Claude Code abierta en `/Users/heralc/Desktop/HDDev/kinelab`.
+Pegar en una sesión nueva de Claude Code abierta en `/Users/heralc/Desktop/HDDev/kinelab`,
+**después** de haber filmado el cronómetro y la primera sesión.
 
-> Estás en `/Users/heralc/Desktop/HDDev/kinelab`, un repo recién sembrado para
-> construir `kinelab`: un motor de medición del movimiento humano a partir de
-> video de celular, agnóstico al deporte, golf primero. Antes de escribir una
-> línea, leé completos y en este orden: `AGENTS.md`, `CONTEXTO.md`,
-> `DECISIONES.md`, `ESPECIFICACION.md`, `CONTRATO.md`, `CAPTURA.md`,
-> `HERENCIA.md`, y por último `ESTADO.md`, que dice exactamente dónde quedó el
-> trabajo: la sesión anterior escribió el código de la Fase 0 pero **no lo
-> instaló, no lo probó y no escribió los tests**. Sólo pasó una verificación de
-> sintaxis. Tratalo como código no confiable hasta que los tests digan otra cosa.
+> Estás en `/Users/heralc/Desktop/HDDev/kinelab`. Antes de escribir una línea,
+> leé completos y en este orden: `AGENTS.md`, `CONTEXTO.md`, `DECISIONES.md`,
+> `ESPECIFICACION.md`, `CONTRATO.md`, `CAPTURA.md`, `HERENCIA.md`, y por último
+> `ESTADO.md`. La Fase 0 de agente está cerrada y probada (94 tests). Yo hice
+> la parte humana: hay clips reales en `data/sessions/` y el cronómetro está en
+> `data/capture-paths.yaml`.
 >
-> Respondé primero, en no más de quince líneas: qué entendiste que se construye
-> y por qué las fases van en ese orden; las contradicciones o huecos que
-> encontraste entre los documentos; y qué te llamó la atención de `ESTADO.md`
-> §Riesgos. Si nada de eso es bloqueante, seguí en la misma respuesta sin
-> esperarme.
+> Primero, en no más de diez líneas: qué dice `capture.json` de cada clip
+> real, si la Fase 0 cumple su criterio de aceptación (cada clip con
+> `fps_real` de un camino calibrado, `codec: hevc`, `vfr_ratio ≤ 1,10`, y el
+> clip exportado desde Fotos rechazado con razón legible), y qué de la lista
+> "Lo que sólo un clip real puede verificar" de `ESTADO.md` se confirmó o no.
+> Si algo no cumple, se arregla eso primero; no se empieza la Fase 1 sobre
+> clips que no pasaron el gate.
 >
-> Lo que sigue es cerrar la parte de agente de la Fase 0, en este orden:
->
-> 1. Venv con `python3.12` (el `python3` del sistema es 3.9), `pip install -e
->    ".[dev]"`, y verificar que `python -m kinelab.tools.fps_truth --help` y
->    `python -m kinelab.ingest --help` corren.
-> 2. Los tests que faltan, contra los fixtures de `tests/conftest.py`:
->    `test_fps_truth.py`, `test_capture_paths.py` y `test_gate.py` (incluida la
->    ingesta de punta a punta que crea `take-01` y después `take-02`).
->    `ESTADO.md` lista qué tiene que demostrar cada uno. El test central es el
->    que prueba que `r_frame_rate` y `avg_frame_rate` **no distinguen** el clip
->    estirado del remuestreado, y que el conteo de cuadros sí.
-> 3. `pytest`. Lo que falle se arregla en el código, no en los tests, salvo que
->    el test esté mal. Cada riesgo de `ESTADO.md` que confirmes o descartes,
->    anotalo ahí.
-> 4. `data/capture-paths.yaml` vacío con `schema_version`,
->    `data/examples/capture-paths.example.yaml` comentado,
->    `docs/checklist-captura.md` imprimible derivado de `CAPTURA.md`, y un
->    `README.md` corto que apunte a `AGENTS.md`.
-> 5. Commit con mensaje en español que diga qué cambió y por qué. Actualizar
->    `ESTADO.md`.
-> 6. **Parar.** Decime exactamente qué tengo que filmar, con qué ajustes del
->    teléfono, cómo lo transfiero y qué comando corro para verificar cada clip.
->
-> No escribas nada de pose, métricas ni interfaz: eso es la Fase 1 y necesita
-> clips reales que hayan pasado el gate. Si algo de los documentos no se puede
-> cumplir, parás y avisás; no rodeás. Y cuando termines un bloque, commit.
+> Si cumple, arrancá la **Fase 1** por el orden de la spec: 1.1 es portar de
+> `padel-coach` (rutas en `HERENCIA.md`) con atribución y tests propios; antes
+> de eso, confirmá que los dos repos de origen están accesibles y leé en su
+> repo los archivos que `HERENCIA.md` §Se porta enumera para 1.1. No propongas
+> dependencias fuera del stack de `DECISIONES.md` ADR-015 sin preguntar.
+> Commit al cerrar cada bloque; `ESTADO.md` al cerrar la sesión.

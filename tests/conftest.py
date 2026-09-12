@@ -4,7 +4,10 @@ Reproducen los tres casos que la investigación midió y que el contenedor no
 distingue: un clip a 240 fps reales, el mismo con los timestamps estirados
 ocho veces (lo que hace un slow-motion horneado), y el mismo remuestreado a 30
 (los cuadros perdidos de verdad). Más un HEVC a 120 fps para el camino "ok",
-una variante VFR, una corta y una rotada.
+una variante de tasa variable, una corta y una rotada por metadatos.
+
+Lo verificado en ffmpeg 9.0.1 al escribir estos fixtures está en ESTADO.md
+§Riesgos: qué salió como se esperaba y qué hubo que cambiar.
 """
 
 from __future__ import annotations
@@ -77,7 +80,8 @@ def clips(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Path]:
         d / "slowed30.mp4", "-i", str(real), "-vf", "setpts=8*PTS", "-fps_mode", "passthrough"
     )
 
-    # Remuestreado a 30 fps: ~120 cuadros en 4 s. Los otros 840 se perdieron.
+    # Remuestreado a 30 fps: ~120 cuadros en 4 s (ffmpeg 9 da 122). Los otros
+    # ~840 se perdieron.
     out["resampled30_h264"] = _x264(d / "resampled30.mp4", "-i", str(real), "-r", "30")
 
     # 30 fps reales desde el origen, 4 s (para el chequeo de fps mínimo).
@@ -87,16 +91,29 @@ def clips(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Path]:
         # El camino "bueno": HEVC a 120 fps, 4 s → 480 cuadros.
         h120 = _hevc(hevc, d / "hevc120.mov", "-f", "lavfi", "-i", f"testsrc2=size={SIZE}:rate=120", "-t", "4")
         out["hevc120"] = h120
-        # Tasa variable: 3 ms extra en los cuadros impares → deltas 11,3 / 5,3 ms.
-        out["hevc120_vfr"] = _hevc(
-            hevc, d / "hevc120_vfr.mov", "-i", str(h120),
-            "-vf", "setpts='PTS+(mod(N,2)*0.003)/TB'", "-fps_mode", "passthrough",
-        )
+
+        # Tasa variable: un tramo a 120 fps seguido de uno a 60, concatenados sin
+        # recodificar → deltas de 8,3 y 16,7 ms, ratio 2,0; 480 cuadros en 5 s.
+        # Meter jitter con `setpts` no alcanza: aun con `-fps_mode passthrough`,
+        # ffmpeg 9 usa 1/fps como time base del encoder y redondea cada PTS a
+        # esa grilla (medido: `-enc_time_base 1/90000` lo conserva). Ver ESTADO.md.
+        seg120 = _hevc(hevc, d / "vfr_seg120.mov", "-f", "lavfi", "-i", f"testsrc2=size={SIZE}:rate=120", "-t", "3")
+        seg60 = _hevc(hevc, d / "vfr_seg60.mov", "-f", "lavfi", "-i", f"testsrc2=size={SIZE}:rate=60", "-t", "2")
+        concat_list = d / "vfr_concat.txt"
+        concat_list.write_text(f"file '{seg120.name}'\nfile '{seg60.name}'\n", encoding="utf-8")
+        _ff("-f", "concat", "-safe", "0", "-i", str(concat_list), "-c", "copy", str(d / "hevc120_vfr.mov"))
+        out["hevc120_vfr"] = d / "hevc120_vfr.mov"
+
         # Demasiado corta: 1 s.
         out["hevc120_short"] = _hevc(hevc, d / "hevc120_short.mov", "-f", "lavfi", "-i", f"testsrc2=size={SIZE}:rate=120", "-t", "1")
-        # Rotada por metadatos, como un celular en vertical.
+
+        # Rotada por metadatos, como un celular en vertical: el cuadro se guarda
+        # 64x96 y la matriz de display pide girarlo 90° en sentido horario
+        # (ffmpeg lo expresa antihorario: -90). `-metadata:s:v rotate=90` ya no
+        # escribe nada en ffmpeg 9; `-display_rotation` con `-c copy` sí.
+        rot_base = _hevc(hevc, d / "rot_base.mov", "-f", "lavfi", "-i", "testsrc2=size=64x96:rate=120", "-t", "2")
         try:
-            _ff("-i", str(h120), "-c", "copy", "-metadata:s:v:0", "rotate=90", str(d / "hevc120_rot90.mov"))
+            _ff("-display_rotation", "-90", "-i", str(rot_base), "-c", "copy", str(d / "hevc120_rot90.mov"))
             out["hevc120_rot90"] = d / "hevc120_rot90.mov"
         except subprocess.CalledProcessError:
             pass

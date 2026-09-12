@@ -85,7 +85,7 @@ class Declared:
     codec: str
     width: int
     height: int
-    rotation_deg: int
+    rotation_deg: int  # sentido horario, 0/90/180/270; iPhone en vertical = 90
     r_frame_rate: float
     avg_frame_rate: float
     nb_frames_declared: int | None
@@ -148,11 +148,16 @@ def probe_declared(path: str | Path) -> Declared:
     s = streams[0]
     fmt = data.get("format") or {}
 
+    # Convención de `rotation_deg`: grados en sentido HORARIO que hay que girar
+    # el cuadro almacenado para verlo derecho (la del tag `rotate` histórico:
+    # un iPhone filmando en vertical da 90). ffprobe reporta la matriz de
+    # display en sentido antihorario (ese mismo clip da `rotation: -90`), así
+    # que se invierte el signo para que las dos fuentes den el mismo número.
     rotation = 0
     for side in s.get("side_data_list") or []:
         if "rotation" in side:
             try:
-                rotation = int(round(float(side["rotation"]))) % 360
+                rotation = (-int(round(float(side["rotation"])))) % 360
             except (TypeError, ValueError):
                 pass
     tags = s.get("tags") or {}
@@ -186,21 +191,30 @@ def count_frames(path: str | Path) -> Counted:
     cuántos cuadros hay de verdad. Un clip de 20 s a 120 fps tarda segundos;
     aceptable para la ingesta.
     """
+    # Salida con claves (`pts_time=0.008333|best_effort_timestamp_time=…|`):
+    # el orden de las columnas lo decide ffprobe, así que no se lee por posición.
     raw = _run(
         [
             "-select_streams", "v:0",
             "-show_entries", "frame=pts_time,best_effort_timestamp_time",
-            "-of", "csv=p=0",
+            "-of", "compact=p=0:nk=0",
             str(path),
         ]
     )
     times: list[float] = []
     for line in raw.splitlines():
-        for cell in line.split(","):
-            cell = cell.strip()
-            if cell and cell != "N/A":
+        fields: dict[str, str] = {}
+        for cell in line.split("|"):
+            key, sep, value = cell.partition("=")
+            if sep:
+                fields[key.strip()] = value.strip()
+        # pts_time es el timestamp de presentación; si falta (N/A), el mejor
+        # esfuerzo del decodificador.
+        for key in ("pts_time", "best_effort_timestamp_time"):
+            value = fields.get(key)
+            if value and value != "N/A":
                 try:
-                    times.append(float(cell))
+                    times.append(float(value))
                     break
                 except ValueError:
                     continue

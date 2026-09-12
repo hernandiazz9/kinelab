@@ -12,13 +12,15 @@ import shutil
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-SLUG = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+# Minúsculas, dígitos, guion y guion bajo (las vistas son `face_on` y
+# `down_the_line`). Empieza con letra o dígito.
+SLUG = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 MAX_TAKES = 99
 
 
 def validate_slug(value: str, what: str) -> str:
     if not SLUG.match(value):
-        raise ValueError(f"{what} inválido: '{value}'. Sólo minúsculas, dígitos y guiones, sin espacios.")
+        raise ValueError(f"{what} inválido: '{value}'. Sólo minúsculas, dígitos, guion y guion bajo, sin espacios.")
     return value
 
 
