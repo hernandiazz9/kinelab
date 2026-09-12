@@ -13,7 +13,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from kinelab.events.onset import onset_backtrack, settle_forward
-from kinelab.events.primitives import Event, direction_change, make_event, peak_window, stable_window_end, stable_window_start
+from kinelab.events.primitives import Event, direction_change, make_event, peak_window, stable_window_end, stable_window_start, stillness_signal
 from kinelab.events.segmentation import RepCandidate, SegmentationParams
 from kinelab.events.signal import principal_axis
 from kinelab.sport import SportEvents
@@ -51,6 +51,8 @@ class GolfEventParams:
     follow_still_s: float = 0.3  # quietud mínima para cerrar el follow-through
     impact_search_s: float = 0.25  # ventana alrededor del pico de velocidad de las manos para el impacto
     refine_s: float = 0.15  # cuánto se camina refinando bordes de quietud
+    still_smooth_s: float = 0.1  # mediana móvil sobre la velocidad para la prueba de quietud
+    noise_factor: float = 2.5  # umbral efectivo de quietud = max(still_speed_max, noise_factor × piso de ruido del clip)
     provenance: str = "estimacion"
     note: str = "Elegidos sin material real; recalibrar con GolfDB (2.5) y con los clips de la Fase 0."
 
@@ -67,7 +69,9 @@ def detect_golf_events(sig, cand: RepCandidate, params: GolfEventParams = GOLF_P
     Devuelve `(eventos, None)` o `({}, razón)` si la repetición no califica."""
     fps, spd, hands = sig.fps, sig.speed, sig.hands
     refine = max(1, int(round(params.refine_s * fps)))
-    end_still = stable_window_end(spd, fps, max_speed=params.still_speed_max, min_duration_s=params.still_window_s, before=cand.peak)
+    still = stillness_signal(spd, fps, params.still_smooth_s)
+    thr = max(params.still_speed_max, params.noise_factor * float(getattr(sig, "noise_floor_bh_s", 0.0) or 0.0))
+    end_still = stable_window_end(still, fps, max_speed=thr, min_duration_s=params.still_window_s, before=cand.peak)
     if end_still is None:
         return {}, "sin_address"
     address = onset_backtrack(spd, end_still, refine)
@@ -80,7 +84,7 @@ def detect_golf_events(sig, cand: RepCandidate, params: GolfEventParams = GOLF_P
     top = direction_change(proj, before=impact, after=address)
     if top is None:
         return {}, "sin_top"
-    follow = stable_window_start(spd, fps, max_speed=params.still_speed_max, min_duration_s=params.follow_still_s, after=impact)
+    follow = stable_window_start(still, fps, max_speed=thr, min_duration_s=params.follow_still_s, after=impact)
     events: dict[str, Event | None] = {
         "address": make_event("address", address, fps, tol_frames=1, method="stable_window"),
         "top": make_event("top", top, fps, tol_frames=1, method="direction_change"),

@@ -86,6 +86,7 @@ def plausibility_mask(
     elbow_range: tuple[float, float] = (20.0, 180.0),
     segment_tolerance: float = 0.35,
     min_scored_joints: int | None = None,
+    segments: tuple[str, ...] | None = None,
 ) -> tuple[np.ndarray, dict[str, int]]:
     """Máscara de plausibilidad `(T,)` uint8 y conteo de cuadros por razón.
 
@@ -134,8 +135,13 @@ def plausibility_mask(
     with np.errstate(invalid="ignore"):
         elbow_bad = (np.isfinite(elbows) & ((elbows < lo) | (elbows > hi))).any(axis=-1)
 
+    # Por defecto, muslos, piernas y tronco: brazos, línea de hombros y línea de caderas se
+    # escorzan legítimamente en un gesto (con 90° de giro la línea de hombros mide casi cero).
+    names = segments or tuple(n for n in SEGMENTS if n.startswith(("thigh", "shank", "torso")))
     segment_bad = np.zeros(n_frames, dtype=bool)
-    for length in segment_lengths(kpts).values():
+    for name, length in segment_lengths(kpts).items():
+        if name not in names:
+            continue
         valid = np.isfinite(length) & (length > 0)
         if not valid.any():
             continue

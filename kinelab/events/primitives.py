@@ -32,6 +32,20 @@ def make_event(event_id: str, frame: int, fps: float, *, tol_frames: int, method
     return Event(id=event_id, frame=int(frame), t_s=round(frame / fps, 4), tol_frames=tol_frames, uncertainty_s=round(tol_frames / fps, 5), method=method)
 
 
+def stillness_signal(speed: np.ndarray, fps: float, window_s: float = 0.1) -> np.ndarray:
+    """Velocidad con mediana móvil corta: un cuadro ruidoso no rompe una ventana de quietud."""
+    from scipy.signal import medfilt
+
+    x = np.asarray(speed, dtype=float)
+    ok = np.isfinite(x)
+    k = max(3, int(round(window_s * fps)) | 1)
+    if x.size < k:
+        return x.copy()
+    y = medfilt(np.where(ok, x, 0.0), k)
+    y[~ok] = np.nan
+    return y
+
+
 def _still(speed: np.ndarray, max_speed: float) -> np.ndarray:
     with np.errstate(invalid="ignore"):
         return np.isfinite(speed) & (speed < max_speed)
