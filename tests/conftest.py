@@ -111,7 +111,7 @@ def clips(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Path]:
         # 64x96 y la matriz de display pide girarlo 90° en sentido horario
         # (ffmpeg lo expresa antihorario: -90). `-metadata:s:v rotate=90` ya no
         # escribe nada en ffmpeg 9; `-display_rotation` con `-c copy` sí.
-        rot_base = _hevc(hevc, d / "rot_base.mov", "-f", "lavfi", "-i", "testsrc2=size=64x96:rate=120", "-t", "2")
+        rot_base = _hevc(hevc, d / "rot_base.mov", "-f", "lavfi", "-i", "testsrc2=size=64x96:rate=120", "-t", "4")
         try:
             _ff("-display_rotation", "-90", "-i", str(rot_base), "-c", "copy", str(d / "hevc120_rot90.mov"))
             out["hevc120_rot90"] = d / "hevc120_rot90.mov"

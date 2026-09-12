@@ -269,3 +269,15 @@ def build_capture_json(
         original_name=original_name,
         gate=gate,
     )
+
+
+def with_checks(gate: Gate, new: list[Check], after: str) -> Gate:
+    """Devuelve un gate nuevo con `new` insertados después del chequeo `after`
+    (reemplazando los que ya existan con el mismo id) y el veredicto recalculado.
+    No muta la entrada. Lo usa la Fase 1 para sumar sus chequeos al capture.json."""
+    new_ids = {c.id for c in new}
+    kept = [c for c in gate.checks if c.id not in new_ids]
+    pos = next((i + 1 for i, c in enumerate(kept) if c.id == after), len(kept))
+    checks = kept[:pos] + list(new) + kept[pos:]
+    reasons = [c.reason for c in checks if c.passed is False and c.reason]
+    return Gate(verdict="reject" if reasons else "ok", checks=checks, reasons=reasons)
