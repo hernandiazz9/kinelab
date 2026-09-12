@@ -9,8 +9,10 @@ const nextConfig: NextConfig = {
     return [{ source: "/api/:path*", destination: `${API}/api/:path*` }];
   },
   // Un video de 1080p120 de 30 s pesa ~85 MB y la pose tarda decenas de segundos:
-  // el proxy no puede cortar a los 30 s por defecto.
-  experimental: { proxyTimeout: 600_000 },
+  // el proxy no puede cortar a los 30 s por defecto, ni a los 10 MiB de cuerpo
+  // que Next 16 trae por defecto (medido: un .mp4 de 20 MB llegaba truncado a
+  // 10 MiB y la conexión quedaba colgada, sin error).
+  experimental: { proxyTimeout: 600_000, proxyClientMaxBodySize: "2gb" },
 };
 
 export default nextConfig;

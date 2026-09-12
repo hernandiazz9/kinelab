@@ -57,8 +57,14 @@ ampliarlo sin pixelar, ni cambiar un evento sin volver a renderizar.
 
 ### Lo que falta o no está probado
 
-- **El front nunca se vio en un navegador** (regla de trabajo): lo prueba
-  Hernán con la lista de abajo. Lo que más puede fallar sin haberlo visto: el
+- **Primera prueba de Hernán (17:28):** el video cargaba al 100 % y no pasaba
+  nada. Causa medida: el proxy de `next dev` trunca el cuerpo a los 10 MiB de
+  `experimental.proxyClientMaxBodySize` y deja la conexión colgada sin error;
+  el `.mp4` pesaba 20 MB. Subido a 2 GB en `web/next.config.ts` y verificado
+  por su propio front: 202, archivo idéntico byte a byte, 265 cuadros
+  procesados en 11,5 s. Anotado en `AGENTS.md` §Cosas que muerden.
+- **El resto del front sigue sin verse en un navegador** (regla de trabajo):
+  lo prueba Hernán con la lista de abajo. Lo que más puede fallar sin haberlo visto: el
   tamaño del recuadro del video (vertical 1080×2320: alto 78 % de la ventana),
   el aviso "pedí el cuadro n y mostró m" si el `mediaTime` no cae en `n/fps`,
   y el ancho de la tabla de 118 columnas.

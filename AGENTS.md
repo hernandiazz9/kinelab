@@ -121,3 +121,8 @@ Todas medidas, ninguna teórica. La fuente de cada una está en `HERENCIA.md`
 - **Mover el impacto dos cuadros a 60 fps cambia el codo hasta 25,6°.** Toda
   métrica anclada a un evento lleva la incertidumbre de ±1 cuadro propagada, o
   es ficción con decimales.
+- **El proxy de `next dev` corta el cuerpo a 10 MiB y no avisa.** Next 16 trae
+  `experimental.proxyClientMaxBodySize = 10mb`: un `.mp4` de 20 MB subido por
+  un rewrite llegó truncado a 10 MiB y la conexión quedó colgada, sin error en
+  ningún lado. Está subido a 2 GB en `web/next.config.ts`; si un video "carga
+  al 100 % y no pasa nada", mirar ahí primero.
