@@ -48,7 +48,7 @@ class SwingSignals:
     body_height: np.ndarray  # (T,) px
     valid: np.ndarray  # (T,) bool
     params: dict
-    noise_floor_bh_s: float = 0.0  # p25 de la velocidad de las manos: el piso de ruido del propio clip
+    noise_floor_bh_s: float = 0.0  # p10 de la velocidad quieta de las manos: el piso de ruido del propio clip
 
 
 def swing_signals(pose: PoseData, fps: float, *, cutoff_hz_max: float = 12.0, max_gap: int = 5) -> SwingSignals:
@@ -64,7 +64,13 @@ def swing_signals(pose: PoseData, fps: float, *, cutoff_hz_max: float = 12.0, ma
     cutoff = cutoff_for_fps(fps, cutoff_hz_max)
     hands = butterworth_lowpass(hands_raw, fps, cutoff_hz=cutoff)
     spd = speed(hands, fps, scale)
-    floor = float(np.nanpercentile(spd, 25)) if np.isfinite(spd).any() else 0.0
+    # Piso de ruido del clip: p10 de la velocidad con mediana móvil corta (los cuadros más
+    # quietos). p25 no sirve: en un clip corto lleno de movimiento sube hasta aceptar
+    # movimiento lento como quietud (medido en el primer clip real).
+    from kinelab.events.primitives import stillness_signal
+
+    still = stillness_signal(spd, fps, 0.1)
+    floor = float(np.nanpercentile(still, 10)) if np.isfinite(still).any() else 0.0
     return SwingSignals(fps=fps, hands_raw=hands_raw, hands=hands, speed=spd, body_height=bh, valid=np.isfinite(hands).all(axis=1), params={"filter": "butterworth", "order": 4, "cutoff_hz": cutoff, "cutoff_hz_max": cutoff_hz_max, "gap_fill_max_frames": max_gap, "speed_unit": unit, "signal": "hands_center", "noise_floor_bh_s": round(floor, 4)}, noise_floor_bh_s=floor)
 
 

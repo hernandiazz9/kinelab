@@ -47,12 +47,12 @@ ORDER = ("address", "top", "impact", "follow_end")
 @dataclass(frozen=True)
 class GolfEventParams:
     still_speed_max: float = 0.15  # alturas de cuerpo / s: por debajo, quietud
-    still_window_s: float = 0.5  # quietud mínima antes del takeaway para definir address
+    still_window_s: float = 0.3  # quietud mínima antes del takeaway para definir address (0,5 dejaba afuera un clip real que arranca ya en address; el waggle queda por ver)
     follow_still_s: float = 0.3  # quietud mínima para cerrar el follow-through
     impact_search_s: float = 0.25  # ventana alrededor del pico de velocidad de las manos para el impacto
     refine_s: float = 0.15  # cuánto se camina refinando bordes de quietud
     still_smooth_s: float = 0.1  # mediana móvil sobre la velocidad para la prueba de quietud
-    noise_factor: float = 2.5  # umbral efectivo de quietud = max(still_speed_max, noise_factor × piso de ruido del clip)
+    noise_factor: float = 2.5  # umbral efectivo de quietud = max(still_speed_max, noise_factor × piso de ruido del clip [p10])
     provenance: str = "estimacion"
     note: str = "Elegidos sin material real; recalibrar con GolfDB (2.5) y con los clips de la Fase 0."
 
