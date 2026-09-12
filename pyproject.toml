@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kinelab"
+version = "0.0.1"
+description = "Motor de medición del movimiento humano a partir de video de celular. Agnóstico al deporte."
+requires-python = ">=3.12"
+# Fase 0: sólo lo que hace falta para verificar la captura. numpy, rtmlib,
+# onnxruntime y OpenCV entran en la Fase 1, cuando haya clips reales que
+# pasen el gate (ver ESPECIFICACION.md).
+dependencies = [
+    "pydantic>=2.7",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+kinelab-fps-truth = "kinelab.tools.fps_truth:main"
+kinelab-ingest = "kinelab.ingest.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["kinelab*", "sports*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

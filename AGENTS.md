@@ -20,6 +20,10 @@ números de error medidos.
 
 Esos seis son la fuente de verdad. Este archivo no los repite ni los resume.
 
+Después de los seis, `ESTADO.md`: dice dónde quedó el trabajo al cerrar la
+última sesión y qué está escrito pero sin probar. Se actualiza al cerrar cada
+sesión.
+
 ## Acuerdo de trabajo
 
 - **Una fase por vez, en el orden que fija la spec.** No se adelanta trabajo

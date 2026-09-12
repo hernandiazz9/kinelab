@@ -1,14 +1,10 @@
 # Cómo arrancar `kinelab`
 
-## 1. Crear el repo y sembrarlo
+## 1. El repo
 
-```bash
-mkdir kinelab && cd kinelab && git init
-# copiar acá los archivos de esta carpeta: AGENTS.md, CONTEXTO.md, DECISIONES.md,
-# ESPECIFICACION.md, CONTRATO.md, CAPTURA.md, HERENCIA.md y la carpeta banco/
-echo "@AGENTS.md" > CLAUDE.md
-git add -A && git commit -m "Semilla: contrato, decisiones, spec, captura y herencia"
-```
+Ya existe en `/Users/heralc/Desktop/HDDev/kinelab`, sembrado y con sus
+primeros commits. **Para retomar trabajo empezado, el mensaje de arranque es el
+de `ESTADO.md`, no el de abajo**: el de abajo asume que no hay nada construido.
 
 `CLAUDE.md` contiene sólo `@AGENTS.md`, igual que en BMPadel: el agente lee
 `AGENTS.md` en cada sesión y ese archivo lo manda a los otros seis.
