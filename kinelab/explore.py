@@ -124,6 +124,22 @@ def per_frame_table(pose, fps: float, height_m: float | None, address: int | Non
     return names, rows
 
 
+# Las tres líneas de texto más anchas que puede haber: el tamaño de la fuente se fija
+# con ellas, no con el texto de cada cuadro, para que no cambie de un cuadro al otro.
+_TEXT_TEMPLATES = ("9999  t=999.999s   FOLLOW_END", "manos 99.99 bh/s  altura manos 999%", "tronco -180  hombros -180  caderas -180")
+
+
+def _font_scale(w: int, h: int, th: int, margin_px: int | None = None) -> float:
+    """Escala de la fuente: por el alto (h / 1400) y acotada por el ancho, para que la
+    línea más ancha entre en `w` menos los márgenes. En un video vertical de
+    1080×2320 el alto solo daba 1,66 y la tercera línea se salía por la derecha."""
+    margin = 10 * th if margin_px is None else margin_px
+    by_height = h / 1400.0
+    widest = max(cv2.getTextSize(t, cv2.FONT_HERSHEY_SIMPLEX, 1.0, th)[0][0] for t in _TEXT_TEMPLATES)
+    by_width = max(0.3, (w - 2 * margin) / widest) if widest > 0 else by_height
+    return float(min(by_height, by_width))
+
+
 def _draw(frame: np.ndarray, kp: np.ndarray, sc: np.ndarray, row: dict, label: str | None, t_s: float) -> np.ndarray:
     img = frame.copy()
     h = img.shape[0]
@@ -135,7 +151,7 @@ def _draw(frame: np.ndarray, kp: np.ndarray, sc: np.ndarray, row: dict, label: s
     for j in range(kp.shape[0]):
         if np.isfinite(kp[j]).all() and sc[j] > 0.3:
             cv2.circle(img, tuple(np.round(kp[j]).astype(int)), th + 2, (0, 0, 255) if sc[j] < 0.5 else (255, 255, 255), -1, cv2.LINE_AA)
-    fs = h / 1400.0
+    fs = _font_scale(img.shape[1], h, th)
     def put(text, x, y, color=(255, 255, 255)):
         cv2.putText(img, text, (int(x), int(y)), cv2.FONT_HERSHEY_SIMPLEX, fs, (0, 0, 0), th + 2, cv2.LINE_AA)
         cv2.putText(img, text, (int(x), int(y)), cv2.FONT_HERSHEY_SIMPLEX, fs, color, th, cv2.LINE_AA)
