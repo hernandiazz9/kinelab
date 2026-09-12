@@ -285,3 +285,15 @@ def test_run_perception_refuses_rejected_take(clips, capture_paths_yaml, tmp_pat
     with pytest.raises(PerceptionError, match="rechazó"):
         run_perception(take, GOLF, estimator=FakeEstimator(True))
     assert not (take / "pose.npz").exists()
+
+
+def test_explore_mode_writes_everything_even_without_a_person(clips, tmp_path):
+    """Modo exploración: sin gate; con el clip sintético (nadie) deja overlay, CSV y JSON igual."""
+    from kinelab.explore import explore
+
+    src = _need(clips, "hevc120")
+    r = explore(src, tmp_path / "out", GOLF, height_m=1.8, estimator=FakeEstimator(True))
+    out = tmp_path / "out"
+    assert (out / "overlay.mp4").is_file() and (out / "datos-por-cuadro.csv").is_file() and (out / "datos-eventos.json").is_file()
+    assert r["cuadros"] == 480 and "elbow_left_deg" in r["columnas"] and "pelvis_dx_vs_address_cm" in r["columnas"]
+    assert r["aviso"].startswith("EXPLORACIÓN")

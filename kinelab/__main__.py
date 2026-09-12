@@ -2,6 +2,7 @@
 
     python -m kinelab analyze TAKE_DIR [--deporte golf]
     python -m kinelab adjust TAKE_DIR --rep N --event top --frame F [--note ...]
+    python -m kinelab datos VIDEO.mp4 --altura-m 1.75      # exploración: todo dibujado y en tablas, sin gate
 """
 
 from __future__ import annotations
@@ -42,9 +43,34 @@ def main(argv: list[str] | None = None) -> int:
     j.add_argument("--frame", type=int, required=True)
     j.add_argument("--note", default="")
     j.add_argument("--altura-m", type=float, default=None)
+    x = sub.add_parser("datos", help="exploración: un video → overlay, fotos por evento, CSV por cuadro y JSON por evento")
+    x.add_argument("video", type=Path)
+    x.add_argument("--altura-m", type=float, default=None)
+    x.add_argument("--vista", default="face_on")
+    x.add_argument("--out", type=Path, default=None, help="carpeta de salida (por defecto <video>.kinelab/)")
+    x.add_argument("--cpu", action="store_true")
+    x.add_argument("--deporte", default="golf")
     args = ap.parse_args(argv)
 
     from sports import get_sport
+
+    if args.cmd == "datos":
+        from kinelab.explore import explore
+
+        try:
+            out = args.out or args.video.with_name(args.video.stem + ".kinelab")
+            r = explore(args.video, out, get_sport(args.deporte), height_m=args.altura_m, view=args.vista, cpu=args.cpu, progress=lambda i: print(f"  {i} cuadros…", file=sys.stderr) if i % 200 == 0 else None)
+        except Exception as e:  # noqa: BLE001 — modo exploración: el error se muestra entero
+            print(f"error: {e}", file=sys.stderr)
+            return 1
+        print(f"{out}")
+        print(f"  {r['cuadros']} cuadros a {r['fps_archivo']:g} fps · eventos {r['eventos_t_s']} · duraciones {r['duraciones']}")
+        print(f"  picos {r['picos']}")
+        if r["gate_diria"]:
+            print("  el gate diría: " + " · ".join(r["gate_diria"]))
+        for f in r["archivos"]:
+            print(f"  {f}")
+        return 0
 
     try:
         sport = get_sport(args.deporte)
