@@ -44,3 +44,4 @@ service = ["static/*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+pythonpath = ["."]  # tests/helpers importable como tests.helpers

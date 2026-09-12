@@ -5,6 +5,8 @@ from __future__ import annotations
 
 from kinelab.sport import PerceptionGates, SportConfig
 
+from .events import GOLF_SPORT_EVENTS
+
 GOLF = SportConfig(
     id="golf",
     # Tres gestos para empezar; se agregan cuando haya material de cada uno.
@@ -21,4 +23,6 @@ GOLF = SportConfig(
     # evaluado, y el chequeo `body_height_frac` se reporta sin veredicto.
     # Tasa de detección y una sola persona usan los defaults de CAPTURA.md.
     perception=PerceptionGates(),
+    # Eventos y segmentación (Fase 2): ver sports/golf/events.py.
+    events=GOLF_SPORT_EVENTS,
 )

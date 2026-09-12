@@ -1,0 +1,125 @@
+"""Registro declarativo de métricas (CONTRATO.md §El registro de métricas).
+
+Cada métrica es un objeto que el motor puede inspeccionar antes de calcular:
+unidad, nivel, vistas válidas, fps mínimo, a qué eventos se ancla, referencia
+con procedencia y MDC. `judgment_allowed` se deriva en código, nunca a mano.
+En la Fase 2 el registro está vacío a propósito: las métricas entran en la
+Fase 3, una por una, con su barrido en el arnés.
+"""
+
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass
+from typing import Any, Callable
+
+PROVENANCES = ("medido_aqui", "pares", "fabricante", "estimacion", "sin_verificar")
+_SLUG = re.compile(r"^[a-z][a-z0-9_]*$")
+
+
+@dataclass(frozen=True)
+class Reference:
+    kind: str  # "descriptive" | "range"
+    provenance: str  # uno de PROVENANCES
+    source: str
+    definition: str
+    range: tuple[float, float] | None = None
+
+    def __post_init__(self) -> None:
+        if self.kind not in ("descriptive", "range"):
+            raise ValueError(f"kind tiene que ser 'descriptive' o 'range': {self.kind!r}")
+        if self.provenance not in PROVENANCES:
+            raise ValueError(f"procedencia desconocida {self.provenance!r}; válidas: {PROVENANCES}")
+        if self.kind == "range":
+            if self.range is None or len(self.range) != 2 or not (self.range[0] < self.range[1]):
+                raise ValueError("una referencia 'range' necesita range=(low, high) con low < high")
+
+    @property
+    def range_width(self) -> float | None:
+        return None if self.range is None else float(self.range[1] - self.range[0])
+
+
+@dataclass(frozen=True)
+class Metric:
+    id: str
+    unit: str
+    level: int
+    views: tuple[str, ...]
+    fps_min: float
+    anchored_to: tuple[str, ...]
+    reference_frame: str
+    compute: Callable[..., Any] | None = None
+    confidence: Callable[..., Any] | None = None
+    reference: Reference | None = None
+    mdc: float | None = None
+    metric_version: str = "1.0.0"
+
+    def __post_init__(self) -> None:
+        if not _SLUG.match(self.id):
+            raise ValueError(f"id de métrica inválido: {self.id!r}")
+        if self.level not in (1, 2):
+            raise ValueError(f"{self.id}: nivel {self.level} no existe en el registro; el nivel 3 no se construye (ADR-007)")
+        if not self.views:
+            raise ValueError(f"{self.id}: una métrica declara al menos una vista válida")
+        if self.fps_min <= 0:
+            raise ValueError(f"{self.id}: fps_min tiene que ser positivo")
+        if self.mdc is not None and self.mdc <= 0:
+            raise ValueError(f"{self.id}: el MDC tiene que ser positivo")
+
+
+def judgment_allowed(metric: Metric, *, view: str, fps_real: float) -> bool:
+    """La regla del MDC, tal cual CONTRATO.md; nunca se escribe a mano."""
+    fps_min_met = fps_real >= metric.fps_min
+    ref = metric.reference
+    return (
+        metric.level == 1
+        and metric.mdc is not None
+        and fps_min_met
+        and view in metric.views
+        and (ref is None or ref.range_width is None or metric.mdc <= ref.range_width)
+    )
+
+
+def null_metric(metric: Metric, reason: str, *, view: str, fps_real: float) -> dict:
+    """El sextuplo con `value: null` y su razón (CONTRATO.md: un null nunca se omite)."""
+    return {
+        "value": None,
+        "unit": metric.unit,
+        "confidence": None,
+        "uncertainty": None,
+        "view": view,
+        "mdc": metric.mdc,
+        "level": metric.level,
+        "fps_min": metric.fps_min,
+        "fps_min_met": fps_real >= metric.fps_min,
+        "judgment_allowed": False,
+        "null_reason": reason,
+    }
+
+
+class Registry:
+    def __init__(self, version: str) -> None:
+        self.version = version
+        self._metrics: dict[str, Metric] = {}
+
+    def register(self, metric: Metric) -> Metric:
+        if metric.id in self._metrics:
+            raise ValueError(f"métrica repetida: {metric.id}")
+        self._metrics[metric.id] = metric
+        return metric
+
+    def get(self, metric_id: str) -> Metric:
+        return self._metrics[metric_id]
+
+    def ids(self) -> list[str]:
+        return list(self._metrics)
+
+    def __len__(self) -> int:
+        return len(self._metrics)
+
+    def __iter__(self):
+        return iter(self._metrics.values())
+
+
+# Vacío hasta la Fase 3: cada métrica entra con sus seis cosas (AGENTS.md).
+REGISTRY = Registry(version="0.1.0")

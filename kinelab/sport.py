@@ -8,6 +8,7 @@ armado desde el punto de entrada que corresponda.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any, Callable
 
 
 @dataclass(frozen=True)
@@ -41,6 +42,21 @@ class PerceptionGates:
 
 
 @dataclass(frozen=True)
+class SportEvents:
+    """Lo que el motor necesita de un deporte para segmentar y detectar eventos
+    (Fase 2). Las definiciones, los parámetros y el detector son del deporte;
+    el motor sólo los invoca."""
+
+    definitions: tuple[Any, ...]  # EventDef del deporte, con su definición textual
+    order: tuple[str, ...]  # ids de los eventos detectados, en orden temporal
+    segmentation: Any  # kinelab.events.segmentation.SegmentationParams
+    params: Any  # dataclass con los parámetros del detector (se guarda en analysis.json)
+    # (SwingSignals, RepCandidate) -> (dict[id, Event | None], razón de descarte | None)
+    detect: Callable[[Any, Any], tuple[dict[str, Any], str | None]]
+    cutoff_hz_max: float = 12.0
+
+
+@dataclass(frozen=True)
 class SportConfig:
     id: str
     # Gestos que se pueden declarar en la ingesta. Cada uno tendrá, en la Fase 2,
@@ -54,6 +70,8 @@ class SportConfig:
     # Umbrales de los chequeos de percepción (Fase 1). Con default para que una
     # config de la Fase 0 (id, gestures, views, fps_min) siga construyendo.
     perception: PerceptionGates = field(default_factory=PerceptionGates)
+    # Eventos y segmentación (Fase 2). None = el deporte todavía no los define.
+    events: SportEvents | None = None
 
     def __post_init__(self) -> None:
         if not self.gestures:

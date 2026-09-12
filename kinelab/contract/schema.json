@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "kinelab analysis.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["header", "quality", "events", "reps", "summary", "series", "warnings", "deviations"],
+  "properties": {
+    "header": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "engine_version", "registry_version", "generated_at", "source", "sport", "gesture", "view"],
+      "properties": {
+        "schema_version": {"type": "string"}, "engine_version": {"type": "string"}, "registry_version": {"type": "string"},
+        "generated_at": {"type": "string"}, "sport": {"type": "string"}, "gesture": {"type": "string"}, "view": {"type": "string"},
+        "source": {
+          "type": "object", "additionalProperties": false,
+          "required": ["pose_sha256", "master_sha256", "capture_path_id", "fps_real"],
+          "properties": {"pose_sha256": {"type": "string"}, "master_sha256": {"type": ["string", "null"]}, "capture_path_id": {"type": "string"}, "fps_real": {"type": "number"}}
+        }
+      }
+    },
+    "quality": {
+      "type": "object", "additionalProperties": false,
+      "required": ["detection_rate", "body_height_px", "blur_estimate", "plausibility", "camera_motion_px", "verdict", "reasons"],
+      "properties": {
+        "detection_rate": {"type": "number"},
+        "body_height_px": {
+          "type": "object", "additionalProperties": false, "required": ["median", "min", "max", "frac_of_frame"],
+          "properties": {"median": {"type": ["number", "null"]}, "min": {"type": ["number", "null"]}, "max": {"type": ["number", "null"]}, "frac_of_frame": {"type": ["number", "null"]}}
+        },
+        "blur_estimate": {"type": ["number", "null"]},
+        "plausibility": {
+          "type": "object", "additionalProperties": false, "required": ["rejected_frames", "by_reason"],
+          "properties": {"rejected_frames": {"type": "integer"}, "by_reason": {"type": "object", "additionalProperties": {"type": "integer"}}}
+        },
+        "camera_motion_px": {"type": ["number", "null"]},
+        "verdict": {"type": "string", "enum": ["confiable", "con_reservas", "no_usar"]},
+        "reasons": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["rep", "address", "top", "impact", "follow_end", "sequence_order"],
+        "properties": {
+          "rep": {"type": "integer"},
+          "address": {"$event": true}, "top": {"$event": true}, "impact": {"$event": true}, "follow_end": {"$event": true},
+          "sequence_order": {"type": "string"}
+        }
+      }
+    },
+    "reps": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["rep", "frame_start", "frame_end", "t_start", "t_end", "peak_speed_bh_s", "metrics"],
+        "properties": {
+          "rep": {"type": "integer"}, "frame_start": {"type": "integer"}, "frame_end": {"type": "integer"},
+          "t_start": {"type": "number"}, "t_end": {"type": "number"}, "peak_speed_bh_s": {"type": ["number", "null"]},
+          "metrics": {"type": "object", "additionalProperties": {"$metric": true}}
+        }
+      }
+    },
+    "summary": {
+      "type": "object", "additionalProperties": false,
+      "required": ["rep_count", "reps_rejected", "metrics", "gain"],
+      "properties": {
+        "rep_count": {"type": "integer"},
+        "reps_rejected": {"type": "object", "additionalProperties": false, "required": ["count", "reasons"], "properties": {"count": {"type": "integer"}, "reasons": {"type": "object", "additionalProperties": {"type": "integer"}}}},
+        "metrics": {"type": "object"},
+        "gain": {"type": "object"}
+      }
+    },
+    "series": {
+      "type": "object", "additionalProperties": false,
+      "required": ["t", "hands_speed_bh_s", "params"],
+      "properties": {
+        "t": {"type": "array", "items": {"type": "number"}},
+        "hands_speed_bh_s": {"type": "array", "items": {"type": ["number", "null"]}},
+        "params": {"type": "object"}
+      }
+    },
+    "warnings": {"type": "array", "items": {"type": "string"}},
+    "deviations": {"type": "array", "items": {"type": "object"}}
+  },
+  "$defs": {
+    "event": {
+      "type": ["object", "null"], "additionalProperties": false,
+      "required": ["id", "frame", "t_s", "tol_frames", "uncertainty_s", "method", "manual", "frame_detected"],
+      "properties": {
+        "id": {"type": "string"}, "frame": {"type": "integer"}, "t_s": {"type": "number"}, "tol_frames": {"type": "integer"},
+        "uncertainty_s": {"type": "number"}, "method": {"type": "string"}, "manual": {"type": "boolean"}, "frame_detected": {"type": ["integer", "null"]}
+      }
+    },
+    "metric": {
+      "type": "object", "additionalProperties": false,
+      "required": ["value", "unit", "confidence", "uncertainty", "view", "mdc", "level", "fps_min", "fps_min_met", "judgment_allowed", "null_reason"],
+      "properties": {
+        "value": {"type": ["number", "null"]}, "unit": {"type": "string"}, "confidence": {"type": ["object", "null"]}, "uncertainty": {"type": ["object", "null"]},
+        "view": {"type": "string"}, "mdc": {"type": ["number", "null"]}, "level": {"type": "integer", "enum": [1, 2]}, "fps_min": {"type": "number"},
+        "fps_min_met": {"type": "boolean"}, "judgment_allowed": {"type": "boolean"}, "null_reason": {"type": ["string", "null"]}
+      }
+    }
+  }
+}

@@ -1,0 +1,273 @@
+{
+  "header": {
+    "schema_version": "1.0.0",
+    "engine_version": "0.0.1",
+    "registry_version": "0.1.0",
+    "generated_at": "2026-09-12T12:00:00+00:00",
+    "source": {
+      "pose_sha256": "ae3a0c96891da288c198a9fa2a0e3e73bf2f390423d56f48328409e7fb1334fe",
+      "master_sha256": null,
+      "capture_path_id": "iphone17pro-video-1080p120-airdrop",
+      "fps_real": 120.0
+    },
+    "sport": "golf",
+    "gesture": "driver",
+    "view": "face_on"
+  },
+  "quality": {
+    "detection_rate": 1.0,
+    "body_height_px": {
+      "median": 900.0,
+      "min": 890.0,
+      "max": 910.0,
+      "frac_of_frame": 0.833
+    },
+    "blur_estimate": null,
+    "plausibility": {
+      "rejected_frames": 0,
+      "by_reason": {
+        "LOW_SCORE": 0,
+        "ELBOW_RANGE": 0,
+        "SEGMENT_LENGTH": 0,
+        "MISSING": 0
+      }
+    },
+    "camera_motion_px": 0.03,
+    "verdict": "confiable",
+    "reasons": []
+  },
+  "events": [
+    {
+      "rep": 1,
+      "address": {
+        "id": "address",
+        "frame": 118,
+        "t_s": 0.9833,
+        "tol_frames": 1,
+        "uncertainty_s": 0.00833,
+        "method": "stable_window",
+        "manual": false,
+        "frame_detected": null
+      },
+      "top": {
+        "id": "top",
+        "frame": 228,
+        "t_s": 1.9,
+        "tol_frames": 1,
+        "uncertainty_s": 0.00833,
+        "method": "direction_change",
+        "manual": false,
+        "frame_detected": null
+      },
+      "impact": {
+        "id": "impact",
+        "frame": 284,
+        "t_s": 2.3667,
+        "tol_frames": 1,
+        "uncertainty_s": 0.00833,
+        "method": "peak_window",
+        "manual": false,
+        "frame_detected": null
+      },
+      "follow_end": {
+        "id": "follow_end",
+        "frame": 334,
+        "t_s": 2.7833,
+        "tol_frames": 2,
+        "uncertainty_s": 0.01667,
+        "method": "stable_window",
+        "manual": false,
+        "frame_detected": null
+      },
+      "sequence_order": "sin_datos"
+    },
+    {
+      "rep": 2,
+      "address": {
+        "id": "address",
+        "frame": 811,
+        "t_s": 6.7583,
+        "tol_frames": 1,
+        "uncertainty_s": 0.00833,
+        "method": "stable_window",
+        "manual": false,
+        "frame_detected": null
+      },
+      "top": {
+        "id": "top",
+        "frame": 920,
+        "t_s": 7.6667,
+        "tol_frames": 1,
+        "uncertainty_s": 0.00833,
+        "method": "direction_change",
+        "manual": false,
+        "frame_detected": null
+      },
+      "impact": {
+        "id": "impact",
+        "frame": 976,
+        "t_s": 8.1333,
+        "tol_frames": 1,
+        "uncertainty_s": 0.00833,
+        "method": "peak_window",
+        "manual": false,
+        "frame_detected": null
+      },
+      "follow_end": {
+        "id": "follow_end",
+        "frame": 1027,
+        "t_s": 8.5583,
+        "tol_frames": 2,
+        "uncertainty_s": 0.01667,
+        "method": "stable_window",
+        "manual": false,
+        "frame_detected": null
+      },
+      "sequence_order": "sin_datos"
+    },
+    {
+      "rep": 3,
+      "address": {
+        "id": "address",
+        "frame": 1503,
+        "t_s": 12.525,
+        "tol_frames": 1,
+        "uncertainty_s": 0.00833,
+        "method": "stable_window",
+        "manual": false,
+        "frame_detected": null
+      },
+      "top": {
+        "id": "top",
+        "frame": 1612,
+        "t_s": 13.4333,
+        "tol_frames": 1,
+        "uncertainty_s": 0.00833,
+        "method": "direction_change",
+        "manual": false,
+        "frame_detected": null
+      },
+      "impact": {
+        "id": "impact",
+        "frame": 1669,
+        "t_s": 13.9083,
+        "tol_frames": 1,
+        "uncertainty_s": 0.00833,
+        "method": "peak_window",
+        "manual": false,
+        "frame_detected": null
+      },
+      "follow_end": {
+        "id": "follow_end",
+        "frame": 1719,
+        "t_s": 14.325,
+        "tol_frames": 2,
+        "uncertainty_s": 0.01667,
+        "method": "stable_window",
+        "manual": false,
+        "frame_detected": null
+      },
+      "sequence_order": "sin_datos"
+    }
+  ],
+  "reps": [
+    {
+      "rep": 1,
+      "frame_start": 118,
+      "frame_end": 334,
+      "t_start": 0.9833,
+      "t_end": 2.7833,
+      "peak_speed_bh_s": 1.383,
+      "metrics": {}
+    },
+    {
+      "rep": 2,
+      "frame_start": 811,
+      "frame_end": 1027,
+      "t_start": 6.7583,
+      "t_end": 8.5583,
+      "peak_speed_bh_s": 1.383,
+      "metrics": {}
+    },
+    {
+      "rep": 3,
+      "frame_start": 1503,
+      "frame_end": 1719,
+      "t_start": 12.525,
+      "t_end": 14.325,
+      "peak_speed_bh_s": 1.383,
+      "metrics": {}
+    }
+  ],
+  "summary": {
+    "rep_count": 3,
+    "reps_rejected": {
+      "count": 0,
+      "reasons": {}
+    },
+    "metrics": {},
+    "gain": {}
+  },
+  "series": {
+    "t": [
+      0.0,
+      0.1,
+      0.2,
+      0.3,
+      0.4,
+      0.5,
+      0.6,
+      0.7,
+      0.8,
+      0.9,
+      1.0,
+      1.1
+    ],
+    "hands_speed_bh_s": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0002,
+      0.0151,
+      0.2924
+    ],
+    "params": {
+      "filter": "butterworth",
+      "order": 4,
+      "cutoff_hz": 12.0,
+      "cutoff_hz_max": 12.0,
+      "gap_fill_max_frames": 5,
+      "speed_unit": "body_heights",
+      "signal": "hands_center",
+      "segmentation": {
+        "min_gap_s": 2.0,
+        "prominence_floor": 0.5,
+        "max_speed": 15.0,
+        "sharpness_min": 2.2,
+        "sharpness_window_s": 3.0,
+        "lookback_s": 2.0,
+        "lookahead_s": 1.5
+      },
+      "events": {
+        "still_speed_max": 0.15,
+        "still_window_s": 0.5,
+        "follow_still_s": 0.3,
+        "impact_search_s": 0.25,
+        "refine_s": 0.15,
+        "provenance": "estimacion",
+        "note": "Elegidos sin material real; recalibrar con GolfDB (2.5) y con los clips de la Fase 0."
+      },
+      "series_hz": 10.0
+    }
+  },
+  "warnings": [
+    "Ejemplo generado desde un swing SINTÉTICO (tests/helpers/synth_swing.py): sirve para el schema, no como referencia de valores."
+  ],
+  "deviations": []
+}
