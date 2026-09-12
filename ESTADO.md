@@ -3,12 +3,12 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
-## 12 de septiembre de 2026 — tercera sesión: Fases 1 y 2 construidas sin material real
+## 12 de septiembre de 2026 — tercera sesión: Fases 1, 2 y 3 construidas sin material real
 
 ### Desviación de proceso, anotada
 
 A pedido explícito del entrenador ("avanzá full en las fases"), se construyó
-código de las Fases 1 y 2 **sin clips reales que hayan pasado el gate**, contra
+código de las Fases 1, 2 y 3 **sin clips reales que hayan pasado el gate**, contra
 lo que fija `ESPECIFICACION.md` ("una fase por vez", "material antes que
 código"). Se hizo con datos sintéticos y con un clip heredado de pádel para
 probar la cadena de percepción. Todo criterio de aceptación que necesita
@@ -23,8 +23,11 @@ sin producir nada).
 - `e1b4b89` `service/`: página HTML local para pasar clips por el gate
   (adelanto de 4.3 a pedido). `python -m service` → http://127.0.0.1:8765.
 - `ed2b865` Fase 1: `kinelab/perception/` completo, `python -m kinelab.perception`.
-- Este commit — Fase 2: `kinelab/events/`, `kinelab/contract/`,
+- `5f7efaa` Fase 2: `kinelab/events/`, `kinelab/contract/`,
   `kinelab/metrics/registry.py`, `sports/golf/events.py`, `python -m kinelab analyze|adjust`.
+- Fase 3: `kinelab/metrics/` (sextuplo, ±1 cuadro, repetibilidad, ganancia),
+  `sports/golf/metrics.py` + `sports/golf/mdc.yaml`, `truth/` (arnés con su venv),
+  `truth/reports/mdc-2026-09-12.json`.
 
 ### Qué hay, qué prueba cada cosa
 
@@ -37,7 +40,9 @@ sin producir nada).
 | Percepción | `.venv/bin/python -m kinelab.perception TAKE_DIR [--cpu] [--overwrite]` | estimador falso (tests) + **una corrida real** sobre `padel-coach/samples/demo_h264.mp4`: 230 cuadros en 10 s con CoreML, 82 % de detección, gate rechaza por varias personas (correcto) |
 | Análisis | `.venv/bin/python -m kinelab analyze TAKE_DIR` | swing sintético (`tests/helpers/synth_swing.py`) |
 | Corrección manual | `.venv/bin/python -m kinelab adjust TAKE_DIR --rep 1 --event top --frame F` | sintético; round-trip y colisión |
-| Suite | `.venv/bin/pytest -q` | 164 tests en verde, ~10 s |
+| Arnés de verdad | `cd truth && .venv/bin/python -m kinelab_truth` (12 s) | escribe `sports/golf/mdc.yaml` y `truth/reports/`; tests: `cd truth && .venv/bin/pytest -q` (4) |
+| Calibrar la cámara real | `cd truth && .venv/bin/python -m kinelab_truth.calibrate FOTOS --cols 9 --rows 6 --square-mm 25 --id iphone17pro-1080p120 --out cameras/iphone17pro-1080p120.yaml` | sin correr: necesita fotos de un tablero con el teléfono |
+| Suite | `.venv/bin/pytest -q` | 165 tests en verde, ~9 s |
 
 ### Decisiones tomadas al codificar (no estaban en los documentos)
 
@@ -72,6 +77,23 @@ sin producir nada).
 - ffmpeg 9: aun con `-fps_mode passthrough`, redondea los PTS al time base del
   encoder (1/fps); `-enc_time_base 1/90000` los conserva. Importa para la
   Fase 4 (master.mp4) y para cualquier retiming.
+- **Métricas en cm** necesitan la altura declarada del atleta
+  (`data/athletes/<slug>.yaml` con `altura_m`, o `--altura-m`); sin ella
+  quedan en `null` con razón. La conversión usa la altura del cuerpo en px del
+  cuadro de address.
+- **Tabla del arnés (nivel 0, cámara `sin_verificar`, ruido 0,6 % de la altura
+  del cuerpo, 16 semillas):** duraciones MDC ≈ 13 ms a 240 fps y `fps_min`
+  120; sway/lift/thrust MDC 2,5–4,5 cm por repetición; sway sólo `face_on`,
+  thrust sólo `down_the_line`, lifts ambas; **las deltas de flexión de rodilla
+  mueren** (declaradas en `face_on`, la flexión ocurre en profundidad). Las
+  tolerancias de sesgo (2 cm, 25 ms, 5°) y de MDC (5 cm, 30 ms, 15°) son
+  estimaciones declaradas en `truth/kinelab_truth/harness.py`. El arnés sólo
+  puede quitar vistas de las que el deporte declara, nunca agregar.
+- La ganancia de velocidad angular (pelvis→tórax→brazo) se calcula desde el
+  giro aparente de las líneas de cadera/hombros en el plano de imagen; NO está
+  validada por el arnés (no es una métrica registrada) y desde `face_on` la
+  rotación axial se ve como escorzo, no como giro: sospechosa. Queda en
+  `summary.gain` como descriptiva hasta que el arnés la evalúe.
 
 ### Lo que sólo material real puede cerrar (abierto)
 
@@ -84,6 +106,9 @@ sin producir nada).
   (`kinelab.tools.golfdb_eval`), el dataset no está descargado; todos los
   parámetros de `GolfEventParams` y `GOLF_SEGMENTATION` son estimaciones.
 - La página `service/` no se abrió en un navegador: **probarla vos** (abajo).
+- Fase 3: intrínsecos reales del teléfono (tablero); nivel 1 de validación
+  (movimiento humano real) y SynthPose; oclusión y desenfoque no están en el
+  barrido; mutation manual de la invariante 15 no hecha sistemáticamente.
 
 ### Para que pruebes vos (cuando quieras)
 
@@ -104,10 +129,10 @@ scipy 1.18.1 · pydantic 2.13.5 · fastapi 0.141.1 · Mac Apple M3 Pro.
 
 ### Siguiente
 
-Fase 3: `truth/` con su propio entorno (cadena cinemática de de Leva, cámara
-pinhole con intrínsecos declarados como `sin_verificar` hasta calibrar el
-teléfono real, barridos) y las métricas de nivel 1 con su MDC. El swing
-sintético de `tests/helpers/synth_swing.py` es la semilla del swing paramétrico.
+Con clips reales: pasarlos por percepción y análisis, medir el umbral de
+encuadre, calibrar la cámara con tablero y re-correr el arnés. Sin clips: Fase 4
+(servicio con jobs, `master.mp4` H.264 CFR, visor desde datos sobre
+`service/`), y evaluar la ganancia en el arnés.
 
 ---
 
@@ -118,5 +143,5 @@ sintético de `tests/helpers/synth_swing.py` es la semilla del swing paramétric
 > `HERENCIA.md` y por último `ESTADO.md`. Regla de trabajo: creá con tests
 > mínimos, sin navegador ni subagentes; yo pruebo el front y las corridas
 > reales. Si hay clips reales en `data/sessions/`, empezá por pasarlos por
-> percepción y análisis y decime qué sale. Si no, seguí con la Fase 3 según
+> percepción y análisis y decime qué sale. Si no, seguí con la Fase 4 según
 > `ESTADO.md` §Siguiente. Commit al cerrar cada bloque; `ESTADO.md` al cerrar.
