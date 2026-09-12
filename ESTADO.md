@@ -12,10 +12,11 @@ código de las Fases 1, 2 y 3 **sin clips reales que hayan pasado el gate**, con
 lo que fija `ESPECIFICACION.md` ("una fase por vez", "material antes que
 código"). Se hizo con datos sintéticos y con un clip heredado de pádel para
 probar la cadena de percepción. Todo criterio de aceptación que necesita
-material real sigue **abierto** y está listado abajo. Regla de trabajo nueva:
-el agente crea con tests mínimos; el entrenador prueba el front y las corridas
-reales. Sin navegador ni workflows de subagentes (quemaron el límite de sesión
-sin producir nada).
+material real sigue **abierto** y está listado abajo. Regla de trabajo:
+el agente trabaja normal (pruebas de funcionalidad con corridas reales, tests,
+subagentes y workflows cuando convengan); lo único que NO hace es levantar el
+front y verlo en el navegador con capturas, salvo pedido explícito. El front
+lo prueba el entrenador.
 
 ### Commits de esta sesión
 
@@ -148,8 +149,9 @@ encuadre, calibrar la cámara con tablero y re-correr el arnés. Sin clips: Fase
 
 > Estás en `/Users/heralc/Desktop/HDDev/kinelab`. Leé `AGENTS.md`, `CONTEXTO.md`,
 > `DECISIONES.md`, `ESPECIFICACION.md`, `CONTRATO.md`, `CAPTURA.md`,
-> `HERENCIA.md` y por último `ESTADO.md`. Regla de trabajo: creá con tests
-> mínimos, sin navegador ni subagentes; yo pruebo el front y las corridas
-> reales. Si hay clips reales en `data/sessions/`, empezá por pasarlos por
+> `HERENCIA.md` y por último `ESTADO.md`. Regla de trabajo: trabajá normal
+> (probá la funcionalidad, usá subagentes y workflows si convienen); lo único
+> que no hacés es levantar el front y verlo en el navegador con capturas,
+> salvo que yo lo pida: el front lo pruebo yo. Si hay clips reales en `data/sessions/`, empezá por pasarlos por
 > percepción y análisis y decime qué sale. Si no, seguí con la Fase 4 según
 > `ESTADO.md` §Siguiente. Commit al cerrar cada bloque; `ESTADO.md` al cerrar.
