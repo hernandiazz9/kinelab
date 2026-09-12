@@ -42,7 +42,8 @@ sin producir nada).
 | Corrección manual | `.venv/bin/python -m kinelab adjust TAKE_DIR --rep 1 --event top --frame F` | sintético; round-trip y colisión |
 | Arnés de verdad | `cd truth && .venv/bin/python -m kinelab_truth` (12 s) | escribe `sports/golf/mdc.yaml` y `truth/reports/`; tests: `cd truth && .venv/bin/pytest -q` (4) |
 | Calibrar la cámara real | `cd truth && .venv/bin/python -m kinelab_truth.calibrate FOTOS --cols 9 --rows 6 --square-mm 25 --id iphone17pro-1080p120 --out cameras/iphone17pro-1080p120.yaml` | sin correr: necesita fotos de un tablero con el teléfono |
-| Suite | `.venv/bin/pytest -q` | 165 tests en verde, ~9 s |
+| Modo exploración | `.venv/bin/python -m kinelab datos VIDEO --altura-m 1.75` | probado con dos clips reales de Hernán (WhatsApp 29 fps y un vertical de iPhone 30 fps): overlay, fotos por evento, CSV por cuadro y JSON por evento |
+| Suite | `.venv/bin/pytest -q` | 166 tests en verde, ~9 s |
 
 ### Decisiones tomadas al codificar (no estaban en los documentos)
 
@@ -128,6 +129,13 @@ sin producir nada).
 scipy 1.18.1 · pydantic 2.13.5 · fastapi 0.141.1 · Mac Apple M3 Pro.
 
 ### Siguiente
+
+**Interfaz de exploración** (pedido de Hernán): una pantalla con un botón para
+subir un video, que corra `python -m kinelab datos` y muestre el `overlay.mp4`
+con un reproductor con cámara lenta y cuadro a cuadro, las fotos por evento y
+toda la data en tablas. El prompt completo para esa sesión está en
+`docs/prompts/interfaz-exploracion.md`. La página actual de `service/` no le
+sirve y se reemplaza por una app Next.js en `web/`.
 
 Con clips reales: pasarlos por percepción y análisis, medir el umbral de
 encuadre, calibrar la cámara con tablero y re-correr el arnés. Sin clips: Fase 4
