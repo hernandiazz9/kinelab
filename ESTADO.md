@@ -132,3 +132,52 @@ encoders `libx264`, `libx265`, `h264_videotoolbox`, `hevc_videotoolbox` ·
   normal a 1080p120). Con otro modelo, el cronómetro decide.
 - Un golfista, un trípode, un cronómetro con milisegundos, una mañana al aire
   libre. Dos vistas, 10–20 swings por vista.
+
+---
+
+## Mensaje de arranque para la próxima sesión
+
+Pegar en una sesión nueva de Claude Code abierta en `/Users/heralc/Desktop/HDDev/kinelab`.
+
+> Estás en `/Users/heralc/Desktop/HDDev/kinelab`, un repo recién sembrado para
+> construir `kinelab`: un motor de medición del movimiento humano a partir de
+> video de celular, agnóstico al deporte, golf primero. Antes de escribir una
+> línea, leé completos y en este orden: `AGENTS.md`, `CONTEXTO.md`,
+> `DECISIONES.md`, `ESPECIFICACION.md`, `CONTRATO.md`, `CAPTURA.md`,
+> `HERENCIA.md`, y por último `ESTADO.md`, que dice exactamente dónde quedó el
+> trabajo: la sesión anterior escribió el código de la Fase 0 pero **no lo
+> instaló, no lo probó y no escribió los tests**. Sólo pasó una verificación de
+> sintaxis. Tratalo como código no confiable hasta que los tests digan otra cosa.
+>
+> Respondé primero, en no más de quince líneas: qué entendiste que se construye
+> y por qué las fases van en ese orden; las contradicciones o huecos que
+> encontraste entre los documentos; y qué te llamó la atención de `ESTADO.md`
+> §Riesgos. Si nada de eso es bloqueante, seguí en la misma respuesta sin
+> esperarme.
+>
+> Lo que sigue es cerrar la parte de agente de la Fase 0, en este orden:
+>
+> 1. Venv con `python3.12` (el `python3` del sistema es 3.9), `pip install -e
+>    ".[dev]"`, y verificar que `python -m kinelab.tools.fps_truth --help` y
+>    `python -m kinelab.ingest --help` corren.
+> 2. Los tests que faltan, contra los fixtures de `tests/conftest.py`:
+>    `test_fps_truth.py`, `test_capture_paths.py` y `test_gate.py` (incluida la
+>    ingesta de punta a punta que crea `take-01` y después `take-02`).
+>    `ESTADO.md` lista qué tiene que demostrar cada uno. El test central es el
+>    que prueba que `r_frame_rate` y `avg_frame_rate` **no distinguen** el clip
+>    estirado del remuestreado, y que el conteo de cuadros sí.
+> 3. `pytest`. Lo que falle se arregla en el código, no en los tests, salvo que
+>    el test esté mal. Cada riesgo de `ESTADO.md` que confirmes o descartes,
+>    anotalo ahí.
+> 4. `data/capture-paths.yaml` vacío con `schema_version`,
+>    `data/examples/capture-paths.example.yaml` comentado,
+>    `docs/checklist-captura.md` imprimible derivado de `CAPTURA.md`, y un
+>    `README.md` corto que apunte a `AGENTS.md`.
+> 5. Commit con mensaje en español que diga qué cambió y por qué. Actualizar
+>    `ESTADO.md`.
+> 6. **Parar.** Decime exactamente qué tengo que filmar, con qué ajustes del
+>    teléfono, cómo lo transfiero y qué comando corro para verificar cada clip.
+>
+> No escribas nada de pose, métricas ni interfaz: eso es la Fase 1 y necesita
+> clips reales que hayan pasado el gate. Si algo de los documentos no se puede
+> cumplir, parás y avisás; no rodeás. Y cuando termines un bloque, commit.
