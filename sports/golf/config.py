@@ -3,9 +3,10 @@ las Fases 2 y 3, con sus barridos en el arnés."""
 
 from __future__ import annotations
 
-from kinelab.sport import PerceptionGates, SportConfig
+from kinelab.sport import PerceptionGates, SportConfig, SportMetrics
 
 from .events import GOLF_SPORT_EVENTS
+from .metrics import GAIN_SEGMENTS, JOINTS, REGISTRY
 
 GOLF = SportConfig(
     id="golf",
@@ -25,4 +26,6 @@ GOLF = SportConfig(
     perception=PerceptionGates(),
     # Eventos y segmentación (Fase 2): ver sports/golf/events.py.
     events=GOLF_SPORT_EVENTS,
+    # Métricas de nivel 1 (Fase 3): ver sports/golf/metrics.py y sports/golf/mdc.yaml.
+    metrics=SportMetrics(registry=REGISTRY, joints=JOINTS, gain_segments=GAIN_SEGMENTS),
 )

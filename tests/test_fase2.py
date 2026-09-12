@@ -149,3 +149,21 @@ def test_repo_example_is_valid():
     if not p.is_file():
         pytest.skip("todavía no se generó el ejemplo")
     assert validate_analysis(json.loads(p.read_text(encoding="utf-8"))) == []
+
+
+def test_metrics_in_analysis(clips, capture_paths_yaml, tmp_path):
+    take, sw = _synthetic_take(clips, capture_paths_yaml, tmp_path)
+    a = analyze_take(take, GOLF, write=True, height_m=1.80)
+    assert validate_analysis(json.loads((take / "analysis.json").read_text())) == []
+    m = a["reps"][0]["metrics"]
+    bs = m["backswing_duration_ms"]
+    assert abs(bs["value"] - 900.0) <= 25 and bs["unit"] == "ms" and bs["null_reason"] is None
+    assert bs["judgment_allowed"] is (bs["mdc"] is not None), "juicio sólo con MDC de la tabla del arnés"
+    assert bs["uncertainty"]["low"] < bs["value"] < bs["uncertainty"]["high"]
+    assert m["pelvis_thrust_top_cm"]["value"] is None and "down_the_line" in m["pelvis_thrust_top_cm"]["null_reason"]
+    assert abs(m["pelvis_sway_top_cm"]["value"]) < 1.0, "la pelvis sintética no se mueve"
+    assert a["summary"]["metrics"]["backswing_duration_ms"]["repeatability"]["kind"] == "sd_abs"
+    assert a["summary"]["metrics"]["hands_speed_curve_top_to_impact"]["repeatability"]["n"] == 2
+    assert "pelvis_to_torso" in a["summary"]["gain"]
+    b = analyze_take(take, GOLF, write=False)
+    assert b["reps"][0]["metrics"]["pelvis_sway_top_cm"]["value"] is None and "altura" in b["reps"][0]["metrics"]["pelvis_sway_top_cm"]["null_reason"]

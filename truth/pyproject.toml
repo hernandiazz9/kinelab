@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kinelab-truth"
+version = "0.0.1"
+description = "Arnés de verdad de kinelab: esqueleto paramétrico proyectado con cámara virtual, barridos, sesgo/LoA/MDC por métrica."
+requires-python = ">=3.12"
+# Entorno propio (CONTEXTO.md, invariante 14). kinelab es el sistema bajo prueba:
+#   cd truth && python3.12 -m venv .venv && .venv/bin/pip install -e .. -e ".[dev]"
+dependencies = ["numpy>=2.0", "scipy>=1.14", "pyyaml>=6.0", "opencv-python==4.14.0.94", "kinelab"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[tool.setuptools.packages.find]
+include = ["kinelab_truth*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

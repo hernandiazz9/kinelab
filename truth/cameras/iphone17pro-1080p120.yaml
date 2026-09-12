@@ -1,0 +1,13 @@
+# Intrínsecos de la cámara. PROCEDENCIA: estimacion (sin_verificar) — derivados
+# del campo de visión nominal (~67° horizontal) de la cámara principal a 1080p.
+# Se reemplazan con `python -m kinelab_truth.calibrate` sobre fotos de un
+# tablero de ajedrez con el teléfono real (ESPECIFICACION 3.1).
+id: iphone17pro-1080p120
+width: 1920
+height: 1080
+fx: 1450.0
+fy: 1450.0
+cx: 960.0
+cy: 540.0
+dist: [0.0, 0.0, 0.0, 0.0, 0.0]   # k1 k2 p1 p2 k3, formato OpenCV
+provenance: sin_verificar

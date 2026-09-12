@@ -1,0 +1,7703 @@
+{
+ "generated_at": "2026-09-12T13:05:41+00:00",
+ "camera": {
+  "id": "iphone17pro-1080p120",
+  "width": 1920,
+  "height": 1080,
+  "fx": 1450.0,
+  "fy": 1450.0,
+  "cx": 960.0,
+  "cy": 540.0,
+  "dist": [
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "provenance": "sin_verificar"
+ },
+ "swing_params": {
+  "height_m": 1.8,
+  "still_s": 1.0,
+  "backswing_s": 0.9,
+  "downswing_s": 0.27,
+  "follow_s": 0.6,
+  "pelvis_rot_top_deg": 45.0,
+  "thorax_rot_top_deg": 90.0,
+  "pelvis_sway_top_cm": -3.0,
+  "pelvis_sway_impact_cm": 5.0,
+  "pelvis_lift_top_cm": 3.0,
+  "pelvis_thrust_top_cm": -4.0,
+  "thorax_sway_top_cm": -6.0,
+  "thorax_lift_top_cm": 4.0,
+  "head_sway_top_cm": -6.0,
+  "head_lift_top_cm": 3.0,
+  "forward_bend_deg": 35.0,
+  "knee_angle_address_deg": 155.0,
+  "lead_knee_delta_top_deg": 8.0,
+  "trail_knee_delta_top_deg": -3.0,
+  "swing_plane_deg": 55.0,
+  "arm_reach_frac": 0.55
+ },
+ "seeds": 16,
+ "level": "0 (proyección + ruido; sin estimador)",
+ "results": [
+  {
+   "condition": {
+    "view": "face_on",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 0.0,
+    "distance_m": 3.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.006,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "face_on az0 el0 d3 s1 n0.006 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -0.619,
+     "sd": 1.034,
+     "loa_low": -2.646,
+     "loa_high": 1.408,
+     "sem": 1.034,
+     "mdc": 2.867,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": 0.394,
+     "sd": 0.885,
+     "loa_low": -1.341,
+     "loa_high": 2.128,
+     "sem": 0.885,
+     "mdc": 2.453,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.144,
+     "sd": 1.007,
+     "loa_low": -1.831,
+     "loa_high": 2.118,
+     "sem": 1.007,
+     "mdc": 2.792,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -1.312,
+     "sd": 1.249,
+     "loa_low": -3.76,
+     "loa_high": 1.135,
+     "sem": 1.249,
+     "mdc": 3.462,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 0.35,
+     "sd": 1.042,
+     "loa_low": -1.693,
+     "loa_high": 2.393,
+     "sem": 1.042,
+     "mdc": 2.889,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": 0.381,
+     "sd": 1.034,
+     "loa_low": -1.646,
+     "loa_high": 2.408,
+     "sem": 1.034,
+     "mdc": 2.867,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -1.581,
+     "sd": 1.379,
+     "loa_low": -4.285,
+     "loa_high": 1.123,
+     "sem": 1.379,
+     "mdc": 3.824,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": -0.525,
+     "sd": 1.62,
+     "loa_low": -3.7,
+     "loa_high": 2.65,
+     "sem": 1.62,
+     "mdc": 4.489,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -19.871,
+     "sd": 3.152,
+     "loa_low": -26.049,
+     "loa_high": -13.692,
+     "sem": 3.152,
+     "mdc": 8.737,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -21.618,
+     "sd": 3.497,
+     "loa_low": -28.473,
+     "loa_high": -14.764,
+     "sem": 3.497,
+     "mdc": 9.694,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "face_on",
+    "azimuth_deg": 15,
+    "elevation_deg": 0.0,
+    "distance_m": 3.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.006,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "face_on az15 el0 d3 s1 n0.006 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": 0.387,
+     "sd": 1.035,
+     "loa_low": -1.642,
+     "loa_high": 2.417,
+     "sem": 1.035,
+     "mdc": 2.87,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": 0.231,
+     "sd": 0.894,
+     "loa_low": -1.521,
+     "loa_high": 1.984,
+     "sem": 0.894,
+     "mdc": 2.479,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.175,
+     "sd": 1.004,
+     "loa_low": -1.792,
+     "loa_high": 2.142,
+     "sem": 1.004,
+     "mdc": 2.782,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -0.85,
+     "sd": 1.235,
+     "loa_low": -3.271,
+     "loa_high": 1.571,
+     "sem": 1.235,
+     "mdc": 3.423,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 0.056,
+     "sd": 1.037,
+     "loa_low": -1.977,
+     "loa_high": 2.089,
+     "sem": 1.037,
+     "mdc": 2.875,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": 1.387,
+     "sd": 1.035,
+     "loa_low": -0.642,
+     "loa_high": 3.417,
+     "sem": 1.035,
+     "mdc": 2.87,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 0.381,
+     "sd": 1.373,
+     "loa_low": -2.31,
+     "loa_high": 3.073,
+     "sem": 1.373,
+     "mdc": 3.806,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": -0.988,
+     "sd": 1.604,
+     "loa_low": -4.131,
+     "loa_high": 2.156,
+     "sem": 1.604,
+     "mdc": 4.445,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -19.654,
+     "sd": 4.07,
+     "loa_low": -27.631,
+     "loa_high": -11.676,
+     "sem": 4.07,
+     "mdc": 11.282,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -17.678,
+     "sd": 3.898,
+     "loa_low": -25.319,
+     "loa_high": -10.037,
+     "sem": 3.898,
+     "mdc": 10.805,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "face_on",
+    "azimuth_deg": 30,
+    "elevation_deg": 0.0,
+    "distance_m": 3.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.006,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "face_on az30 el0 d3 s1 n0.006 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": 1.738,
+     "sd": 1.025,
+     "loa_low": -0.271,
+     "loa_high": 3.746,
+     "sem": 1.025,
+     "mdc": 2.841,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": -0.237,
+     "sd": 0.895,
+     "loa_low": -1.992,
+     "loa_high": 1.517,
+     "sem": 0.895,
+     "mdc": 2.481,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.194,
+     "sd": 1.018,
+     "loa_low": -1.802,
+     "loa_high": 2.189,
+     "sem": 1.018,
+     "mdc": 2.822,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 0.413,
+     "sd": 1.225,
+     "loa_low": -1.989,
+     "loa_high": 2.814,
+     "sem": 1.225,
+     "mdc": 3.396,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": -0.244,
+     "sd": 1.037,
+     "loa_low": -2.277,
+     "loa_high": 1.789,
+     "sem": 1.037,
+     "mdc": 2.875,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": 2.737,
+     "sd": 1.025,
+     "loa_low": 0.729,
+     "loa_high": 4.746,
+     "sem": 1.025,
+     "mdc": 2.841,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 2.794,
+     "sd": 1.353,
+     "loa_low": 0.141,
+     "loa_high": 5.446,
+     "sem": 1.353,
+     "mdc": 3.751,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": -1.294,
+     "sd": 1.613,
+     "loa_low": -4.456,
+     "loa_high": 1.869,
+     "sem": 1.613,
+     "mdc": 4.472,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -14.956,
+     "sd": 4.703,
+     "loa_low": -24.173,
+     "loa_high": -5.739,
+     "sem": 4.703,
+     "mdc": 13.035,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -12.677,
+     "sd": 3.995,
+     "loa_low": -20.508,
+     "loa_high": -4.847,
+     "sem": 3.995,
+     "mdc": 11.074,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "face_on",
+    "azimuth_deg": 45,
+    "elevation_deg": 0.0,
+    "distance_m": 3.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.006,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "face_on az45 el0 d3 s1 n0.006 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": 3.3,
+     "sd": 1.028,
+     "loa_low": 1.285,
+     "loa_high": 5.315,
+     "sem": 1.028,
+     "mdc": 2.85,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": -1.038,
+     "sd": 0.895,
+     "loa_low": -2.792,
+     "loa_high": 0.717,
+     "sem": 0.895,
+     "mdc": 2.481,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.25,
+     "sd": 1.002,
+     "loa_low": -1.714,
+     "loa_high": 2.214,
+     "sem": 1.002,
+     "mdc": 2.777,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 2.519,
+     "sd": 1.234,
+     "loa_low": 0.101,
+     "loa_high": 4.936,
+     "sem": 1.234,
+     "mdc": 3.419,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": -0.494,
+     "sd": 1.043,
+     "loa_low": -2.539,
+     "loa_high": 1.551,
+     "sem": 1.043,
+     "mdc": 2.892,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": 4.3,
+     "sd": 1.028,
+     "loa_low": 2.285,
+     "loa_high": 6.315,
+     "sem": 1.028,
+     "mdc": 2.85,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 5.381,
+     "sd": 1.373,
+     "loa_low": 2.69,
+     "loa_high": 8.073,
+     "sem": 1.373,
+     "mdc": 3.806,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": -1.45,
+     "sd": 1.602,
+     "loa_low": -4.59,
+     "loa_high": 1.69,
+     "sem": 1.602,
+     "mdc": 4.441,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -10.303,
+     "sd": 4.593,
+     "loa_low": -19.305,
+     "loa_high": -1.3,
+     "sem": 4.593,
+     "mdc": 12.731,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -8.458,
+     "sd": 4.06,
+     "loa_low": -16.415,
+     "loa_high": -0.5,
+     "sem": 4.06,
+     "mdc": 11.254,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "face_on",
+    "azimuth_deg": 60,
+    "elevation_deg": 0.0,
+    "distance_m": 3.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.006,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "face_on az60 el0 d3 s1 n0.006 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": 5.031,
+     "sd": 1.021,
+     "loa_low": 3.03,
+     "loa_high": 7.032,
+     "sem": 1.021,
+     "mdc": 2.83,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": -2.15,
+     "sd": 0.894,
+     "loa_low": -3.902,
+     "loa_high": -0.398,
+     "sem": 0.894,
+     "mdc": 2.477,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.294,
+     "sd": 1.018,
+     "loa_low": -1.702,
+     "loa_high": 2.289,
+     "sem": 1.018,
+     "mdc": 2.822,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 5.256,
+     "sd": 1.243,
+     "loa_low": 2.82,
+     "loa_high": 7.693,
+     "sem": 1.243,
+     "mdc": 3.446,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": -0.656,
+     "sd": 1.047,
+     "loa_low": -2.708,
+     "loa_high": 1.396,
+     "sem": 1.047,
+     "mdc": 2.902,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": 6.031,
+     "sd": 1.021,
+     "loa_low": 4.03,
+     "loa_high": 8.032,
+     "sem": 1.021,
+     "mdc": 2.83,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 7.8,
+     "sd": 1.357,
+     "loa_low": 5.14,
+     "loa_high": 10.46,
+     "sem": 1.357,
+     "mdc": 3.761,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": -1.444,
+     "sd": 1.602,
+     "loa_low": -4.583,
+     "loa_high": 1.695,
+     "sem": 1.602,
+     "mdc": 4.44,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -6.737,
+     "sd": 4.476,
+     "loa_low": -15.509,
+     "loa_high": 2.036,
+     "sem": 4.476,
+     "mdc": 12.406,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -5.281,
+     "sd": 4.088,
+     "loa_low": -13.293,
+     "loa_high": 2.731,
+     "sem": 4.088,
+     "mdc": 11.331,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "face_on",
+    "azimuth_deg": 90,
+    "elevation_deg": 0.0,
+    "distance_m": 3.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.006,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "face_on az90 el0 d3 s1 n0.006 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": 8.188,
+     "sd": 1.035,
+     "loa_low": 6.16,
+     "loa_high": 10.215,
+     "sem": 1.035,
+     "mdc": 2.868,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": -4.988,
+     "sd": 0.897,
+     "loa_low": -6.746,
+     "loa_high": -3.229,
+     "sem": 0.897,
+     "mdc": 2.487,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.394,
+     "sd": 1.018,
+     "loa_low": -1.602,
+     "loa_high": 2.389,
+     "sem": 1.018,
+     "mdc": 2.822,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 11.156,
+     "sd": 1.243,
+     "loa_low": 8.72,
+     "loa_high": 13.593,
+     "sem": 1.243,
+     "mdc": 3.446,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": -0.612,
+     "sd": 1.035,
+     "loa_low": -2.64,
+     "loa_high": 1.415,
+     "sem": 1.035,
+     "mdc": 2.868,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": 9.188,
+     "sd": 1.035,
+     "loa_low": 7.16,
+     "loa_high": 11.215,
+     "sem": 1.035,
+     "mdc": 2.868,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 11.581,
+     "sd": 1.373,
+     "loa_low": 8.89,
+     "loa_high": 14.273,
+     "sem": 1.373,
+     "mdc": 3.806,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": -1.087,
+     "sd": 1.604,
+     "loa_low": -4.231,
+     "loa_high": 2.056,
+     "sem": 1.604,
+     "mdc": 4.445,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -3.834,
+     "sd": 4.332,
+     "loa_low": -12.325,
+     "loa_high": 4.656,
+     "sem": 4.332,
+     "mdc": 12.008,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -2.728,
+     "sd": 3.999,
+     "loa_low": -10.567,
+     "loa_high": 5.111,
+     "sem": 3.999,
+     "mdc": 11.086,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "face_on",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 15,
+    "distance_m": 3.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.006,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "face_on az0 el15 d3 s1 n0.006 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -1.169,
+     "sd": 1.021,
+     "loa_low": -3.17,
+     "loa_high": 0.832,
+     "sem": 1.021,
+     "mdc": 2.83,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": 1.225,
+     "sd": 0.881,
+     "loa_low": -0.502,
+     "loa_high": 2.952,
+     "sem": 0.881,
+     "mdc": 2.443,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 1.644,
+     "sd": 1.007,
+     "loa_low": -0.331,
+     "loa_high": 3.618,
+     "sem": 1.007,
+     "mdc": 2.792,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -2.75,
+     "sd": 1.235,
+     "loa_low": -5.171,
+     "loa_high": -0.329,
+     "sem": 1.235,
+     "mdc": 3.423,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 2.05,
+     "sd": 1.042,
+     "loa_low": 0.007,
+     "loa_high": 4.093,
+     "sem": 1.042,
+     "mdc": 2.889,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": -0.169,
+     "sd": 1.021,
+     "loa_low": -2.17,
+     "loa_high": 1.832,
+     "sem": 1.021,
+     "mdc": 2.83,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -3.388,
+     "sd": 1.367,
+     "loa_low": -6.067,
+     "loa_high": -0.708,
+     "sem": 1.367,
+     "mdc": 3.79,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 2.106,
+     "sd": 1.613,
+     "loa_low": -1.056,
+     "loa_high": 5.269,
+     "sem": 1.613,
+     "mdc": 4.472,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -19.843,
+     "sd": 2.845,
+     "loa_low": -25.42,
+     "loa_high": -14.266,
+     "sem": 2.845,
+     "mdc": 7.887,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -21.506,
+     "sd": 3.499,
+     "loa_low": -28.364,
+     "loa_high": -14.649,
+     "sem": 3.499,
+     "mdc": 9.698,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "face_on",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 30,
+    "distance_m": 3.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.006,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "face_on az0 el30 d3 s1 n0.006 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -2.419,
+     "sd": 1.034,
+     "loa_low": -4.446,
+     "loa_high": -0.392,
+     "sem": 1.034,
+     "mdc": 2.867,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": 3.125,
+     "sd": 0.881,
+     "loa_low": 1.398,
+     "loa_high": 4.852,
+     "sem": 0.881,
+     "mdc": 2.443,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 3.994,
+     "sd": 1.018,
+     "loa_low": 1.998,
+     "loa_high": 5.989,
+     "sem": 1.018,
+     "mdc": 2.822,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -5.731,
+     "sd": 1.235,
+     "loa_low": -8.152,
+     "loa_high": -3.311,
+     "sem": 1.235,
+     "mdc": 3.423,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 4.681,
+     "sd": 1.033,
+     "loa_low": 2.657,
+     "loa_high": 6.706,
+     "sem": 1.033,
+     "mdc": 2.863,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": -1.419,
+     "sd": 1.034,
+     "loa_low": -3.446,
+     "loa_high": 0.608,
+     "sem": 1.034,
+     "mdc": 2.867,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -6.912,
+     "sd": 1.359,
+     "loa_low": -9.576,
+     "loa_high": -4.249,
+     "sem": 1.359,
+     "mdc": 3.767,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 6.275,
+     "sd": 1.62,
+     "loa_low": 3.1,
+     "loa_high": 9.45,
+     "sem": 1.62,
+     "mdc": 4.489,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -19.759,
+     "sd": 2.391,
+     "loa_low": -24.445,
+     "loa_high": -15.072,
+     "sem": 2.391,
+     "mdc": 6.627,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -21.255,
+     "sd": 3.191,
+     "loa_low": -27.509,
+     "loa_high": -15.001,
+     "sem": 3.191,
+     "mdc": 8.845,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "face_on",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 45,
+    "distance_m": 3.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.006,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "face_on az0 el45 d3 s1 n0.006 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -5.625,
+     "sd": 1.034,
+     "loa_low": -7.652,
+     "loa_high": -3.598,
+     "sem": 1.034,
+     "mdc": 2.867,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": 8.1,
+     "sd": 0.864,
+     "loa_low": 6.406,
+     "loa_high": 9.794,
+     "sem": 0.864,
+     "mdc": 2.395,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 9.181,
+     "sd": 1.009,
+     "loa_low": 7.203,
+     "loa_high": 11.16,
+     "sem": 1.009,
+     "mdc": 2.798,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -13.131,
+     "sd": 1.225,
+     "loa_low": -15.533,
+     "loa_high": -10.73,
+     "sem": 1.225,
+     "mdc": 3.396,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 10.45,
+     "sd": 1.042,
+     "loa_low": 8.407,
+     "loa_high": 12.493,
+     "sem": 1.042,
+     "mdc": 2.889,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": -4.625,
+     "sd": 1.034,
+     "loa_low": -6.652,
+     "loa_high": -2.598,
+     "sem": 1.034,
+     "mdc": 2.867,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -15.512,
+     "sd": 1.359,
+     "loa_low": -18.176,
+     "loa_high": -12.849,
+     "sem": 1.359,
+     "mdc": 3.767,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 14.569,
+     "sd": 1.611,
+     "loa_low": 11.412,
+     "loa_high": 17.726,
+     "sem": 1.611,
+     "mdc": 4.465,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -19.582,
+     "sd": 1.836,
+     "loa_low": -23.181,
+     "loa_high": -15.984,
+     "sem": 1.836,
+     "mdc": 5.089,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -20.471,
+     "sd": 2.667,
+     "loa_low": -25.699,
+     "loa_high": -15.243,
+     "sem": 2.667,
+     "mdc": 7.393,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "face_on",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 0.0,
+    "distance_m": 2.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.006,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "face_on az0 el0 d2 s1 n0.006 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -0.656,
+     "sd": 1.042,
+     "loa_low": -2.699,
+     "loa_high": 1.387,
+     "sem": 1.042,
+     "mdc": 2.889,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": 0.138,
+     "sd": 0.883,
+     "loa_low": -1.593,
+     "loa_high": 1.868,
+     "sem": 0.883,
+     "mdc": 2.448,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.013,
+     "sd": 1.005,
+     "loa_low": -1.958,
+     "loa_high": 1.983,
+     "sem": 1.005,
+     "mdc": 2.786,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -1.394,
+     "sd": 1.228,
+     "loa_low": -3.801,
+     "loa_high": 1.014,
+     "sem": 1.228,
+     "mdc": 3.405,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 0.513,
+     "sd": 1.042,
+     "loa_low": -1.531,
+     "loa_high": 2.556,
+     "sem": 1.042,
+     "mdc": 2.889,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": 0.344,
+     "sd": 1.042,
+     "loa_low": -1.699,
+     "loa_high": 2.387,
+     "sem": 1.042,
+     "mdc": 2.889,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -1.919,
+     "sd": 1.373,
+     "loa_low": -4.61,
+     "loa_high": 0.773,
+     "sem": 1.373,
+     "mdc": 3.806,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": -1.288,
+     "sd": 1.604,
+     "loa_low": -4.431,
+     "loa_high": 1.856,
+     "sem": 1.604,
+     "mdc": 4.445,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -19.594,
+     "sd": 3.564,
+     "loa_low": -26.579,
+     "loa_high": -12.609,
+     "sem": 3.564,
+     "mdc": 9.879,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -21.637,
+     "sd": 3.718,
+     "loa_low": -28.924,
+     "loa_high": -14.349,
+     "sem": 3.718,
+     "mdc": 10.306,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "face_on",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 0.0,
+    "distance_m": 4.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.006,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "face_on az0 el0 d4 s1 n0.006 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -0.556,
+     "sd": 1.042,
+     "loa_low": -2.599,
+     "loa_high": 1.487,
+     "sem": 1.042,
+     "mdc": 2.889,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": 0.506,
+     "sd": 0.895,
+     "loa_low": -1.248,
+     "loa_high": 2.26,
+     "sem": 0.895,
+     "mdc": 2.48,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.194,
+     "sd": 1.018,
+     "loa_low": -1.802,
+     "loa_high": 2.189,
+     "sem": 1.018,
+     "mdc": 2.822,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -1.262,
+     "sd": 1.234,
+     "loa_low": -3.681,
+     "loa_high": 1.156,
+     "sem": 1.234,
+     "mdc": 3.42,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 0.35,
+     "sd": 1.042,
+     "loa_low": -1.693,
+     "loa_high": 2.393,
+     "sem": 1.042,
+     "mdc": 2.889,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": 0.444,
+     "sd": 1.042,
+     "loa_low": -1.599,
+     "loa_high": 2.487,
+     "sem": 1.042,
+     "mdc": 2.889,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -1.419,
+     "sd": 1.373,
+     "loa_low": -4.11,
+     "loa_high": 1.273,
+     "sem": 1.373,
+     "mdc": 3.806,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": -0.244,
+     "sd": 1.602,
+     "loa_low": -3.383,
+     "loa_high": 2.895,
+     "sem": 1.602,
+     "mdc": 4.44,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -20.0,
+     "sd": 2.98,
+     "loa_low": -25.841,
+     "loa_high": -14.158,
+     "sem": 2.98,
+     "mdc": 8.261,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -21.567,
+     "sd": 3.417,
+     "loa_low": -28.264,
+     "loa_high": -14.869,
+     "sem": 3.417,
+     "mdc": 9.471,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "face_on",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 0.0,
+    "distance_m": 6.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.006,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "face_on az0 el0 d6 s1 n0.006 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -0.519,
+     "sd": 1.034,
+     "loa_low": -2.546,
+     "loa_high": 1.508,
+     "sem": 1.034,
+     "mdc": 2.867,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": 0.606,
+     "sd": 0.895,
+     "loa_low": -1.148,
+     "loa_high": 2.36,
+     "sem": 0.895,
+     "mdc": 2.48,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.256,
+     "sd": 1.012,
+     "loa_low": -1.727,
+     "loa_high": 2.24,
+     "sem": 1.012,
+     "mdc": 2.805,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -1.225,
+     "sd": 1.244,
+     "loa_low": -3.663,
+     "loa_high": 1.213,
+     "sem": 1.244,
+     "mdc": 3.448,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 0.381,
+     "sd": 1.034,
+     "loa_low": -1.645,
+     "loa_high": 2.407,
+     "sem": 1.034,
+     "mdc": 2.865,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": 0.481,
+     "sd": 1.034,
+     "loa_low": -1.546,
+     "loa_high": 2.508,
+     "sem": 1.034,
+     "mdc": 2.867,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -1.244,
+     "sd": 1.376,
+     "loa_low": -3.942,
+     "loa_high": 1.454,
+     "sem": 1.376,
+     "mdc": 3.815,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.012,
+     "sd": 1.604,
+     "loa_low": -3.131,
+     "loa_high": 3.156,
+     "sem": 1.604,
+     "mdc": 4.445,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -20.083,
+     "sd": 2.811,
+     "loa_low": -25.591,
+     "loa_high": -14.574,
+     "sem": 2.811,
+     "mdc": 7.791,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -21.517,
+     "sd": 3.367,
+     "loa_low": -28.117,
+     "loa_high": -14.917,
+     "sem": 3.367,
+     "mdc": 9.334,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "face_on",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 0.0,
+    "distance_m": 8.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.006,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "face_on az0 el0 d8 s1 n0.006 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -0.475,
+     "sd": 1.026,
+     "loa_low": -2.486,
+     "loa_high": 1.536,
+     "sem": 1.026,
+     "mdc": 2.844,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": 0.644,
+     "sd": 0.901,
+     "loa_low": -1.122,
+     "loa_high": 2.41,
+     "sem": 0.901,
+     "mdc": 2.498,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.275,
+     "sd": 1.004,
+     "loa_low": -1.692,
+     "loa_high": 2.242,
+     "sem": 1.004,
+     "mdc": 2.782,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -1.206,
+     "sd": 1.24,
+     "loa_low": -3.636,
+     "loa_high": 1.223,
+     "sem": 1.24,
+     "mdc": 3.436,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 0.438,
+     "sd": 1.035,
+     "loa_low": -1.59,
+     "loa_high": 2.465,
+     "sem": 1.035,
+     "mdc": 2.868,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": 0.525,
+     "sd": 1.026,
+     "loa_low": -1.486,
+     "loa_high": 2.536,
+     "sem": 1.026,
+     "mdc": 2.844,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -1.181,
+     "sd": 1.379,
+     "loa_low": -3.885,
+     "loa_high": 1.523,
+     "sem": 1.379,
+     "mdc": 3.824,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.112,
+     "sd": 1.604,
+     "loa_low": -3.031,
+     "loa_high": 3.256,
+     "sem": 1.604,
+     "mdc": 4.445,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -20.108,
+     "sd": 2.731,
+     "loa_low": -25.462,
+     "loa_high": -14.754,
+     "sem": 2.731,
+     "mdc": 7.571,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -21.492,
+     "sd": 3.354,
+     "loa_low": -28.066,
+     "loa_high": -14.919,
+     "sem": 3.354,
+     "mdc": 9.296,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "face_on",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 0.0,
+    "distance_m": 3.0,
+    "size_factor": 0.5,
+    "noise_frac": 0.006,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "face_on az0 el0 d3 s0.5 n0.006 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -0.619,
+     "sd": 1.034,
+     "loa_low": -2.646,
+     "loa_high": 1.408,
+     "sem": 1.034,
+     "mdc": 2.867,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": 0.394,
+     "sd": 0.885,
+     "loa_low": -1.341,
+     "loa_high": 2.128,
+     "sem": 0.885,
+     "mdc": 2.453,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.144,
+     "sd": 1.007,
+     "loa_low": -1.831,
+     "loa_high": 2.118,
+     "sem": 1.007,
+     "mdc": 2.792,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -1.312,
+     "sd": 1.249,
+     "loa_low": -3.76,
+     "loa_high": 1.135,
+     "sem": 1.249,
+     "mdc": 3.462,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 0.35,
+     "sd": 1.042,
+     "loa_low": -1.693,
+     "loa_high": 2.393,
+     "sem": 1.042,
+     "mdc": 2.889,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": 0.381,
+     "sd": 1.034,
+     "loa_low": -1.646,
+     "loa_high": 2.408,
+     "sem": 1.034,
+     "mdc": 2.867,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -1.581,
+     "sd": 1.379,
+     "loa_low": -4.285,
+     "loa_high": 1.123,
+     "sem": 1.379,
+     "mdc": 3.824,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": -0.525,
+     "sd": 1.62,
+     "loa_low": -3.7,
+     "loa_high": 2.65,
+     "sem": 1.62,
+     "mdc": 4.489,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -19.871,
+     "sd": 3.152,
+     "loa_low": -26.049,
+     "loa_high": -13.692,
+     "sem": 3.152,
+     "mdc": 8.737,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -21.618,
+     "sd": 3.497,
+     "loa_low": -28.473,
+     "loa_high": -14.764,
+     "sem": 3.497,
+     "mdc": 9.694,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "face_on",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 0.0,
+    "distance_m": 3.0,
+    "size_factor": 0.25,
+    "noise_frac": 0.006,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "face_on az0 el0 d3 s0.25 n0.006 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -0.619,
+     "sd": 1.034,
+     "loa_low": -2.646,
+     "loa_high": 1.408,
+     "sem": 1.034,
+     "mdc": 2.867,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": 0.394,
+     "sd": 0.885,
+     "loa_low": -1.341,
+     "loa_high": 2.128,
+     "sem": 0.885,
+     "mdc": 2.453,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.144,
+     "sd": 1.007,
+     "loa_low": -1.831,
+     "loa_high": 2.118,
+     "sem": 1.007,
+     "mdc": 2.792,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -1.312,
+     "sd": 1.249,
+     "loa_low": -3.76,
+     "loa_high": 1.135,
+     "sem": 1.249,
+     "mdc": 3.462,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 0.35,
+     "sd": 1.042,
+     "loa_low": -1.693,
+     "loa_high": 2.393,
+     "sem": 1.042,
+     "mdc": 2.889,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": 0.381,
+     "sd": 1.034,
+     "loa_low": -1.646,
+     "loa_high": 2.408,
+     "sem": 1.034,
+     "mdc": 2.867,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -1.581,
+     "sd": 1.379,
+     "loa_low": -4.285,
+     "loa_high": 1.123,
+     "sem": 1.379,
+     "mdc": 3.824,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": -0.525,
+     "sd": 1.62,
+     "loa_low": -3.7,
+     "loa_high": 2.65,
+     "sem": 1.62,
+     "mdc": 4.489,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -19.871,
+     "sd": 3.152,
+     "loa_low": -26.049,
+     "loa_high": -13.692,
+     "sem": 3.152,
+     "mdc": 8.737,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -21.618,
+     "sd": 3.497,
+     "loa_low": -28.473,
+     "loa_high": -14.764,
+     "sem": 3.497,
+     "mdc": 9.694,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "face_on",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 0.0,
+    "distance_m": 3.0,
+    "size_factor": 0.11,
+    "noise_frac": 0.006,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "face_on az0 el0 d3 s0.11 n0.006 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -0.619,
+     "sd": 1.034,
+     "loa_low": -2.646,
+     "loa_high": 1.408,
+     "sem": 1.034,
+     "mdc": 2.867,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": 0.394,
+     "sd": 0.885,
+     "loa_low": -1.341,
+     "loa_high": 2.128,
+     "sem": 0.885,
+     "mdc": 2.453,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.144,
+     "sd": 1.007,
+     "loa_low": -1.831,
+     "loa_high": 2.118,
+     "sem": 1.007,
+     "mdc": 2.792,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -1.312,
+     "sd": 1.249,
+     "loa_low": -3.76,
+     "loa_high": 1.135,
+     "sem": 1.249,
+     "mdc": 3.462,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 0.35,
+     "sd": 1.042,
+     "loa_low": -1.693,
+     "loa_high": 2.393,
+     "sem": 1.042,
+     "mdc": 2.889,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": 0.381,
+     "sd": 1.034,
+     "loa_low": -1.646,
+     "loa_high": 2.408,
+     "sem": 1.034,
+     "mdc": 2.867,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -1.581,
+     "sd": 1.379,
+     "loa_low": -4.285,
+     "loa_high": 1.123,
+     "sem": 1.379,
+     "mdc": 3.824,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": -0.525,
+     "sd": 1.62,
+     "loa_low": -3.7,
+     "loa_high": 2.65,
+     "sem": 1.62,
+     "mdc": 4.489,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -19.871,
+     "sd": 3.152,
+     "loa_low": -26.049,
+     "loa_high": -13.692,
+     "sem": 3.152,
+     "mdc": 8.737,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -21.618,
+     "sd": 3.497,
+     "loa_low": -28.473,
+     "loa_high": -14.764,
+     "sem": 3.497,
+     "mdc": 9.694,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "face_on",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 0.0,
+    "distance_m": 3.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.0,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "face_on az0 el0 d3 s1 n0 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -0.7,
+     "sd": 0.0,
+     "loa_low": -0.7,
+     "loa_high": -0.7,
+     "sem": 0.0,
+     "mdc": 0.0,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": 0.369,
+     "sd": 0.048,
+     "loa_low": 0.275,
+     "loa_high": 0.463,
+     "sem": 0.048,
+     "mdc": 0.133,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.3,
+     "sd": 0.0,
+     "loa_low": 0.3,
+     "loa_high": 0.3,
+     "sem": 0.0,
+     "mdc": 0.0,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -1.1,
+     "sd": 0.0,
+     "loa_low": -1.1,
+     "loa_high": -1.1,
+     "sem": 0.0,
+     "mdc": 0.0,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 0.4,
+     "sd": 0.0,
+     "loa_low": 0.4,
+     "loa_high": 0.4,
+     "sem": 0.0,
+     "mdc": 0.0,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": 0.3,
+     "sd": 0.0,
+     "loa_low": 0.3,
+     "loa_high": 0.3,
+     "sem": 0.0,
+     "mdc": 0.0,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -1.6,
+     "sd": 0.0,
+     "loa_low": -1.6,
+     "loa_high": -1.6,
+     "sem": 0.0,
+     "mdc": 0.0,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": -0.5,
+     "sd": 0.0,
+     "loa_low": -0.5,
+     "loa_high": -0.5,
+     "sem": 0.0,
+     "mdc": 0.0,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -19.414,
+     "sd": 0.0,
+     "loa_low": -19.414,
+     "loa_high": -19.414,
+     "sem": 0.0,
+     "mdc": 0.0,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -19.414,
+     "sd": 0.0,
+     "loa_low": -19.414,
+     "loa_high": -19.414,
+     "sem": 0.0,
+     "mdc": 0.0,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "face_on",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 0.0,
+    "distance_m": 3.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.003,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "face_on az0 el0 d3 s1 n0.003 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -0.65,
+     "sd": 0.518,
+     "loa_low": -1.665,
+     "loa_high": 0.365,
+     "sem": 0.518,
+     "mdc": 1.435,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": 0.381,
+     "sd": 0.429,
+     "loa_low": -0.46,
+     "loa_high": 1.223,
+     "sem": 0.429,
+     "mdc": 1.19,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.2,
+     "sd": 0.509,
+     "loa_low": -0.797,
+     "loa_high": 1.197,
+     "sem": 0.509,
+     "mdc": 1.41,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -1.206,
+     "sd": 0.632,
+     "loa_low": -2.445,
+     "loa_high": 0.032,
+     "sem": 0.632,
+     "mdc": 1.752,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 0.387,
+     "sd": 0.512,
+     "loa_low": -0.617,
+     "loa_high": 1.392,
+     "sem": 0.512,
+     "mdc": 1.42,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": 0.35,
+     "sd": 0.518,
+     "loa_low": -0.665,
+     "loa_high": 1.365,
+     "sem": 0.518,
+     "mdc": 1.435,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -1.569,
+     "sd": 0.681,
+     "loa_low": -2.903,
+     "loa_high": -0.234,
+     "sem": 0.681,
+     "mdc": 1.887,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": -0.519,
+     "sd": 0.811,
+     "loa_low": -2.108,
+     "loa_high": 1.071,
+     "sem": 0.811,
+     "mdc": 2.248,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -19.967,
+     "sd": 1.826,
+     "loa_low": -23.545,
+     "loa_high": -16.389,
+     "sem": 1.826,
+     "mdc": 5.06,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -20.989,
+     "sd": 1.817,
+     "loa_low": -24.549,
+     "loa_high": -17.428,
+     "sem": 1.817,
+     "mdc": 5.035,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "face_on",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 0.0,
+    "distance_m": 3.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.012,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "face_on az0 el0 d3 s1 n0.012 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -0.525,
+     "sd": 2.067,
+     "loa_low": -4.576,
+     "loa_high": 3.526,
+     "sem": 2.067,
+     "mdc": 5.73,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": 0.406,
+     "sd": 1.778,
+     "loa_low": -3.079,
+     "loa_high": 3.892,
+     "sem": 1.778,
+     "mdc": 4.929,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.031,
+     "sd": 2.015,
+     "loa_low": -3.919,
+     "loa_high": 3.981,
+     "sem": 2.015,
+     "mdc": 5.586,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -1.538,
+     "sd": 2.471,
+     "loa_low": -6.38,
+     "loa_high": 3.305,
+     "sem": 2.471,
+     "mdc": 6.849,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 0.312,
+     "sd": 2.078,
+     "loa_low": -3.761,
+     "loa_high": 4.386,
+     "sem": 2.078,
+     "mdc": 5.761,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": 0.475,
+     "sd": 2.067,
+     "loa_low": -3.576,
+     "loa_high": 4.526,
+     "sem": 2.067,
+     "mdc": 5.73,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -1.6,
+     "sd": 2.752,
+     "loa_low": -6.994,
+     "loa_high": 3.794,
+     "sem": 2.752,
+     "mdc": 7.629,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": -0.587,
+     "sd": 3.244,
+     "loa_low": -6.947,
+     "loa_high": 5.772,
+     "sem": 3.244,
+     "mdc": 8.993,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -19.497,
+     "sd": 5.929,
+     "loa_low": -31.117,
+     "loa_high": -7.876,
+     "sem": 5.929,
+     "mdc": 16.434,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -22.568,
+     "sd": 7.061,
+     "loa_low": -36.408,
+     "loa_high": -8.729,
+     "sem": 7.061,
+     "mdc": 19.572,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "face_on",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 0.0,
+    "distance_m": 3.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.006,
+    "fps": 120.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "face_on az0 el0 d3 s1 n0.006 fps120",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": 1.033,
+     "sd": 9.052,
+     "loa_low": -16.708,
+     "loa_high": 18.775,
+     "sem": 9.052,
+     "mdc": 25.09,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": -3.633,
+     "sd": 9.357,
+     "loa_low": -21.973,
+     "loa_high": 14.706,
+     "sem": 9.357,
+     "mdc": 25.936,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": 0.018,
+     "sd": 0.048,
+     "loa_low": -0.076,
+     "loa_high": 0.112,
+     "sem": 0.048,
+     "mdc": 0.133,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.513,
+     "sd": 8.323,
+     "loa_low": -16.826,
+     "loa_high": 15.801,
+     "sem": 8.323,
+     "mdc": 23.071,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -0.319,
+     "sd": 1.028,
+     "loa_low": -2.333,
+     "loa_high": 1.696,
+     "sem": 1.028,
+     "mdc": 2.849,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": 0.687,
+     "sd": 1.098,
+     "loa_low": -1.465,
+     "loa_high": 2.84,
+     "sem": 1.098,
+     "mdc": 3.045,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.319,
+     "sd": 1.073,
+     "loa_low": -1.784,
+     "loa_high": 2.421,
+     "sem": 1.073,
+     "mdc": 2.974,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -1.337,
+     "sd": 1.229,
+     "loa_low": -3.746,
+     "loa_high": 1.071,
+     "sem": 1.229,
+     "mdc": 3.407,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 0.381,
+     "sd": 1.019,
+     "loa_low": -1.617,
+     "loa_high": 2.379,
+     "sem": 1.019,
+     "mdc": 2.825,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": 0.681,
+     "sd": 1.028,
+     "loa_low": -1.333,
+     "loa_high": 2.696,
+     "sem": 1.028,
+     "mdc": 2.849,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -1.925,
+     "sd": 1.406,
+     "loa_low": -4.681,
+     "loa_high": 0.831,
+     "sem": 1.406,
+     "mdc": 3.897,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": -0.119,
+     "sd": 1.293,
+     "loa_low": -2.652,
+     "loa_high": 2.415,
+     "sem": 1.293,
+     "mdc": 3.583,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -20.597,
+     "sd": 3.047,
+     "loa_low": -26.57,
+     "loa_high": -14.625,
+     "sem": 3.047,
+     "mdc": 8.447,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -18.063,
+     "sd": 3.171,
+     "loa_low": -24.278,
+     "loa_high": -11.848,
+     "sem": 3.171,
+     "mdc": 8.789,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "face_on",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 0.0,
+    "distance_m": 3.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.006,
+    "fps": 60.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "face_on az0 el0 d3 s1 n0.006 fps60",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": 6.258,
+     "sd": 18.143,
+     "loa_low": -29.303,
+     "loa_high": 41.82,
+     "sem": 18.143,
+     "mdc": 50.291,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": -3.115,
+     "sd": 18.73,
+     "loa_low": -39.826,
+     "loa_high": 33.597,
+     "sem": 18.73,
+     "mdc": 51.917,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": 0.029,
+     "sd": 0.097,
+     "loa_low": -0.16,
+     "loa_high": 0.219,
+     "sem": 0.097,
+     "mdc": 0.268,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -1.05,
+     "sd": 16.625,
+     "loa_low": -33.634,
+     "loa_high": 31.534,
+     "sem": 16.625,
+     "mdc": 46.081,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -0.881,
+     "sd": 0.866,
+     "loa_low": -2.578,
+     "loa_high": 0.816,
+     "sem": 0.866,
+     "mdc": 2.4,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": -0.125,
+     "sd": 1.045,
+     "loa_low": -2.174,
+     "loa_high": 1.924,
+     "sem": 1.045,
+     "mdc": 2.897,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.244,
+     "sd": 0.906,
+     "loa_low": -1.531,
+     "loa_high": 2.019,
+     "sem": 0.906,
+     "mdc": 2.51,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -0.606,
+     "sd": 0.871,
+     "loa_low": -2.314,
+     "loa_high": 1.102,
+     "sem": 0.871,
+     "mdc": 2.415,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 0.738,
+     "sd": 1.281,
+     "loa_low": -1.772,
+     "loa_high": 3.247,
+     "sem": 1.281,
+     "mdc": 3.55,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": 0.119,
+     "sd": 0.866,
+     "loa_low": -1.578,
+     "loa_high": 1.816,
+     "sem": 0.866,
+     "mdc": 2.4,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -2.138,
+     "sd": 1.397,
+     "loa_low": -4.875,
+     "loa_high": 0.6,
+     "sem": 1.397,
+     "mdc": 3.871,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": -0.406,
+     "sd": 1.613,
+     "loa_low": -3.567,
+     "loa_high": 2.755,
+     "sem": 1.613,
+     "mdc": 4.47,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -20.288,
+     "sd": 2.216,
+     "loa_low": -24.632,
+     "loa_high": -15.944,
+     "sem": 2.216,
+     "mdc": 6.143,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -18.403,
+     "sd": 3.226,
+     "loa_low": -24.726,
+     "loa_high": -12.08,
+     "sem": 3.226,
+     "mdc": 8.942,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "face_on",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 0.0,
+    "distance_m": 3.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.006,
+    "fps": 30.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "face_on az0 el0 d3 s1 n0.006 fps30",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": 16.658,
+     "sd": 36.247,
+     "loa_low": -54.386,
+     "loa_high": 87.703,
+     "sem": 36.247,
+     "mdc": 100.472,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": -2.071,
+     "sd": 37.447,
+     "loa_low": -75.467,
+     "loa_high": 71.325,
+     "sem": 37.447,
+     "mdc": 103.798,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": 0.058,
+     "sd": 0.2,
+     "loa_low": -0.334,
+     "loa_high": 0.449,
+     "sem": 0.2,
+     "mdc": 0.554,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -2.075,
+     "sd": 33.271,
+     "loa_low": -67.286,
+     "loa_high": 63.136,
+     "sem": 33.271,
+     "mdc": 92.223,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -0.756,
+     "sd": 1.087,
+     "loa_low": -2.887,
+     "loa_high": 1.374,
+     "sem": 1.087,
+     "mdc": 3.013,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": -0.088,
+     "sd": 1.405,
+     "loa_low": -2.841,
+     "loa_high": 2.666,
+     "sem": 1.405,
+     "mdc": 3.894,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.306,
+     "sd": 1.126,
+     "loa_low": -1.9,
+     "loa_high": 2.513,
+     "sem": 1.126,
+     "mdc": 3.12,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -1.044,
+     "sd": 0.63,
+     "loa_low": -2.279,
+     "loa_high": 0.192,
+     "sem": 0.63,
+     "mdc": 1.747,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 0.163,
+     "sd": 0.983,
+     "loa_low": -1.764,
+     "loa_high": 2.089,
+     "sem": 0.983,
+     "mdc": 2.725,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": 0.244,
+     "sd": 1.087,
+     "loa_low": -1.887,
+     "loa_high": 2.374,
+     "sem": 1.087,
+     "mdc": 3.013,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -1.062,
+     "sd": 1.6,
+     "loa_low": -4.198,
+     "loa_high": 2.073,
+     "sem": 1.6,
+     "mdc": 4.434,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": -0.719,
+     "sd": 1.083,
+     "loa_low": -2.841,
+     "loa_high": 1.403,
+     "sem": 1.083,
+     "mdc": 3.001,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -20.532,
+     "sd": 2.54,
+     "loa_low": -25.51,
+     "loa_high": -15.554,
+     "sem": 2.54,
+     "mdc": 7.04,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -20.645,
+     "sd": 1.534,
+     "loa_low": -23.651,
+     "loa_high": -17.639,
+     "sem": 1.534,
+     "mdc": 4.251,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "down_the_line",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 0.0,
+    "distance_m": 3.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.006,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "down_the_line az0 el0 d3 s1 n0.006 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -0.981,
+     "sd": 1.022,
+     "loa_low": -2.984,
+     "loa_high": 1.022,
+     "sem": 1.022,
+     "mdc": 2.833,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": -5.0,
+     "sd": 0.89,
+     "loa_low": -6.744,
+     "loa_high": -3.256,
+     "sem": 0.89,
+     "mdc": 2.467,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.3,
+     "sd": 1.009,
+     "loa_low": -1.677,
+     "loa_high": 2.277,
+     "sem": 1.009,
+     "mdc": 2.796,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 1.575,
+     "sd": 1.244,
+     "loa_low": -0.863,
+     "loa_high": 4.013,
+     "sem": 1.244,
+     "mdc": 3.448,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 1.237,
+     "sd": 1.035,
+     "loa_low": -0.79,
+     "loa_high": 3.265,
+     "sem": 1.035,
+     "mdc": 2.868,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": 0.019,
+     "sd": 1.022,
+     "loa_low": -1.984,
+     "loa_high": 2.022,
+     "sem": 1.022,
+     "mdc": 2.833,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 2.419,
+     "sd": 1.379,
+     "loa_low": -0.285,
+     "loa_high": 5.123,
+     "sem": 1.379,
+     "mdc": 3.824,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 1.913,
+     "sd": 1.604,
+     "loa_low": -1.231,
+     "loa_high": 5.056,
+     "sem": 1.604,
+     "mdc": 4.445,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -1.088,
+     "sd": 4.805,
+     "loa_low": -10.504,
+     "loa_high": 8.329,
+     "sem": 4.805,
+     "mdc": 13.317,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -2.06,
+     "sd": 3.591,
+     "loa_low": -9.098,
+     "loa_high": 4.979,
+     "sem": 3.591,
+     "mdc": 9.954,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "down_the_line",
+    "azimuth_deg": 15,
+    "elevation_deg": 0.0,
+    "distance_m": 3.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.006,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "down_the_line az15 el0 d3 s1 n0.006 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -1.425,
+     "sd": 1.034,
+     "loa_low": -3.452,
+     "loa_high": 0.602,
+     "sem": 1.034,
+     "mdc": 2.867,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": -3.544,
+     "sd": 0.882,
+     "loa_low": -5.273,
+     "loa_high": -1.814,
+     "sem": 0.882,
+     "mdc": 2.446,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.269,
+     "sd": 1.002,
+     "loa_low": -1.695,
+     "loa_high": 2.232,
+     "sem": 1.002,
+     "mdc": 2.777,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 0.856,
+     "sd": 1.243,
+     "loa_low": -1.58,
+     "loa_high": 3.293,
+     "sem": 1.243,
+     "mdc": 3.446,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 1.125,
+     "sd": 1.023,
+     "loa_low": -0.881,
+     "loa_high": 3.131,
+     "sem": 1.023,
+     "mdc": 2.837,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": -0.425,
+     "sd": 1.034,
+     "loa_low": -2.452,
+     "loa_high": 1.602,
+     "sem": 1.034,
+     "mdc": 2.867,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 0.413,
+     "sd": 1.367,
+     "loa_low": -2.267,
+     "loa_high": 3.092,
+     "sem": 1.367,
+     "mdc": 3.79,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 1.788,
+     "sd": 1.624,
+     "loa_low": -1.395,
+     "loa_high": 4.97,
+     "sem": 1.624,
+     "mdc": 4.501,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -1.634,
+     "sd": 4.828,
+     "loa_low": -11.097,
+     "loa_high": 7.83,
+     "sem": 4.828,
+     "mdc": 13.383,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -2.773,
+     "sd": 3.64,
+     "loa_low": -9.908,
+     "loa_high": 4.362,
+     "sem": 3.64,
+     "mdc": 10.091,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "down_the_line",
+    "azimuth_deg": 30,
+    "elevation_deg": 0.0,
+    "distance_m": 3.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.006,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "down_the_line az30 el0 d3 s1 n0.006 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -1.719,
+     "sd": 1.034,
+     "loa_low": -3.746,
+     "loa_high": 0.308,
+     "sem": 1.034,
+     "mdc": 2.867,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": -2.231,
+     "sd": 0.897,
+     "loa_low": -3.99,
+     "loa_high": -0.473,
+     "sem": 0.897,
+     "mdc": 2.487,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.213,
+     "sd": 1.005,
+     "loa_low": -1.758,
+     "loa_high": 2.183,
+     "sem": 1.005,
+     "mdc": 2.786,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 0.331,
+     "sd": 1.241,
+     "loa_low": -2.102,
+     "loa_high": 2.764,
+     "sem": 1.241,
+     "mdc": 3.441,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 1.025,
+     "sd": 1.023,
+     "loa_low": -0.981,
+     "loa_high": 3.031,
+     "sem": 1.023,
+     "mdc": 2.837,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": -0.719,
+     "sd": 1.034,
+     "loa_low": -2.746,
+     "loa_high": 1.308,
+     "sem": 1.034,
+     "mdc": 2.867,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -1.319,
+     "sd": 1.373,
+     "loa_low": -4.01,
+     "loa_high": 1.373,
+     "sem": 1.373,
+     "mdc": 3.806,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 1.506,
+     "sd": 1.613,
+     "loa_low": -1.656,
+     "loa_high": 4.669,
+     "sem": 1.613,
+     "mdc": 4.472,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -3.49,
+     "sd": 4.826,
+     "loa_low": -12.949,
+     "loa_high": 5.969,
+     "sem": 4.826,
+     "mdc": 13.376,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -5.0,
+     "sd": 3.71,
+     "loa_low": -12.271,
+     "loa_high": 2.271,
+     "sem": 3.71,
+     "mdc": 10.283,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "down_the_line",
+    "azimuth_deg": 45,
+    "elevation_deg": 0.0,
+    "distance_m": 3.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.006,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "down_the_line az45 el0 d3 s1 n0.006 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -1.812,
+     "sd": 1.035,
+     "loa_low": -3.842,
+     "loa_high": 0.217,
+     "sem": 1.035,
+     "mdc": 2.87,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": -1.144,
+     "sd": 0.887,
+     "loa_low": -2.882,
+     "loa_high": 0.595,
+     "sem": 0.887,
+     "mdc": 2.458,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.175,
+     "sd": 1.004,
+     "loa_low": -1.792,
+     "loa_high": 2.142,
+     "sem": 1.004,
+     "mdc": 2.782,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -0.169,
+     "sd": 1.241,
+     "loa_low": -2.602,
+     "loa_high": 2.264,
+     "sem": 1.241,
+     "mdc": 3.441,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 0.919,
+     "sd": 1.028,
+     "loa_low": -1.097,
+     "loa_high": 2.934,
+     "sem": 1.028,
+     "mdc": 2.851,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": -0.812,
+     "sd": 1.035,
+     "loa_low": -2.842,
+     "loa_high": 1.217,
+     "sem": 1.035,
+     "mdc": 2.87,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -2.587,
+     "sd": 1.367,
+     "loa_low": -5.267,
+     "loa_high": 0.092,
+     "sem": 1.367,
+     "mdc": 3.79,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 1.094,
+     "sd": 1.622,
+     "loa_low": -2.086,
+     "loa_high": 4.273,
+     "sem": 1.622,
+     "mdc": 4.496,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -6.584,
+     "sd": 4.793,
+     "loa_low": -15.977,
+     "loa_high": 2.81,
+     "sem": 4.793,
+     "mdc": 13.285,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -8.581,
+     "sd": 3.794,
+     "loa_low": -16.018,
+     "loa_high": -1.144,
+     "sem": 3.794,
+     "mdc": 10.518,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "down_the_line",
+    "azimuth_deg": 60,
+    "elevation_deg": 0.0,
+    "distance_m": 3.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.006,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "down_the_line az60 el0 d3 s1 n0.006 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -1.663,
+     "sd": 1.025,
+     "loa_low": -3.671,
+     "loa_high": 0.346,
+     "sem": 1.025,
+     "mdc": 2.841,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": -0.312,
+     "sd": 0.893,
+     "loa_low": -2.062,
+     "loa_high": 1.437,
+     "sem": 0.893,
+     "mdc": 2.475,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.15,
+     "sd": 1.002,
+     "loa_low": -1.814,
+     "loa_high": 2.114,
+     "sem": 1.002,
+     "mdc": 2.777,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -0.706,
+     "sd": 1.24,
+     "loa_low": -3.136,
+     "loa_high": 1.723,
+     "sem": 1.24,
+     "mdc": 3.436,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 0.775,
+     "sd": 1.032,
+     "loa_low": -1.247,
+     "loa_high": 2.797,
+     "sem": 1.032,
+     "mdc": 2.86,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": -0.662,
+     "sd": 1.025,
+     "loa_low": -2.671,
+     "loa_high": 1.346,
+     "sem": 1.025,
+     "mdc": 2.841,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -3.119,
+     "sd": 1.373,
+     "loa_low": -5.81,
+     "loa_high": -0.427,
+     "sem": 1.373,
+     "mdc": 3.806,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.575,
+     "sd": 1.62,
+     "loa_low": -2.6,
+     "loa_high": 3.75,
+     "sem": 1.62,
+     "mdc": 4.489,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -10.754,
+     "sd": 4.725,
+     "loa_low": -20.015,
+     "loa_high": -1.492,
+     "sem": 4.725,
+     "mdc": 13.097,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -13.237,
+     "sd": 3.886,
+     "loa_low": -20.854,
+     "loa_high": -5.62,
+     "sem": 3.886,
+     "mdc": 10.772,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "down_the_line",
+    "azimuth_deg": 90,
+    "elevation_deg": 0.0,
+    "distance_m": 3.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.006,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "down_the_line az90 el0 d3 s1 n0.006 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -0.619,
+     "sd": 1.034,
+     "loa_low": -2.646,
+     "loa_high": 1.408,
+     "sem": 1.034,
+     "mdc": 2.867,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": 0.394,
+     "sd": 0.885,
+     "loa_low": -1.341,
+     "loa_high": 2.128,
+     "sem": 0.885,
+     "mdc": 2.453,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.144,
+     "sd": 1.007,
+     "loa_low": -1.831,
+     "loa_high": 2.118,
+     "sem": 1.007,
+     "mdc": 2.792,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -1.312,
+     "sd": 1.249,
+     "loa_low": -3.76,
+     "loa_high": 1.135,
+     "sem": 1.249,
+     "mdc": 3.462,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 0.35,
+     "sd": 1.042,
+     "loa_low": -1.693,
+     "loa_high": 2.393,
+     "sem": 1.042,
+     "mdc": 2.889,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": 0.381,
+     "sd": 1.034,
+     "loa_low": -1.646,
+     "loa_high": 2.408,
+     "sem": 1.034,
+     "mdc": 2.867,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -1.581,
+     "sd": 1.379,
+     "loa_low": -4.285,
+     "loa_high": 1.123,
+     "sem": 1.379,
+     "mdc": 3.824,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": -0.525,
+     "sd": 1.62,
+     "loa_low": -3.7,
+     "loa_high": 2.65,
+     "sem": 1.62,
+     "mdc": 4.489,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -19.871,
+     "sd": 3.152,
+     "loa_low": -26.049,
+     "loa_high": -13.692,
+     "sem": 3.152,
+     "mdc": 8.737,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -21.618,
+     "sd": 3.497,
+     "loa_low": -28.473,
+     "loa_high": -14.764,
+     "sem": 3.497,
+     "mdc": 9.694,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "down_the_line",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 15,
+    "distance_m": 3.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.006,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "down_the_line az0 el15 d3 s1 n0.006 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -1.219,
+     "sd": 1.034,
+     "loa_low": -3.246,
+     "loa_high": 0.808,
+     "sem": 1.034,
+     "mdc": 2.867,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": -5.0,
+     "sd": 0.89,
+     "loa_low": -6.744,
+     "loa_high": -3.256,
+     "sem": 0.89,
+     "mdc": 2.467,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": -0.456,
+     "sd": 1.007,
+     "loa_low": -2.431,
+     "loa_high": 1.518,
+     "sem": 1.007,
+     "mdc": 2.792,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 1.331,
+     "sd": 1.241,
+     "loa_low": -1.102,
+     "loa_high": 3.764,
+     "sem": 1.241,
+     "mdc": 3.441,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 0.269,
+     "sd": 1.032,
+     "loa_low": -1.754,
+     "loa_high": 2.291,
+     "sem": 1.032,
+     "mdc": 2.86,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": -0.219,
+     "sd": 1.034,
+     "loa_low": -2.246,
+     "loa_high": 1.808,
+     "sem": 1.034,
+     "mdc": 2.867,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 2.194,
+     "sd": 1.353,
+     "loa_low": -0.459,
+     "loa_high": 4.846,
+     "sem": 1.353,
+     "mdc": 3.751,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.55,
+     "sd": 1.602,
+     "loa_low": -2.59,
+     "loa_high": 3.69,
+     "sem": 1.602,
+     "mdc": 4.441,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": 0.834,
+     "sd": 5.277,
+     "loa_low": -9.508,
+     "loa_high": 11.177,
+     "sem": 5.277,
+     "mdc": 14.627,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -1.031,
+     "sd": 3.714,
+     "loa_low": -8.312,
+     "loa_high": 6.249,
+     "sem": 3.714,
+     "mdc": 10.296,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "down_the_line",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 30,
+    "distance_m": 3.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.006,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "down_the_line az0 el30 d3 s1 n0.006 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -1.825,
+     "sd": 1.034,
+     "loa_low": -3.852,
+     "loa_high": 0.202,
+     "sem": 1.034,
+     "mdc": 2.867,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": -5.0,
+     "sd": 0.89,
+     "loa_low": -6.744,
+     "loa_high": -3.256,
+     "sem": 0.89,
+     "mdc": 2.467,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": -1.425,
+     "sd": 1.004,
+     "loa_low": -3.392,
+     "loa_high": 0.542,
+     "sem": 1.004,
+     "mdc": 2.782,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 0.713,
+     "sd": 1.225,
+     "loa_low": -1.689,
+     "loa_high": 3.114,
+     "sem": 1.225,
+     "mdc": 3.396,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": -1.181,
+     "sd": 1.028,
+     "loa_low": -3.197,
+     "loa_high": 0.834,
+     "sem": 1.028,
+     "mdc": 2.851,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": -0.825,
+     "sd": 1.034,
+     "loa_low": -2.852,
+     "loa_high": 1.202,
+     "sem": 1.034,
+     "mdc": 2.867,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 1.6,
+     "sd": 1.357,
+     "loa_low": -1.06,
+     "loa_high": 4.26,
+     "sem": 1.357,
+     "mdc": 3.761,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": -1.569,
+     "sd": 1.618,
+     "loa_low": -4.739,
+     "loa_high": 1.602,
+     "sem": 1.618,
+     "mdc": 4.484,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": 4.65,
+     "sd": 5.74,
+     "loa_low": -6.601,
+     "loa_high": 15.9,
+     "sem": 5.74,
+     "mdc": 15.911,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": 1.741,
+     "sd": 3.882,
+     "loa_low": -5.867,
+     "loa_high": 9.35,
+     "sem": 3.882,
+     "mdc": 10.759,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "down_the_line",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 45,
+    "distance_m": 3.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.006,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "down_the_line az0 el45 d3 s1 n0.006 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -3.056,
+     "sd": 1.042,
+     "loa_low": -5.099,
+     "loa_high": -1.013,
+     "sem": 1.042,
+     "mdc": 2.889,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": -5.0,
+     "sd": 0.89,
+     "loa_low": -6.744,
+     "loa_high": -3.256,
+     "sem": 0.89,
+     "mdc": 2.467,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": -2.825,
+     "sd": 1.004,
+     "loa_low": -4.792,
+     "loa_high": -0.858,
+     "sem": 1.004,
+     "mdc": 2.782,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": -0.544,
+     "sd": 1.243,
+     "loa_low": -2.98,
+     "loa_high": 1.893,
+     "sem": 1.243,
+     "mdc": 3.446,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": -3.831,
+     "sd": 1.032,
+     "loa_low": -5.854,
+     "loa_high": -1.809,
+     "sem": 1.032,
+     "mdc": 2.86,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": -2.056,
+     "sd": 1.042,
+     "loa_low": -4.099,
+     "loa_high": -0.013,
+     "sem": 1.042,
+     "mdc": 2.889,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 0.319,
+     "sd": 1.379,
+     "loa_low": -2.385,
+     "loa_high": 3.023,
+     "sem": 1.379,
+     "mdc": 3.824,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": -5.119,
+     "sd": 1.625,
+     "loa_low": -8.304,
+     "loa_high": -1.934,
+     "sem": 1.625,
+     "mdc": 4.504,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": 11.949,
+     "sd": 6.167,
+     "loa_low": -0.138,
+     "loa_high": 24.037,
+     "sem": 6.167,
+     "mdc": 17.094,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": 7.232,
+     "sd": 4.041,
+     "loa_low": -0.689,
+     "loa_high": 15.153,
+     "sem": 4.041,
+     "mdc": 11.202,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "down_the_line",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 0.0,
+    "distance_m": 2.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.006,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "down_the_line az0 el0 d2 s1 n0.006 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -0.7,
+     "sd": 1.028,
+     "loa_low": -2.715,
+     "loa_high": 1.315,
+     "sem": 1.028,
+     "mdc": 2.85,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": -5.0,
+     "sd": 0.89,
+     "loa_low": -6.744,
+     "loa_high": -3.256,
+     "sem": 0.89,
+     "mdc": 2.467,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.288,
+     "sd": 1.009,
+     "loa_low": -1.689,
+     "loa_high": 2.264,
+     "sem": 1.009,
+     "mdc": 2.796,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 1.656,
+     "sd": 1.243,
+     "loa_low": -0.78,
+     "loa_high": 4.093,
+     "sem": 1.243,
+     "mdc": 3.446,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 1.35,
+     "sd": 1.042,
+     "loa_low": -0.693,
+     "loa_high": 3.393,
+     "sem": 1.042,
+     "mdc": 2.889,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": 0.3,
+     "sd": 1.028,
+     "loa_low": -1.715,
+     "loa_high": 2.315,
+     "sem": 1.028,
+     "mdc": 2.85,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 2.987,
+     "sd": 1.359,
+     "loa_low": 0.324,
+     "loa_high": 5.651,
+     "sem": 1.359,
+     "mdc": 3.767,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 2.694,
+     "sd": 1.622,
+     "loa_low": -0.486,
+     "loa_high": 5.873,
+     "sem": 1.622,
+     "mdc": 4.496,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -1.01,
+     "sd": 5.048,
+     "loa_low": -10.904,
+     "loa_high": 8.884,
+     "sem": 5.048,
+     "mdc": 13.993,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -2.199,
+     "sd": 3.442,
+     "loa_low": -8.947,
+     "loa_high": 4.548,
+     "sem": 3.442,
+     "mdc": 9.542,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "down_the_line",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 0.0,
+    "distance_m": 4.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.006,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "down_the_line az0 el0 d4 s1 n0.006 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -1.125,
+     "sd": 1.034,
+     "loa_low": -3.152,
+     "loa_high": 0.902,
+     "sem": 1.034,
+     "mdc": 2.867,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": -5.0,
+     "sd": 0.89,
+     "loa_low": -6.744,
+     "loa_high": -3.256,
+     "sem": 0.89,
+     "mdc": 2.467,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.319,
+     "sd": 1.001,
+     "loa_low": -1.643,
+     "loa_high": 2.28,
+     "sem": 1.001,
+     "mdc": 2.774,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 1.506,
+     "sd": 1.228,
+     "loa_low": -0.901,
+     "loa_high": 3.914,
+     "sem": 1.228,
+     "mdc": 3.405,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 1.119,
+     "sd": 1.028,
+     "loa_low": -0.897,
+     "loa_high": 3.134,
+     "sem": 1.028,
+     "mdc": 2.851,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": -0.125,
+     "sd": 1.034,
+     "loa_low": -2.152,
+     "loa_high": 1.902,
+     "sem": 1.034,
+     "mdc": 2.867,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 2.163,
+     "sd": 1.373,
+     "loa_low": -0.53,
+     "loa_high": 4.855,
+     "sem": 1.373,
+     "mdc": 3.807,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 1.55,
+     "sd": 1.602,
+     "loa_low": -1.59,
+     "loa_high": 4.69,
+     "sem": 1.602,
+     "mdc": 4.441,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -1.132,
+     "sd": 4.688,
+     "loa_low": -10.321,
+     "loa_high": 8.057,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -1.996,
+     "sd": 3.669,
+     "loa_low": -9.187,
+     "loa_high": 5.194,
+     "sem": 3.669,
+     "mdc": 10.169,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "down_the_line",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 0.0,
+    "distance_m": 6.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.006,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "down_the_line az0 el0 d6 s1 n0.006 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -1.263,
+     "sd": 1.025,
+     "loa_low": -3.271,
+     "loa_high": 0.746,
+     "sem": 1.025,
+     "mdc": 2.841,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": -4.994,
+     "sd": 0.895,
+     "loa_low": -6.748,
+     "loa_high": -3.24,
+     "sem": 0.895,
+     "mdc": 2.48,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.325,
+     "sd": 1.001,
+     "loa_low": -1.637,
+     "loa_high": 2.287,
+     "sem": 1.001,
+     "mdc": 2.775,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 1.413,
+     "sd": 1.225,
+     "loa_low": -0.989,
+     "loa_high": 3.814,
+     "sem": 1.225,
+     "mdc": 3.396,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 0.95,
+     "sd": 1.042,
+     "loa_low": -1.093,
+     "loa_high": 2.993,
+     "sem": 1.042,
+     "mdc": 2.889,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": -0.263,
+     "sd": 1.025,
+     "loa_low": -2.271,
+     "loa_high": 1.746,
+     "sem": 1.025,
+     "mdc": 2.841,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 1.881,
+     "sd": 1.373,
+     "loa_low": -0.81,
+     "loa_high": 4.573,
+     "sem": 1.373,
+     "mdc": 3.806,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 1.175,
+     "sd": 1.62,
+     "loa_low": -2.0,
+     "loa_high": 4.35,
+     "sem": 1.62,
+     "mdc": 4.489,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -1.181,
+     "sd": 4.575,
+     "loa_low": -10.149,
+     "loa_high": 7.787,
+     "sem": 4.575,
+     "mdc": 12.682,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -1.938,
+     "sd": 3.748,
+     "loa_low": -9.284,
+     "loa_high": 5.409,
+     "sem": 3.748,
+     "mdc": 10.39,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "down_the_line",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 0.0,
+    "distance_m": 8.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.006,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "down_the_line az0 el0 d8 s1 n0.006 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -1.325,
+     "sd": 1.034,
+     "loa_low": -3.352,
+     "loa_high": 0.702,
+     "sem": 1.034,
+     "mdc": 2.867,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": -4.994,
+     "sd": 0.895,
+     "loa_low": -6.748,
+     "loa_high": -3.24,
+     "sem": 0.895,
+     "mdc": 2.48,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.331,
+     "sd": 1.011,
+     "loa_low": -1.65,
+     "loa_high": 2.313,
+     "sem": 1.011,
+     "mdc": 2.803,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 1.356,
+     "sd": 1.243,
+     "loa_low": -1.08,
+     "loa_high": 3.793,
+     "sem": 1.243,
+     "mdc": 3.446,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 0.869,
+     "sd": 1.032,
+     "loa_low": -1.154,
+     "loa_high": 2.891,
+     "sem": 1.032,
+     "mdc": 2.86,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": -0.325,
+     "sd": 1.034,
+     "loa_low": -2.352,
+     "loa_high": 1.702,
+     "sem": 1.034,
+     "mdc": 2.867,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 1.756,
+     "sd": 1.376,
+     "loa_low": -0.942,
+     "loa_high": 4.454,
+     "sem": 1.376,
+     "mdc": 3.815,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.981,
+     "sd": 1.625,
+     "loa_low": -2.204,
+     "loa_high": 4.166,
+     "sem": 1.625,
+     "mdc": 4.504,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -1.207,
+     "sd": 4.52,
+     "loa_low": -10.066,
+     "loa_high": 7.652,
+     "sem": 4.52,
+     "mdc": 12.529,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -1.91,
+     "sd": 3.789,
+     "loa_low": -9.336,
+     "loa_high": 5.517,
+     "sem": 3.789,
+     "mdc": 10.502,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "down_the_line",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 0.0,
+    "distance_m": 3.0,
+    "size_factor": 0.5,
+    "noise_frac": 0.006,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "down_the_line az0 el0 d3 s0.5 n0.006 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -0.981,
+     "sd": 1.022,
+     "loa_low": -2.984,
+     "loa_high": 1.022,
+     "sem": 1.022,
+     "mdc": 2.833,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": -5.0,
+     "sd": 0.89,
+     "loa_low": -6.744,
+     "loa_high": -3.256,
+     "sem": 0.89,
+     "mdc": 2.467,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.3,
+     "sd": 1.009,
+     "loa_low": -1.677,
+     "loa_high": 2.277,
+     "sem": 1.009,
+     "mdc": 2.796,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 1.575,
+     "sd": 1.244,
+     "loa_low": -0.863,
+     "loa_high": 4.013,
+     "sem": 1.244,
+     "mdc": 3.448,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 1.237,
+     "sd": 1.035,
+     "loa_low": -0.79,
+     "loa_high": 3.265,
+     "sem": 1.035,
+     "mdc": 2.868,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": 0.019,
+     "sd": 1.022,
+     "loa_low": -1.984,
+     "loa_high": 2.022,
+     "sem": 1.022,
+     "mdc": 2.833,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 2.419,
+     "sd": 1.379,
+     "loa_low": -0.285,
+     "loa_high": 5.123,
+     "sem": 1.379,
+     "mdc": 3.824,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 1.913,
+     "sd": 1.604,
+     "loa_low": -1.231,
+     "loa_high": 5.056,
+     "sem": 1.604,
+     "mdc": 4.445,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -1.088,
+     "sd": 4.805,
+     "loa_low": -10.504,
+     "loa_high": 8.329,
+     "sem": 4.805,
+     "mdc": 13.317,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -2.06,
+     "sd": 3.591,
+     "loa_low": -9.098,
+     "loa_high": 4.979,
+     "sem": 3.591,
+     "mdc": 9.954,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "down_the_line",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 0.0,
+    "distance_m": 3.0,
+    "size_factor": 0.25,
+    "noise_frac": 0.006,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "down_the_line az0 el0 d3 s0.25 n0.006 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -0.981,
+     "sd": 1.022,
+     "loa_low": -2.984,
+     "loa_high": 1.022,
+     "sem": 1.022,
+     "mdc": 2.833,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": -5.0,
+     "sd": 0.89,
+     "loa_low": -6.744,
+     "loa_high": -3.256,
+     "sem": 0.89,
+     "mdc": 2.467,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.3,
+     "sd": 1.009,
+     "loa_low": -1.677,
+     "loa_high": 2.277,
+     "sem": 1.009,
+     "mdc": 2.796,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 1.575,
+     "sd": 1.244,
+     "loa_low": -0.863,
+     "loa_high": 4.013,
+     "sem": 1.244,
+     "mdc": 3.448,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 1.237,
+     "sd": 1.035,
+     "loa_low": -0.79,
+     "loa_high": 3.265,
+     "sem": 1.035,
+     "mdc": 2.868,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": 0.019,
+     "sd": 1.022,
+     "loa_low": -1.984,
+     "loa_high": 2.022,
+     "sem": 1.022,
+     "mdc": 2.833,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 2.419,
+     "sd": 1.379,
+     "loa_low": -0.285,
+     "loa_high": 5.123,
+     "sem": 1.379,
+     "mdc": 3.824,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 1.913,
+     "sd": 1.604,
+     "loa_low": -1.231,
+     "loa_high": 5.056,
+     "sem": 1.604,
+     "mdc": 4.445,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -1.088,
+     "sd": 4.805,
+     "loa_low": -10.504,
+     "loa_high": 8.329,
+     "sem": 4.805,
+     "mdc": 13.317,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -2.06,
+     "sd": 3.591,
+     "loa_low": -9.098,
+     "loa_high": 4.979,
+     "sem": 3.591,
+     "mdc": 9.954,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "down_the_line",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 0.0,
+    "distance_m": 3.0,
+    "size_factor": 0.11,
+    "noise_frac": 0.006,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "down_the_line az0 el0 d3 s0.11 n0.006 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -0.981,
+     "sd": 1.022,
+     "loa_low": -2.984,
+     "loa_high": 1.022,
+     "sem": 1.022,
+     "mdc": 2.833,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": -5.0,
+     "sd": 0.89,
+     "loa_low": -6.744,
+     "loa_high": -3.256,
+     "sem": 0.89,
+     "mdc": 2.467,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.3,
+     "sd": 1.009,
+     "loa_low": -1.677,
+     "loa_high": 2.277,
+     "sem": 1.009,
+     "mdc": 2.796,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 1.575,
+     "sd": 1.244,
+     "loa_low": -0.863,
+     "loa_high": 4.013,
+     "sem": 1.244,
+     "mdc": 3.448,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 1.237,
+     "sd": 1.035,
+     "loa_low": -0.79,
+     "loa_high": 3.265,
+     "sem": 1.035,
+     "mdc": 2.868,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": 0.019,
+     "sd": 1.022,
+     "loa_low": -1.984,
+     "loa_high": 2.022,
+     "sem": 1.022,
+     "mdc": 2.833,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 2.419,
+     "sd": 1.379,
+     "loa_low": -0.285,
+     "loa_high": 5.123,
+     "sem": 1.379,
+     "mdc": 3.824,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 1.913,
+     "sd": 1.604,
+     "loa_low": -1.231,
+     "loa_high": 5.056,
+     "sem": 1.604,
+     "mdc": 4.445,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -1.088,
+     "sd": 4.805,
+     "loa_low": -10.504,
+     "loa_high": 8.329,
+     "sem": 4.805,
+     "mdc": 13.317,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -2.06,
+     "sd": 3.591,
+     "loa_low": -9.098,
+     "loa_high": 4.979,
+     "sem": 3.591,
+     "mdc": 9.954,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "down_the_line",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 0.0,
+    "distance_m": 3.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.0,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "down_the_line az0 el0 d3 s1 n0 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -1.1,
+     "sd": 0.0,
+     "loa_low": -1.1,
+     "loa_high": -1.1,
+     "sem": 0.0,
+     "mdc": 0.0,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": -5.0,
+     "sd": 0.0,
+     "loa_low": -5.0,
+     "loa_high": -5.0,
+     "sem": 0.0,
+     "mdc": 0.0,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.4,
+     "sd": 0.0,
+     "loa_low": 0.4,
+     "loa_high": 0.4,
+     "sem": 0.0,
+     "mdc": 0.0,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 1.8,
+     "sd": 0.0,
+     "loa_low": 1.8,
+     "loa_high": 1.8,
+     "sem": 0.0,
+     "mdc": 0.0,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 1.3,
+     "sd": 0.0,
+     "loa_low": 1.3,
+     "loa_high": 1.3,
+     "sem": 0.0,
+     "mdc": 0.0,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": -0.1,
+     "sd": 0.0,
+     "loa_low": -0.1,
+     "loa_high": -0.1,
+     "sem": 0.0,
+     "mdc": 0.0,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 2.4,
+     "sd": 0.0,
+     "loa_low": 2.4,
+     "loa_high": 2.4,
+     "sem": 0.0,
+     "mdc": 0.0,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 2.0,
+     "sd": 0.0,
+     "loa_low": 2.0,
+     "loa_high": 2.0,
+     "sem": 0.0,
+     "mdc": 0.0,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": 0.486,
+     "sd": 0.0,
+     "loa_low": 0.486,
+     "loa_high": 0.486,
+     "sem": 0.0,
+     "mdc": 0.0,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -0.274,
+     "sd": 0.0,
+     "loa_low": -0.274,
+     "loa_high": -0.274,
+     "sem": 0.0,
+     "mdc": 0.0,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "down_the_line",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 0.0,
+    "distance_m": 3.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.003,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "down_the_line az0 el0 d3 s1 n0.003 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -1.025,
+     "sd": 0.52,
+     "loa_low": -2.043,
+     "loa_high": -0.007,
+     "sem": 0.52,
+     "mdc": 1.44,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": -5.006,
+     "sd": 0.442,
+     "loa_low": -5.872,
+     "loa_high": -4.14,
+     "sem": 0.442,
+     "mdc": 1.225,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.362,
+     "sd": 0.506,
+     "loa_low": -0.629,
+     "loa_high": 1.354,
+     "sem": 0.506,
+     "mdc": 1.402,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 1.688,
+     "sd": 0.624,
+     "loa_low": 0.465,
+     "loa_high": 2.91,
+     "sem": 0.624,
+     "mdc": 1.729,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 1.244,
+     "sd": 0.519,
+     "loa_low": 0.227,
+     "loa_high": 2.261,
+     "sem": 0.519,
+     "mdc": 1.438,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": -0.025,
+     "sd": 0.52,
+     "loa_low": -1.043,
+     "loa_high": 0.993,
+     "sem": 0.52,
+     "mdc": 1.44,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 2.431,
+     "sd": 0.681,
+     "loa_low": 1.097,
+     "loa_high": 3.766,
+     "sem": 0.681,
+     "mdc": 1.887,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 1.963,
+     "sd": 0.805,
+     "loa_low": 0.385,
+     "loa_high": 3.54,
+     "sem": 0.805,
+     "mdc": 2.231,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -0.224,
+     "sd": 2.434,
+     "loa_low": -4.996,
+     "loa_high": 4.547,
+     "sem": 2.434,
+     "mdc": 6.748,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -1.075,
+     "sd": 1.799,
+     "loa_low": -4.601,
+     "loa_high": 2.452,
+     "sem": 1.799,
+     "mdc": 4.987,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "down_the_line",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 0.0,
+    "distance_m": 3.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.012,
+    "fps": 240.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "down_the_line az0 el0 d3 s1 n0.012 fps240",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": -1.554,
+     "sd": 4.546,
+     "loa_low": -10.464,
+     "loa_high": 7.356,
+     "sem": 4.546,
+     "mdc": 12.601,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": 0.248,
+     "sd": 4.688,
+     "loa_low": -8.941,
+     "loa_high": 9.437,
+     "sem": 4.688,
+     "mdc": 12.996,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": -0.004,
+     "sd": 0.023,
+     "loa_low": -0.05,
+     "loa_high": 0.042,
+     "sem": 0.023,
+     "mdc": 0.065,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.269,
+     "sd": 4.151,
+     "loa_low": -8.404,
+     "loa_high": 7.867,
+     "sem": 4.151,
+     "mdc": 11.505,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -0.887,
+     "sd": 2.059,
+     "loa_low": -4.923,
+     "loa_high": 3.148,
+     "sem": 2.059,
+     "mdc": 5.707,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": -4.963,
+     "sd": 1.779,
+     "loa_low": -8.45,
+     "loa_high": -1.475,
+     "sem": 1.779,
+     "mdc": 4.932,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.194,
+     "sd": 2.004,
+     "loa_low": -3.734,
+     "loa_high": 4.121,
+     "sem": 2.004,
+     "mdc": 5.554,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 1.356,
+     "sd": 2.463,
+     "loa_low": -3.471,
+     "loa_high": 6.183,
+     "sem": 2.463,
+     "mdc": 6.826,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 1.175,
+     "sd": 2.065,
+     "loa_low": -2.873,
+     "loa_high": 5.223,
+     "sem": 2.065,
+     "mdc": 5.724,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": 0.113,
+     "sd": 2.059,
+     "loa_low": -3.923,
+     "loa_high": 4.148,
+     "sem": 2.059,
+     "mdc": 5.707,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 2.4,
+     "sd": 2.752,
+     "loa_low": -2.994,
+     "loa_high": 7.794,
+     "sem": 2.752,
+     "mdc": 7.629,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 1.869,
+     "sd": 3.205,
+     "loa_low": -4.413,
+     "loa_high": 8.15,
+     "sem": 3.205,
+     "mdc": 8.884,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -2.847,
+     "sd": 9.552,
+     "loa_low": -21.569,
+     "loa_high": 15.876,
+     "sem": 9.552,
+     "mdc": 26.478,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -4.033,
+     "sd": 7.175,
+     "loa_low": -18.095,
+     "loa_high": 10.029,
+     "sem": 7.175,
+     "mdc": 19.887,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "down_the_line",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 0.0,
+    "distance_m": 3.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.006,
+    "fps": 120.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "down_the_line az0 el0 d3 s1 n0.006 fps120",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": 1.033,
+     "sd": 9.052,
+     "loa_low": -16.708,
+     "loa_high": 18.775,
+     "sem": 9.052,
+     "mdc": 25.09,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": -3.633,
+     "sd": 9.357,
+     "loa_low": -21.973,
+     "loa_high": 14.706,
+     "sem": 9.357,
+     "mdc": 25.936,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": 0.018,
+     "sd": 0.048,
+     "loa_low": -0.076,
+     "loa_high": 0.112,
+     "sem": 0.048,
+     "mdc": 0.133,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -0.513,
+     "sd": 8.323,
+     "loa_low": -16.826,
+     "loa_high": 15.801,
+     "sem": 8.323,
+     "mdc": 23.071,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -0.694,
+     "sd": 1.021,
+     "loa_low": -2.694,
+     "loa_high": 1.307,
+     "sem": 1.021,
+     "mdc": 2.829,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": -4.637,
+     "sd": 1.099,
+     "loa_low": -6.792,
+     "loa_high": -2.483,
+     "sem": 1.099,
+     "mdc": 3.046,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.5,
+     "sd": 1.07,
+     "loa_low": -1.598,
+     "loa_high": 2.598,
+     "sem": 1.07,
+     "mdc": 2.966,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 1.562,
+     "sd": 1.229,
+     "loa_low": -0.846,
+     "loa_high": 3.971,
+     "sem": 1.229,
+     "mdc": 3.407,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 1.238,
+     "sd": 1.014,
+     "loa_low": -0.751,
+     "loa_high": 3.226,
+     "sem": 1.014,
+     "mdc": 2.812,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": 0.306,
+     "sd": 1.021,
+     "loa_low": -1.694,
+     "loa_high": 2.307,
+     "sem": 1.021,
+     "mdc": 2.829,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 2.075,
+     "sd": 1.406,
+     "loa_low": -0.681,
+     "loa_high": 4.831,
+     "sem": 1.406,
+     "mdc": 3.897,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 2.325,
+     "sd": 1.281,
+     "loa_low": -0.187,
+     "loa_high": 4.837,
+     "sem": 1.281,
+     "mdc": 3.552,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -1.685,
+     "sd": 3.511,
+     "loa_low": -8.566,
+     "loa_high": 5.196,
+     "sem": 3.511,
+     "mdc": 9.732,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -0.415,
+     "sd": 4.393,
+     "loa_low": -9.025,
+     "loa_high": 8.196,
+     "sem": 4.393,
+     "mdc": 12.178,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "down_the_line",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 0.0,
+    "distance_m": 3.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.006,
+    "fps": 60.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "down_the_line az0 el0 d3 s1 n0.006 fps60",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": 6.258,
+     "sd": 18.143,
+     "loa_low": -29.303,
+     "loa_high": 41.82,
+     "sem": 18.143,
+     "mdc": 50.291,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": -3.115,
+     "sd": 18.73,
+     "loa_low": -39.826,
+     "loa_high": 33.597,
+     "sem": 18.73,
+     "mdc": 51.917,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": 0.029,
+     "sd": 0.097,
+     "loa_low": -0.16,
+     "loa_high": 0.219,
+     "sem": 0.097,
+     "mdc": 0.268,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -1.05,
+     "sd": 16.625,
+     "loa_low": -33.634,
+     "loa_high": 31.534,
+     "sem": 16.625,
+     "mdc": 46.081,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -1.256,
+     "sd": 0.857,
+     "loa_low": -2.936,
+     "loa_high": 0.424,
+     "sem": 0.857,
+     "mdc": 2.376,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": -5.419,
+     "sd": 1.012,
+     "loa_low": -7.402,
+     "loa_high": -3.435,
+     "sem": 1.012,
+     "mdc": 2.805,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.419,
+     "sd": 0.901,
+     "loa_low": -1.346,
+     "loa_high": 2.184,
+     "sem": 0.901,
+     "mdc": 2.496,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 2.294,
+     "sd": 0.871,
+     "loa_low": 0.586,
+     "loa_high": 4.002,
+     "sem": 0.871,
+     "mdc": 2.415,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 1.6,
+     "sd": 1.255,
+     "loa_low": -0.86,
+     "loa_high": 4.06,
+     "sem": 1.255,
+     "mdc": 3.478,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": -0.256,
+     "sd": 0.857,
+     "loa_low": -1.936,
+     "loa_high": 1.424,
+     "sem": 0.857,
+     "mdc": 2.376,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 1.85,
+     "sd": 1.394,
+     "loa_low": -0.882,
+     "loa_high": 4.582,
+     "sem": 1.394,
+     "mdc": 3.863,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 2.056,
+     "sd": 1.61,
+     "loa_low": -1.098,
+     "loa_high": 5.211,
+     "sem": 1.61,
+     "mdc": 4.461,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -1.533,
+     "sd": 3.59,
+     "loa_low": -8.57,
+     "loa_high": 5.504,
+     "sem": 3.59,
+     "mdc": 9.952,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -2.747,
+     "sd": 3.451,
+     "loa_low": -9.511,
+     "loa_high": 4.018,
+     "sem": 3.451,
+     "mdc": 9.566,
+     "unit": "deg"
+    }
+   }
+  },
+  {
+   "condition": {
+    "view": "down_the_line",
+    "azimuth_deg": 0.0,
+    "elevation_deg": 0.0,
+    "distance_m": 3.0,
+    "size_factor": 1.0,
+    "noise_frac": 0.006,
+    "fps": 30.0,
+    "camera_height_m": 1.0,
+    "event_jitter_frames": 1
+   },
+   "label": "down_the_line az0 el0 d3 s1 n0.006 fps30",
+   "metrics": {
+    "backswing_duration_ms": {
+     "n": 16,
+     "truth": 904.167,
+     "bias": 16.658,
+     "sd": 36.247,
+     "loa_low": -54.386,
+     "loa_high": 87.703,
+     "sem": 36.247,
+     "mdc": 100.472,
+     "unit": "ms"
+    },
+    "downswing_duration_ms": {
+     "n": 16,
+     "truth": 470.833,
+     "bias": -2.071,
+     "sd": 37.447,
+     "loa_low": -75.467,
+     "loa_high": 71.325,
+     "sem": 37.447,
+     "mdc": 103.798,
+     "unit": "ms"
+    },
+    "tempo_ratio": {
+     "n": 16,
+     "truth": 1.92,
+     "bias": 0.058,
+     "sd": 0.2,
+     "loa_low": -0.334,
+     "loa_high": 0.449,
+     "sem": 0.2,
+     "mdc": 0.554,
+     "unit": "ratio"
+    },
+    "follow_duration_ms": {
+     "n": 16,
+     "truth": 400.0,
+     "bias": -2.075,
+     "sd": 33.271,
+     "loa_low": -67.286,
+     "loa_high": 63.136,
+     "sem": 33.271,
+     "mdc": 92.223,
+     "unit": "ms"
+    },
+    "pelvis_sway_top_cm": {
+     "n": 16,
+     "truth": -3.0,
+     "bias": -1.138,
+     "sd": 1.096,
+     "loa_low": -3.286,
+     "loa_high": 1.011,
+     "sem": 1.096,
+     "mdc": 3.038,
+     "unit": "cm"
+    },
+    "pelvis_sway_impact_cm": {
+     "n": 16,
+     "truth": 5.0,
+     "bias": -5.325,
+     "sd": 1.195,
+     "loa_low": -7.668,
+     "loa_high": -2.982,
+     "sem": 1.195,
+     "mdc": 3.313,
+     "unit": "cm"
+    },
+    "pelvis_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 0.456,
+     "sd": 1.123,
+     "loa_low": -1.745,
+     "loa_high": 2.657,
+     "sem": 1.123,
+     "mdc": 3.113,
+     "unit": "cm"
+    },
+    "thorax_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 1.863,
+     "sd": 0.615,
+     "loa_low": 0.657,
+     "loa_high": 3.068,
+     "sem": 0.615,
+     "mdc": 1.705,
+     "unit": "cm"
+    },
+    "thorax_lift_top_cm": {
+     "n": 16,
+     "truth": 4.0,
+     "bias": 1.006,
+     "sd": 0.992,
+     "loa_low": -0.939,
+     "loa_high": 2.951,
+     "sem": 0.992,
+     "mdc": 2.75,
+     "unit": "cm"
+    },
+    "pelvis_thrust_top_cm": {
+     "n": 16,
+     "truth": -4.0,
+     "bias": -0.137,
+     "sd": 1.096,
+     "loa_low": -2.286,
+     "loa_high": 2.011,
+     "sem": 1.096,
+     "mdc": 3.038,
+     "unit": "cm"
+    },
+    "head_sway_top_cm": {
+     "n": 16,
+     "truth": -6.0,
+     "bias": 2.913,
+     "sd": 1.612,
+     "loa_low": -0.248,
+     "loa_high": 6.073,
+     "sem": 1.612,
+     "mdc": 4.469,
+     "unit": "cm"
+    },
+    "head_lift_top_cm": {
+     "n": 16,
+     "truth": 3.0,
+     "bias": 1.725,
+     "sd": 1.073,
+     "loa_low": -0.378,
+     "loa_high": 3.828,
+     "sem": 1.073,
+     "mdc": 2.974,
+     "unit": "cm"
+    },
+    "lead_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.584,
+     "bias": -1.208,
+     "sd": 3.001,
+     "loa_low": -7.09,
+     "loa_high": 4.673,
+     "sem": 3.001,
+     "mdc": 8.317,
+     "unit": "deg"
+    },
+    "trail_knee_flexion_delta_top_deg": {
+     "n": 16,
+     "truth": 20.58,
+     "bias": -0.705,
+     "sd": 2.409,
+     "loa_low": -5.427,
+     "loa_high": 4.018,
+     "sem": 2.409,
+     "mdc": 6.679,
+     "unit": "deg"
+    }
+   }
+  }
+ ],
+ "summary": {
+  "backswing_duration_ms": {
+   "unit": "ms",
+   "views": [
+    "face_on",
+    "down_the_line"
+   ],
+   "fps_min": 120.0,
+   "mdc": 12.601,
+   "mdc_by_view": {
+    "face_on": 12.601,
+    "down_the_line": 12.601
+   },
+   "note": ""
+  },
+  "downswing_duration_ms": {
+   "unit": "ms",
+   "views": [
+    "face_on",
+    "down_the_line"
+   ],
+   "fps_min": 120.0,
+   "mdc": 12.996,
+   "mdc_by_view": {
+    "face_on": 12.996,
+    "down_the_line": 12.996
+   },
+   "note": ""
+  },
+  "tempo_ratio": {
+   "unit": "ratio",
+   "views": [
+    "face_on",
+    "down_the_line"
+   ],
+   "fps_min": 60.0,
+   "mdc": 0.065,
+   "mdc_by_view": {
+    "face_on": 0.065,
+    "down_the_line": 0.065
+   },
+   "note": ""
+  },
+  "follow_duration_ms": {
+   "unit": "ms",
+   "views": [
+    "face_on",
+    "down_the_line"
+   ],
+   "fps_min": 120.0,
+   "mdc": 11.505,
+   "mdc_by_view": {
+    "face_on": 11.505,
+    "down_the_line": 11.505
+   },
+   "note": ""
+  },
+  "pelvis_sway_top_cm": {
+   "unit": "cm",
+   "views": [
+    "face_on"
+   ],
+   "fps_min": 30.0,
+   "mdc": 2.87,
+   "mdc_by_view": {
+    "face_on": 2.87
+   },
+   "note": ""
+  },
+  "pelvis_sway_impact_cm": {
+   "unit": "cm",
+   "views": [
+    "face_on"
+   ],
+   "fps_min": 30.0,
+   "mdc": 2.481,
+   "mdc_by_view": {
+    "face_on": 2.481
+   },
+   "note": ""
+  },
+  "pelvis_lift_top_cm": {
+   "unit": "cm",
+   "views": [
+    "face_on",
+    "down_the_line"
+   ],
+   "fps_min": 30.0,
+   "mdc": 2.822,
+   "mdc_by_view": {
+    "face_on": 2.822,
+    "down_the_line": 2.796
+   },
+   "note": ""
+  },
+  "thorax_sway_top_cm": {
+   "unit": "cm",
+   "views": [
+    "face_on"
+   ],
+   "fps_min": 30.0,
+   "mdc": 3.462,
+   "mdc_by_view": {
+    "face_on": 3.462
+   },
+   "note": ""
+  },
+  "thorax_lift_top_cm": {
+   "unit": "cm",
+   "views": [
+    "face_on",
+    "down_the_line"
+   ],
+   "fps_min": 30.0,
+   "mdc": 2.889,
+   "mdc_by_view": {
+    "face_on": 2.889,
+    "down_the_line": 2.868
+   },
+   "note": ""
+  },
+  "pelvis_thrust_top_cm": {
+   "unit": "cm",
+   "views": [
+    "down_the_line"
+   ],
+   "fps_min": 30.0,
+   "mdc": 2.867,
+   "mdc_by_view": {
+    "down_the_line": 2.867
+   },
+   "note": ""
+  },
+  "head_sway_top_cm": {
+   "unit": "cm",
+   "views": [
+    "face_on"
+   ],
+   "fps_min": 30.0,
+   "mdc": 3.824,
+   "mdc_by_view": {
+    "face_on": 3.824
+   },
+   "note": ""
+  },
+  "head_lift_top_cm": {
+   "unit": "cm",
+   "views": [
+    "face_on",
+    "down_the_line"
+   ],
+   "fps_min": 30.0,
+   "mdc": 4.501,
+   "mdc_by_view": {
+    "face_on": 4.489,
+    "down_the_line": 4.501
+   },
+   "note": ""
+  },
+  "lead_knee_flexion_delta_top_deg": {
+   "unit": "deg",
+   "views": [],
+   "fps_min": null,
+   "mdc": null,
+   "mdc_by_view": {},
+   "note": "sin vista válida: la métrica muere (ESPECIFICACION 3.3)"
+  },
+  "trail_knee_flexion_delta_top_deg": {
+   "unit": "deg",
+   "views": [],
+   "fps_min": null,
+   "mdc": null,
+   "mdc_by_view": {},
+   "note": "sin vista válida: la métrica muere (ESPECIFICACION 3.3)"
+  }
+ }
+}

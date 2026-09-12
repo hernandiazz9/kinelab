@@ -57,6 +57,15 @@ class SportEvents:
 
 
 @dataclass(frozen=True)
+class SportMetrics:
+    """Lo que el motor necesita para calcular las métricas de un deporte (Fase 3)."""
+
+    registry: Any  # kinelab.metrics.registry.Registry con las métricas del deporte
+    joints: dict[str, tuple[int, ...]]  # keypoints involucrados por métrica (para la confianza)
+    gain_segments: dict[str, tuple[int, int]]  # segmentos para la ganancia de velocidad angular, en orden proximal→distal
+
+
+@dataclass(frozen=True)
 class SportConfig:
     id: str
     # Gestos que se pueden declarar en la ingesta. Cada uno tendrá, en la Fase 2,
@@ -72,6 +81,8 @@ class SportConfig:
     perception: PerceptionGates = field(default_factory=PerceptionGates)
     # Eventos y segmentación (Fase 2). None = el deporte todavía no los define.
     events: SportEvents | None = None
+    # Métricas (Fase 3). None = sin métricas todavía.
+    metrics: SportMetrics | None = None
 
     def __post_init__(self) -> None:
         if not self.gestures:

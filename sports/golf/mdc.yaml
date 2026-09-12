@@ -1,0 +1,77 @@
+# Tabla de MDC por métrica — escrita por el arnés (truth/), NO a mano (ESPECIFICACION 3.3).
+# generado: 2026-09-12T13:05:41+00:00 · nivel 0 (proyección + ruido; sin estimador) · cámara iphone17pro-1080p120 (sin_verificar) · semillas 16
+# views: |sesgo| nominal bajo tolerancia; fps_min: menor fps con |sesgo| y MDC bajo tolerancia;
+# mdc: el peor entre nominal y azimut ≤ 30° en las vistas válidas. Ver truth/reports/.
+metrics:
+  backswing_duration_ms:
+    unit: ms
+    views: [face_on, down_the_line]
+    fps_min: 120.0
+    mdc: 12.601
+  downswing_duration_ms:
+    unit: ms
+    views: [face_on, down_the_line]
+    fps_min: 120.0
+    mdc: 12.996
+  tempo_ratio:
+    unit: ratio
+    views: [face_on, down_the_line]
+    fps_min: 60.0
+    mdc: 0.065
+  follow_duration_ms:
+    unit: ms
+    views: [face_on, down_the_line]
+    fps_min: 120.0
+    mdc: 11.505
+  pelvis_sway_top_cm:
+    unit: cm
+    views: [face_on]
+    fps_min: 30.0
+    mdc: 2.87
+  pelvis_sway_impact_cm:
+    unit: cm
+    views: [face_on]
+    fps_min: 30.0
+    mdc: 2.481
+  pelvis_lift_top_cm:
+    unit: cm
+    views: [face_on, down_the_line]
+    fps_min: 30.0
+    mdc: 2.822
+  thorax_sway_top_cm:
+    unit: cm
+    views: [face_on]
+    fps_min: 30.0
+    mdc: 3.462
+  thorax_lift_top_cm:
+    unit: cm
+    views: [face_on, down_the_line]
+    fps_min: 30.0
+    mdc: 2.889
+  pelvis_thrust_top_cm:
+    unit: cm
+    views: [down_the_line]
+    fps_min: 30.0
+    mdc: 2.867
+  head_sway_top_cm:
+    unit: cm
+    views: [face_on]
+    fps_min: 30.0
+    mdc: 3.824
+  head_lift_top_cm:
+    unit: cm
+    views: [face_on, down_the_line]
+    fps_min: 30.0
+    mdc: 4.501
+  lead_knee_flexion_delta_top_deg:
+    unit: deg
+    views: []
+    fps_min: null
+    mdc: null
+    note: "sin vista válida: la métrica muere (ESPECIFICACION 3.3)"
+  trail_knee_flexion_delta_top_deg:
+    unit: deg
+    views: []
+    fps_min: null
+    mdc: null
+    note: "sin vista válida: la métrica muere (ESPECIFICACION 3.3)"
