@@ -1,8 +1,9 @@
 # Informes de sesión
 
-Cada sesión de trabajo deja acá un informe corto, `AAAA-MM-DD-<slug>.md`, que el
-orquestador lee para decidir el paso siguiente. Formato fijo, para que se pueda
-leer en un minuto:
+Cada sesión de trabajo deja acá un informe corto, `AAAA-MM-DD-NN-<slug>.md`
+(NN es el número del encargo en `docs/prompts/`), que el orquestador lee para
+decidir el paso siguiente. Formato fijo, para que se pueda leer en un minuto.
+Con números: el orquestador no lee código ni CSVs, decide con lo que diga acá.
 
 ```
 # <slug> — <fecha>

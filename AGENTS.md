@@ -44,6 +44,15 @@ sesión.
 - Prosa de documentos, comentarios y mensajes de commit en español;
   identificadores de código en inglés.
 
+## Sesiones: orquestador y encargos
+
+El trabajo se reparte en sesiones de Claude Code. Una **orquestadora**
+(`/orquestador`) lee los informes, mantiene el backlog en `docs/PLAN.md` y
+escribe encargos numerados en `docs/prompts/NN-<slug>.md`. Las sesiones de
+**trabajo** (`/encargo NN`) ejecutan uno, commitean y dejan un informe corto en
+`docs/informes/`. Las reglas fijas de cada rol viven en `.claude/skills/`; los
+prompts sólo llevan lo específico de cada encargo.
+
 ## Estructura del repo
 
 ```

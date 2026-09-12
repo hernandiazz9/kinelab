@@ -74,7 +74,7 @@ teléfono con números.
 
 Una pantalla: subir un video → el `overlay.mp4` con los palitos en un
 reproductor con cámara lenta, cuadro a cuadro y zoom, las fotos por evento y
-toda la data en tablas. Prompt de origen: `docs/prompts/interfaz-exploracion.md`.
+toda la data en tablas. Prompt de origen: `docs/prompts/01-interfaz-exploracion.md`.
 Los comandos y qué esperar están en `README.md`.
 
 ### Qué existe
@@ -314,7 +314,7 @@ scipy 1.18.1 · pydantic 2.13.5 · fastapi 0.141.1 · Mac Apple M3 Pro.
 subir un video, que corra `python -m kinelab datos` y muestre el `overlay.mp4`
 con un reproductor con cámara lenta y cuadro a cuadro, las fotos por evento y
 toda la data en tablas. El prompt completo para esa sesión está en
-`docs/prompts/interfaz-exploracion.md`. La página actual de `service/` no le
+`docs/prompts/01-interfaz-exploracion.md`. La página actual de `service/` no le
 sirve y se reemplaza por una app Next.js en `web/`.
 
 Con clips reales: pasarlos por percepción y análisis, medir el umbral de
