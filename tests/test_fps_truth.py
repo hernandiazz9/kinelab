@@ -54,6 +54,103 @@ def test_resampled30_lost_the_frames(clips):
     assert d.r_frame_rate == pytest.approx(30, abs=0.5)
 
 
+# --- el primer delta: arranque de la cámara, no tasa variable -------------
+
+
+def test_first_delta_is_not_variable_rate(clips):
+    """El caso medido en el original del Galaxy S22 Ultra: 263 deltas de
+    0,0333 s y UNO de 0,2015 s, el primero. Con ese delta adentro el clip se
+    declaraba VFR y reproducía a 29,436 fps en vez de 30,000 — todos los
+    tiempos 1,9 % largos. El fixture lo reproduce con 0,2 s exactos."""
+    c = ft.count_frames(clips["first_delta30_h264"])
+    assert c.frames_decoded == 120, "setpts conserva los cuadros"
+    assert c.delta_first_s == pytest.approx(0.2, abs=1e-3)
+
+    # Lo bruto, que es lo que había antes y sigue estando con su significado.
+    assert c.vfr_ratio == pytest.approx(6.0, abs=0.05)
+    assert c.vfr_ratio > VFR_MAX
+    assert c.fps_playback == pytest.approx(28.79, abs=0.05), "contaminado por el primer delta"
+
+    # Lo nuevo: sin el primer delta el clip es CFR a 30,00 exactos.
+    assert c.vfr_ratio_excl_first == pytest.approx(1.0, abs=0.01)
+    assert c.fps_playback_excl_first == pytest.approx(30.0, abs=0.01)
+    assert c.first_delta_is_the_only_outlier
+    assert c.fps_playback_effective == pytest.approx(30.0, abs=0.01)
+    assert c.vfr_ratio_effective == c.vfr_ratio_excl_first
+
+
+def test_first_delta_clip_is_not_called_vfr_and_says_why(clips):
+    t = ft.analyze(clips["first_delta30_h264"])
+    assert t.verdict != "vfr"
+    assert t.verdict == "sin_duracion_real"
+    nota = [n for n in t.notes if "primer delta" in n]
+    assert nota, f"falta la nota del primer delta: {t.notes}"
+    assert "arranque de la cámara" in nota[0]
+    assert "0.2000" in nota[0], "la nota dice cuánto mide el primer delta"
+    assert "30.000 fps" in nota[0], "y la reproducción sin él"
+
+
+def test_first_delta_clip_with_real_duration_is_cfr_at_capture_rate(clips):
+    """El caso que importa para el cronómetro: 120 cuadros en 4 s reales son
+    30 fps de captura, y el factor de estiramiento tiene que dar 1,00. Con el
+    fps de reproducción bruto (28,79) daría 1,042: un clip normal parecería
+    estirado un 4 %."""
+    t = ft.analyze(clips["first_delta30_h264"], real_duration_s=4.0, nominal_fps=30)
+    assert t.verdict == "cfr_a_tasa_de_captura"
+    assert t.fps_capture == pytest.approx(30.0, abs=0.01)
+    assert t.stretch_factor == pytest.approx(1.0, abs=0.01)
+
+
+def test_first_delta_clip_keeps_the_raw_numbers_in_json(clips):
+    """Nadie pierde información: el bruto y el corregido viajan los dos."""
+    d = json.loads(json.dumps(ft.analyze(clips["first_delta30_h264"]).to_dict()))
+    c = d["counted"]
+    assert c["vfr_ratio"] == pytest.approx(6.0, abs=0.05)
+    assert c["fps_playback"] == pytest.approx(28.79, abs=0.05)
+    assert c["vfr_ratio_excl_first"] == pytest.approx(1.0, abs=0.01)
+    assert c["fps_playback_excl_first"] == pytest.approx(30.0, abs=0.01)
+    assert c["delta_first_s"] == pytest.approx(0.2, abs=1e-3)
+    assert c["first_delta_is_the_only_outlier"] is True
+    assert c["fps_playback_effective"] == pytest.approx(30.0, abs=0.01)
+
+
+def test_real_vfr_clip_stays_vfr_after_excluding_the_first_delta(clips):
+    """El contraste. En el clip realmente VFR (120 fps y después 60) excluir
+    el primer delta no cambia nada: sigue VFR, y lo dice."""
+    clip = _need(clips, "hevc120_vfr")
+    c = ft.count_frames(clip)
+    assert c.vfr_ratio > VFR_MAX
+    assert c.vfr_ratio_excl_first > VFR_MAX, "el problema no es el arranque"
+    assert not c.first_delta_is_the_only_outlier
+    assert c.vfr_ratio_effective == c.vfr_ratio
+    assert c.fps_playback_effective == c.fps_playback
+
+    t = ft.analyze(clip)
+    assert t.verdict == "vfr"
+    assert not any("arranque de la cámara" in n for n in t.notes)
+
+
+def test_cfr_clip_is_unchanged_by_the_new_fields(clips):
+    """Un clip CFR de punta a punta: el corregido y el bruto coinciden y no
+    aparece ninguna nota nueva."""
+    c = ft.count_frames(clips["real240_h264"])
+    assert not c.first_delta_is_the_only_outlier
+    assert c.fps_playback_excl_first == pytest.approx(c.fps_playback, rel=0.01)
+    assert c.vfr_ratio_excl_first <= VFR_MAX
+    assert not any("primer delta" in n for n in ft.analyze(clips["real240_h264"]).notes)
+
+
+def test_first_delta_cli_shows_both_numbers(clips, capsys):
+    rc = ft.main([str(clips["first_delta30_h264"])])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "VFR" not in out
+    medido = next(l for l in out.splitlines() if "medido:" in l)
+    corregida = next(l for l in out.splitlines() if "sin el 1er delta" in l)
+    assert "28.790 fps" in medido, "el bruto sigue estando, con su significado"
+    assert "30.000 fps" in corregida and "ratio 1.000" in corregida
+
+
 def test_declared_fields_do_not_separate_slowed_from_resampled(clips):
     """El test central. Si alguna vez falla porque el contenedor empezó a
     distinguirlos, cambió ffmpeg, no el problema: verificar con un clip real

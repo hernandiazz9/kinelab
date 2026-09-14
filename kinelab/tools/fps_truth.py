@@ -15,6 +15,14 @@ Por eso esta herramienta separa tres cosas que suelen confundirse:
 - y, sólo si se pasa la duración real, la **tasa de captura** y el factor de
   estiramiento.
 
+Aparte de eso, el **primer delta de PTS no es tasa variable**: la cámara tarda
+en entregar el segundo cuadro. Medido en el original del Galaxy S22 Ultra
+(265 cuadros): 263 deltas de 0,0333 s y uno de 0,2015 s, el primero. Contado
+entero, el clip se declaraba VFR (ratio 6,04) y reproducía a 29,436 fps en vez
+de 30,000 — todos los tiempos 1,9 % largos. Por eso `Counted` lleva los dos
+juegos de números, el bruto y el `_excl_first`, y el veredicto usa el segundo
+sólo cuando el primer delta es el único fuera de lugar.
+
 Uso:
     python -m kinelab.tools.fps_truth clip.mov
     python -m kinelab.tools.fps_truth clip.mov --duracion-real 10.00 --nominal 240
@@ -103,21 +111,50 @@ class Declared:
 
 @dataclass(frozen=True)
 class Counted:
-    """Lo que hay de verdad: cuadros decodificados y sus timestamps."""
+    """Lo que hay de verdad: cuadros decodificados y sus timestamps.
+
+    Los campos `vfr_ratio` y `fps_playback` son los BRUTOS, sobre todos los
+    deltas, y no cambian de significado. Los `_excl_first` son los mismos
+    números calculados sin el primer delta, porque el arranque de la cámara no
+    es tasa variable: medido en un Galaxy S22 Ultra (`20260907_170638.mp4`,
+    265 cuadros), 263 deltas de 0,0333 s y UNO de 0,2015 s, el primero. Con
+    ese delta adentro el ratio da 6,04 y la reproducción 29,436 fps; sin él,
+    1,00 y 30,000 fps. Cuál de los dos usa el gate es una decisión de
+    CAPTURA.md, no de esta herramienta: acá se reportan los dos.
+    """
 
     frames_decoded: int
     pts_first_s: float
     pts_last_s: float
+    delta_first_s: float
     delta_min_s: float
     delta_max_s: float
     delta_median_s: float
     zero_deltas: int
     vfr_ratio: float
     fps_playback: float
+    vfr_ratio_excl_first: float
+    fps_playback_excl_first: float
 
     @property
     def playback_span_s(self) -> float:
         return self.pts_last_s - self.pts_first_s
+
+    @property
+    def first_delta_is_the_only_outlier(self) -> bool:
+        """El clip sería CFR si no fuera por el primer delta."""
+        return self.vfr_ratio > VFR_RATIO_MAX and self.vfr_ratio_excl_first <= VFR_RATIO_MAX
+
+    @property
+    def vfr_ratio_effective(self) -> float:
+        """El ratio con el que se juzga: sin el primer delta sólo si ése es el
+        único anómalo. En un clip realmente VFR es el bruto, sin perdón."""
+        return self.vfr_ratio_excl_first if self.first_delta_is_the_only_outlier else self.vfr_ratio
+
+    @property
+    def fps_playback_effective(self) -> float:
+        """La tasa a la que el clip reproduce de verdad, con el mismo criterio."""
+        return self.fps_playback_excl_first if self.first_delta_is_the_only_outlier else self.fps_playback
 
 
 @dataclass(frozen=True)
@@ -136,6 +173,9 @@ class Truth:
         d = asdict(self)
         d["declared"]["display_size"] = list(self.declared.display_size)
         d["counted"]["playback_span_s"] = self.counted.playback_span_s
+        d["counted"]["first_delta_is_the_only_outlier"] = self.counted.first_delta_is_the_only_outlier
+        d["counted"]["vfr_ratio_effective"] = self.counted.vfr_ratio_effective
+        d["counted"]["fps_playback_effective"] = self.counted.fps_playback_effective
         return d
 
 
@@ -232,16 +272,36 @@ def count_frames(path: str | Path) -> Counted:
         raise FfprobeError(f"{path}: todos los cuadros tienen el mismo timestamp")
     dmin, dmax = min(positive), max(positive)
     span = times[-1] - times[0]
+    fps_playback = (n - 1) / span if span > 0 else 0.0
+
+    # Los mismos dos números sin el primer delta. El arranque de la cámara (el
+    # sensor tarda en entregar el segundo cuadro) no es tasa variable, y con
+    # `(n-1)/span` contamina la tasa entera: medido en el original del S22,
+    # 29,436 fps en vez de 30,000, o sea todos los tiempos 1,9 % largos.
+    # Se usa el span de los cuadros restantes y no la mediana de deltas porque
+    # el span promedia el error de cuantización del time base sobre todo el
+    # clip (263 deltas), mientras que la mediana lo hereda de un solo delta.
+    rest = [d for d in deltas[1:] if d > 0]
+    rest_span = times[-1] - times[1]
+    if rest and rest_span > 0:
+        vfr_excl, fps_excl = max(rest) / min(rest), (n - 2) / rest_span
+    else:
+        # Dos cuadros: no queda nada al excluir el primer delta.
+        vfr_excl, fps_excl = dmax / dmin, fps_playback
+
     return Counted(
         frames_decoded=n,
         pts_first_s=times[0],
         pts_last_s=times[-1],
+        delta_first_s=deltas[0],
         delta_min_s=dmin,
         delta_max_s=dmax,
         delta_median_s=statistics.median(positive),
         zero_deltas=zero,
         vfr_ratio=dmax / dmin,
-        fps_playback=(n - 1) / span if span > 0 else 0.0,
+        fps_playback=fps_playback,
+        vfr_ratio_excl_first=vfr_excl,
+        fps_playback_excl_first=fps_excl,
     )
 
 
@@ -256,23 +316,40 @@ def analyze(
     counted = count_frames(path)
     notes: list[str] = []
 
+    # El arranque de la cámara no es tasa variable: si el primer delta es el
+    # único fuera de lugar, se juzga con los números sin él (`_effective`).
+    # Los brutos quedan intactos en `counted`; nadie pierde información.
+    fps_playback_eff = counted.fps_playback_effective
+    if counted.first_delta_is_the_only_outlier:
+        notes.append(
+            f"el primer delta es {counted.delta_first_s:.4f} s (arranque de la cámara); sin él, "
+            f"ratio {counted.vfr_ratio_excl_first:.2f} y reproducción {fps_playback_eff:.3f} fps "
+            f"(con él: ratio {counted.vfr_ratio:.2f}, {counted.fps_playback:.3f} fps). "
+            "El resto de los deltas es uniforme: no es tasa variable."
+        )
+
     fps_capture: float | None = None
     stretch: float | None = None
     if real_duration_s is not None:
         fps_capture = counted.frames_decoded / real_duration_s
-        stretch = fps_capture / counted.fps_playback if counted.fps_playback > 0 else None
+        stretch = fps_capture / fps_playback_eff if fps_playback_eff > 0 else None
 
-    if counted.vfr_ratio > VFR_RATIO_MAX:
+    if counted.vfr_ratio_effective > VFR_RATIO_MAX:
         verdict = "vfr"
         notes.append(
-            f"tasa variable: delta_max/delta_min = {counted.vfr_ratio:.2f} (> {VFR_RATIO_MAX}). "
+            f"tasa variable: delta_max/delta_min = {counted.vfr_ratio_effective:.2f} (> {VFR_RATIO_MAX}). "
             "Puede ser VFR real o el bug de captura del iPhone; el clip no sirve para medir tiempos."
         )
+        if counted.vfr_ratio > counted.vfr_ratio_effective:
+            notes.append(
+                f"excluir el primer delta ({counted.delta_first_s:.4f} s) no alcanza: "
+                f"quedan deltas de {counted.delta_min_s:.5f} a {counted.delta_max_s:.5f} s."
+            )
     elif real_duration_s is None:
         verdict = "sin_duracion_real"
         notes.append(
             "sin una duración real no se puede saber la tasa de captura: el contenedor sólo "
-            f"dice la de reproducción ({counted.fps_playback:.2f} fps). Filmá un cronómetro."
+            f"dice la de reproducción ({fps_playback_eff:.2f} fps). Filmá un cronómetro."
         )
     elif stretch is not None and abs(stretch - 1.0) <= STRETCH_TOL:
         if nominal_fps and fps_capture is not None and fps_capture < DESTROYED_RATIO * nominal_fps:
@@ -287,15 +364,15 @@ def analyze(
         verdict = "estirado"
         notes.append(
             f"los cuadros están ({fps_capture:.1f} fps de captura) pero los timestamps los "
-            f"reproducen a {counted.fps_playback:.2f} fps: factor de estiramiento {stretch:.2f}. "
+            f"reproducen a {fps_playback_eff:.2f} fps: factor de estiramiento {stretch:.2f}. "
             "Es un slow-motion horneado o un ready-to-play de Android; los datos se recuperan con el factor."
         )
 
     if counted.zero_deltas:
         notes.append(f"{counted.zero_deltas} cuadro(s) con timestamp repetido")
-    if declared.r_frame_rate > 0 and abs(declared.r_frame_rate - counted.fps_playback) / declared.r_frame_rate > 0.02:
+    if declared.r_frame_rate > 0 and abs(declared.r_frame_rate - fps_playback_eff) / declared.r_frame_rate > 0.02:
         notes.append(
-            f"r_frame_rate declarado {declared.r_frame_rate:.3f} ≠ reproducción medida {counted.fps_playback:.3f}"
+            f"r_frame_rate declarado {declared.r_frame_rate:.3f} ≠ reproducción medida {fps_playback_eff:.3f}"
         )
 
     return Truth(
@@ -321,6 +398,11 @@ def format_human(t: Truth) -> str:
         f"  medido:     {c.frames_decoded} cuadros · reproducción {c.fps_playback:.3f} fps · "
         f"deltas {c.delta_min_s:.5f}–{c.delta_max_s:.5f} s (ratio {c.vfr_ratio:.3f})",
     ]
+    if c.first_delta_is_the_only_outlier:
+        lines.append(
+            f"  sin el 1er delta ({c.delta_first_s:.5f} s): reproducción {c.fps_playback_excl_first:.3f} fps · "
+            f"ratio {c.vfr_ratio_excl_first:.3f}  ← el que se usa"
+        )
     if t.real_duration_s is not None:
         lines.append(
             f"  con duración real {t.real_duration_s:.3f} s: captura {t.fps_capture:.2f} fps · "
