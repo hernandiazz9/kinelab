@@ -1,6 +1,8 @@
 # Plan
 
-Última ronda: 2026-09-14 — leídos los informes del 04, 05, 06 y 08. Los
+Última ronda: 2026-09-15 — Hernán dejó tres clips nuevos en `~/Downloads`;
+encargo 11 de diagnóstico, en paralelo con 07, 09 y 10.
+Ronda anterior, 2026-09-14 — leídos los informes del 04, 05, 06 y 08. Los
 cuatro cerraron. El experimento de interpolación (05) está contestado: no
 sirve para ver el contacto; el shaft sale fantasma. Decididas las preguntas
 abiertas (abajo). Escritos el 09 (ficha y selector en la pantalla) y el 10
@@ -58,6 +60,11 @@ pendientes van sin número, en orden de ejecución.
   12 métricas calculada / no calculada con razón.
 - [en curso] 10 fps-min-tolerancia — 0,5 % en el registro; a 29,998 fps las
   métricas de 30 vuelven a calcularse (sin juicio).
+- [en curso] 11 diagnostico-vid123 — tres clips nuevos en `~/Downloads`
+  (`vid1/2/3.mp4`, filmados el 14/9): ficha, qué son, si alguno es un
+  cronómetro y permite calibrar un camino del S22, veredicto del gate y
+  exploración de los de swings. Sólo medición; toca `capture-paths.yaml` si
+  hay cronómetro uniforme.
 - [pendiente] arnes-ganancia-y-subcuadro — en `truth/`: ganancia de
   velocidad angular pelvis→tórax→brazo con ratios conocidos desde las dos
   vistas (vive con MDC y vistas, o muere), y sesgo/MDC del instante
