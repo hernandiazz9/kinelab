@@ -8,6 +8,8 @@ en `service/static/index.html`.
 - `GET /api/sessions`   lista los `capture.json` que hay en `data/sessions/`.
 - `PUT /api/datos`      sube un video y encola el modo exploración
   (`kinelab.explore`): 202 con el id del trabajo. Ver `service/exploracion.py`.
+- `GET /api/datos`      la lista de trabajos que hay en disco, del más nuevo al
+  más viejo: los de sesiones anteriores y los ejemplos que deje otro proceso.
 - `GET /api/datos/{id}` estado del trabajo; cuando está `listo`, trae el
   contenido de `datos-eventos.json` y las URLs de sus archivos.
 - `GET /api/datos/{id}/archivos/{nombre}` sirve `overlay.mp4` (con `Range`/206:
@@ -250,6 +252,16 @@ def create_app(data_dir: Path | None = None, sport_id: str = "golf", estimator: 
             raise
         exploracion.submit(job, upload)
         return job.to_dict()
+
+    @app.get("/api/datos")
+    async def datos_list() -> list[dict[str, Any]]:
+        """Los trabajos que hay en disco, del más nuevo al más viejo.
+
+        Lee los `trabajo.json` en cada llamada: los trabajos de sesiones
+        anteriores y las carpetas de ejemplo que deje otro proceso aparecen sin
+        reiniciar el servidor, y uno borrado del disco desaparece.
+        """
+        return [t.fila() for t in await run_in_threadpool(exploracion.listar)]
 
     @app.get("/api/datos/{job_id}")
     async def datos_get(job_id: str) -> dict[str, Any]:

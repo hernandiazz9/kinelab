@@ -64,7 +64,11 @@ def test_config_lists_sport_and_capture_paths(client, data_dir):
     assert cfg["sport"]["fps_min"] == 100
     assert [p["id"] for p in cfg["capture_paths"]] == [
         "test-hevc-120-cfr", "test-h264-240-cfr", "test-h264-slomo-240-to-30", "test-h264-30-cfr",
+        "test-declarado-video", "test-declarado-video-h264", "test-declarado-slomo",
     ]
+    # La API ofrece los declarados con su bandera: quien elige el camino en la
+    # pantalla tiene que poder ver que ése no tiene cronómetro (ADR-016).
+    assert {p["id"]: p["calibrated"] for p in cfg["capture_paths"]}["test-declarado-video"] is False
     assert cfg["data_dir"] == str(data_dir.resolve())
 
 
@@ -381,3 +385,120 @@ def test_datos_survive_a_restart(client_datos, clips, data_dir):
         assert c2.get(f"/api/datos/{j['id']}/archivos/overlay.mp4").status_code == 200
         h = c2.get("/api/datos/" + "a" * 32).json()
         assert h["estado"] == "error" and "reinició" in h["error"]
+
+
+# --- exploración: la lista de trabajos anteriores y ejemplos -----------------------
+
+
+def _carpeta(data_dir: Path, job_id: str, resumen: dict | None = None, **campos) -> Path:
+    """Un trabajo armado a mano en disco, como el que deja otro proceso."""
+    import json
+
+    d = data_dir / "exploracion" / job_id
+    d.mkdir(parents=True)
+    (d / "trabajo.json").write_text(json.dumps({"estado": "listo", **campos}, ensure_ascii=False), encoding="utf-8")
+    if resumen is not None:
+        (d / "datos-eventos.json").write_text(json.dumps(resumen, ensure_ascii=False), encoding="utf-8")
+    return d
+
+
+def test_datos_lista_vacia_y_despues_del_mas_nuevo_al_mas_viejo(client_datos, data_dir):
+    assert client_datos.get("/api/datos").json() == []
+    _carpeta(data_dir, "b" * 32, video="viejo.mp4", creado="2026-09-10T10:00:00+00:00")
+    _carpeta(data_dir, "c" * 32, video="nuevo.mp4", creado="2026-09-13T10:00:00+00:00")
+    _carpeta(data_dir, "d" * 32, video="medio.mp4", creado="2026-09-12T10:00:00+00:00")
+    filas = client_datos.get("/api/datos").json()
+    assert [f["video"] for f in filas] == ["nuevo.mp4", "medio.mp4", "viejo.mp4"], "del más nuevo al más viejo"
+    assert all(f["origen"] == "subida" for f in filas), "un trabajo.json sin origen es una subida"
+    assert filas[0]["id"] == "c" * 32
+
+
+def test_datos_lista_un_ejemplo_de_otro_proceso(client_datos, clips, data_dir):
+    """El ejemplo aparece sin reiniciar, con su etiqueta, y se abre como cualquier trabajo."""
+    src = _need(clips, "hevc120")
+    j = _wait(client_datos, _put(client_datos, "/api/datos", src, altura_m=1.75).json()["id"])
+    assert j["estado"] == "listo", j["error"]
+    assert j["origen"] == "subida" and j["etiqueta"] is None
+
+    # Copiado de un trabajo real, con su trabajo.json escrito a mano: sin campo
+    # `id` (el id es la carpeta) y con el texto del rótulo.
+    etiqueta = "ejemplo · mocap CMU 64_01 · cámara virtual · no es video"
+    ejemplo = data_dir / "exploracion" / "ejemplo-cmu-64_01-face_on"
+    shutil.copytree(data_dir / "exploracion" / j["id"], ejemplo)
+    (ejemplo / "trabajo.json").write_text(
+        '{"estado": "listo", "origen": "ejemplo", "video": "cmu-64_01-face_on", "vista": "face_on",'
+        ' "altura_m": 1.75, "creado": "2026-09-14T12:00:00+00:00", "etiqueta": "%s"}' % etiqueta,
+        encoding="utf-8",
+    )
+
+    filas = client_datos.get("/api/datos").json()
+    assert [f["origen"] for f in filas] == ["ejemplo", "subida"], "el ejemplo es más nuevo"
+    fila = filas[0]
+    assert fila["id"] == "ejemplo-cmu-64_01-face_on" and fila["etiqueta"] == etiqueta
+    assert fila["video"] == "cmu-64_01-face_on" and fila["altura_m"] == 1.75
+    assert (fila["fps_archivo"], fila["cuadros"]) == (120.0, 480), "de su datos-eventos.json, no de memoria"
+
+    abierto = client_datos.get(f"/api/datos/{fila['id']}")
+    assert abierto.status_code == 200, "un trabajo que apareció después del arranque se abre igual"
+    t = abierto.json()
+    assert t["origen"] == "ejemplo" and t["etiqueta"] == etiqueta
+    assert t["resumen"]["cuadros"] == 480
+    assert t["archivos"]["overlay.mp4"] == f"/api/datos/{fila['id']}/archivos/overlay.mp4"
+    assert client_datos.get(t["archivos"]["overlay.mp4"]).status_code == 200
+
+
+def test_datos_lista_trae_fps_y_eventos_solo_si_esta_listo(client_datos, data_dir, tmp_path):
+    # Los números son los de `cortado.mp4`, para que se lean como en la pantalla.
+    _carpeta(
+        data_dir, "a" * 32, video="cortado.mp4", creado="2026-09-13T10:00:00+00:00", altura_m=1.75, segundos=4.0,
+        resumen={"fps_archivo": 29.999, "cuadros": 76, "eventos_frame": {"address": 7, "top": 39, "impact": 44}},
+    )
+    bogus = tmp_path / "texto.mov"
+    bogus.write_text("esto no es un video", encoding="utf-8")
+    _wait(client_datos, _put(client_datos, "/api/datos", bogus).json()["id"])
+
+    filas = {f["estado"]: f for f in client_datos.get("/api/datos").json()}
+    listo, error = filas["listo"], filas["error"]
+    assert listo["fps_archivo"] == 29.999 and listo["cuadros"] == 76
+    assert listo["eventos_frame"] == {"address": 7, "top": 39, "impact": 44}
+    assert listo["altura_m"] == 1.75 and listo["segundos"] == 4.0
+    assert error["fps_archivo"] is None and error["cuadros"] is None and error["eventos_frame"] is None
+    assert error["error"], "el error se ve en la lista, sin abrir el trabajo"
+
+
+def test_datos_lista_saltea_lo_roto_y_lo_registra(client_datos, data_dir, capfd):
+    _carpeta(data_dir, "e" * 32, video="bueno.mp4", creado="2026-09-13T10:00:00+00:00")
+    roto = data_dir / "exploracion" / ("f" * 32)
+    roto.mkdir(parents=True)
+    (roto / "trabajo.json").write_text("{esto no es json", encoding="utf-8")
+    sin_json = data_dir / "exploracion" / ("0" * 32)
+    sin_json.mkdir(parents=True)
+    (sin_json / "overlay.mp4").write_bytes(b"x")
+    sin_estado = data_dir / "exploracion" / ("1" * 32)
+    sin_estado.mkdir(parents=True)
+    (sin_estado / "trabajo.json").write_text('{"video": "sin-estado.mp4"}', encoding="utf-8")
+
+    filas = client_datos.get("/api/datos").json()
+    assert [f["video"] for f in filas] == ["bueno.mp4"], "lo ilegible y lo que no es un trabajo se saltean"
+    log = capfd.readouterr().out
+    assert "f" * 32 in log and "1" * 32 in log and "0" * 32 in log, "lo que se saltea queda en el log"
+    assert client_datos.get("/api/datos/" + "f" * 32).status_code == 404
+
+
+def test_datos_borrado_del_disco_desaparece_sin_romper(client_datos, clips, data_dir):
+    src = _need(clips, "hevc120")
+    j = _wait(client_datos, _put(client_datos, "/api/datos", src).json()["id"])
+    assert [f["id"] for f in client_datos.get("/api/datos").json()] == [j["id"]]
+
+    shutil.rmtree(data_dir / "exploracion" / j["id"])
+
+    assert client_datos.get("/api/datos").json() == []
+    assert client_datos.get(f"/api/datos/{j['id']}").status_code == 404, "el que guardó el navegador ya no está"
+    assert client_datos.get(f"/api/datos/{j['id']}/archivos/overlay.mp4").status_code == 404
+
+
+def test_datos_el_id_es_la_carpeta_y_no_se_sale_de_ella(client_datos, data_dir):
+    _carpeta(data_dir, "ejemplo-cmu-64_01-face_on", video="x", id="otro-id-que-se-ignora")
+    assert client_datos.get("/api/datos/ejemplo-cmu-64_01-face_on").json()["id"] == "ejemplo-cmu-64_01-face_on"
+    for malo in ["..", "..%2F..%2Fcapture-paths.yaml", ".oculto", "con/barra", "a" * 65]:
+        assert client_datos.get(f"/api/datos/{malo}").status_code == 404, malo
