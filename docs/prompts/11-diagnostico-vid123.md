@@ -7,8 +7,12 @@ recibió quien filmó).
 ## Contexto
 
 Hernán dejó tres clips en `~/Downloads/vid1.mp4`, `vid2.mp4` y `vid3.mp4`,
-filmados el 14 de septiembre, "en teoría de buena calidad". No se sabe con
-qué teléfono ni en qué modo, ni si alguno es el cronómetro que pide la guía.
+filmados el 14 de septiembre con el Galaxy S22 Ultra en modo **Video, UHD
+(3840×2160) a 60 fps, lente 1×** según la captura de pantalla de la cámara
+que mandó Hernán. No se sabe cómo llegaron a la Mac (cable, Quick Share,
+Drive…): preguntáselo, y buscá en los metadatos si conservan el `udta` de
+Samsung (el original del 7/9 lo tenía intacto, 557.940 bytes) o si algo los
+recomprimió. Tampoco se sabe si alguno es el cronómetro que pide la guía.
 Este encargo es de **diagnóstico y medición, no de código**: decir qué son,
 a qué tasa capturaron de verdad, si alguno permite calibrar un camino de
 captura, y qué dice el gate de cada uno. Regla de la casa: el archivo miente
@@ -67,7 +71,12 @@ y `gate.py` (cómo se ingesta con `--camino` y `--data`),
 5. **El gate, para cada clip de swings**: ingestá con el camino que
    corresponda (el calibrado si lo hay; si no, el declarado del S22 que
    coincida; si no, `desconocido-video`) en un `--data` del scratchpad.
-   Reportá el veredicto y los nueve chequeos con su valor.
+   Reportá el veredicto y los nueve chequeos con su valor. No hay camino
+   declarado para UHD 60: agregá `s22ultra-video-uhd60-cable` (o el
+   transporte que Hernán diga) como declarado en `capture-paths.yaml`,
+   con `nominal_fps` 60 y el codec que midas, y validalo con los tests.
+   Esperá `reject` por `fps_min_for_gesture` (60 < 100): es lo correcto y
+   hay que decirlo así.
 6. **Exploración de cada clip de swings**: `datos` con ese mismo camino y
    altura 1,75 (si el sujeto no es Hernán, preguntá la altura o dejalo sin
    cm y decilo). Reportá eventos (address, top, impacto en cuadros y
@@ -76,7 +85,11 @@ y `gate.py` (cómo se ingesta con `--camino` y `--data`),
    salen con valor y cuáles en `null` con su razón. Si un clip tiene varios
    swings, decí qué hizo `datos` con eso y qué daría `analyze` sobre el
    take ingestado si el gate lo dejó pasar.
-7. Cerrá con **tres líneas**: qué son los tres clips, cuál es el mejor y por
+7. Medí lo que cuesta UHD: tiempo de `datos` por clip y por cuadro contra
+   el original FHD del 7/9 (ese tardó 11,5 s por 265 cuadros), y si el
+   recorte del cuerpo que entra al modelo supera los 256 px de alto en FHD
+   ya (si sí, UHD no agrega precisión, sólo peso; si no, decilo).
+8. Cerrá con **tres líneas**: qué son los tres clips, cuál es el mejor y por
    qué, y qué le falta al material para pasar el gate (o que ya pasa).
 
 NO: no toques código del motor ni de `service/` ni `web/` (si encontrás un
