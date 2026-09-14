@@ -41,6 +41,18 @@ dibujando) y al terminar:
   address, y la tabla completa por cuadro con filtro de columnas y descarga
   del CSV, del JSON y del video.
 
+Debajo de «Subir video», la lista **«Trabajos anteriores y ejemplos»**: todo lo
+que hay en `data/exploracion/`, del más nuevo al más viejo, con fecha, estado,
+fps y los cuadros de cada evento. Un clic abre ese trabajo como si acabara de
+terminar, sin volver a subir el video, y la URL pasa a `?trabajo=<id>`: ese
+enlace, pegado en otra pestaña, abre el mismo trabajo. La lista sale de los
+`trabajo.json` en disco, así que también aparecen los trabajos de sesiones
+anteriores y los **ejemplos** que deje otro proceso — una carpeta con los
+mismos archivos y un `trabajo.json` con `"origen": "ejemplo"` y su `etiqueta`,
+que se muestra rotulada en la lista y sobre el resultado (ver el encabezado de
+`service/exploracion.py`). Desde la pantalla no se borra nada: un trabajo se
+borra con `rm -rf data/exploracion/<id>`, y desaparece de la lista solo.
+
 El frontend habla con el backend por `/api/*` (proxy en `web/next.config.ts`),
 así que no hace falta CORS. Los trabajos quedan en `data/exploracion/<id>/`
 (ignorado por git); el último se vuelve a mostrar al recargar la página.

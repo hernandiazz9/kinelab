@@ -7,11 +7,26 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import DosCuadros from "@/components/DosCuadros";
+import ListaTrabajos from "@/components/ListaTrabajos";
 import Reproductor, { COLOR_EVENTO, type ReproductorHandle } from "@/components/Reproductor";
 import Subida from "@/components/Subida";
 import TablaCuadros from "@/components/TablaCuadros";
 import TablaEventos from "@/components/TablaEventos";
-import { ETAPA, archivoUrl, getTrabajo, olvidarUltimoTrabajo, subirVideo, ultimoTrabajoId, type EventoId, type Trabajo } from "@/lib/api";
+import {
+  ETAPA,
+  archivoUrl,
+  getTrabajo,
+  listarTrabajos,
+  olvidarUltimoTrabajo,
+  ponerTrabajoEnLaUrl,
+  recordarTrabajo,
+  subirVideo,
+  trabajoDeLaUrl,
+  ultimoTrabajoId,
+  type EventoId,
+  type Trabajo,
+  type TrabajoFila,
+} from "@/lib/api";
 import { EVENTOS, fmt, textoSubcuadro } from "@/lib/etiquetas";
 
 type Fase =
@@ -32,22 +47,57 @@ function faseDe(t: Trabajo): Fase {
 export default function Pagina() {
   const [fase, setFase] = useState<Fase>({ tipo: "inicio" });
   const [cuadro, setCuadro] = useState(0);
+  const [filas, setFilas] = useState<TrabajoFila[]>([]);
+  const [lista, setLista] = useState<{ cargando: boolean; error: string | null }>({ cargando: true, error: null });
+  const [nota, setNota] = useState<string | null>(null);
   const reproductor = useRef<ReproductorHandle>(null);
+  const arranque = useRef(false);
 
-  // Al volver a la página se recupera el último trabajo (queda en localStorage).
-  useEffect(() => {
-    const id = ultimoTrabajoId();
-    if (!id) return;
-    let vivo = true;
-    getTrabajo(id)
-      .then((t) => {
-        if (vivo) setFase(faseDe(t));
+  const refrescarLista = useCallback(() => {
+    listarTrabajos()
+      .then((f) => {
+        setFilas(f);
+        setLista({ cargando: false, error: null });
       })
-      .catch(() => olvidarUltimoTrabajo());
-    return () => {
-      vivo = false;
-    };
+      .catch((e: Error) => setLista({ cargando: false, error: e.message }));
   }, []);
+
+  /** Abre un trabajo que ya está en disco: el mismo resultado, sin volver a subir nada. */
+  const abrir = useCallback(
+    (id: string) => {
+      getTrabajo(id)
+        .then((t) => {
+          setNota(null);
+          setCuadro(0);
+          setFase(faseDe(t));
+          recordarTrabajo(t.id);
+          ponerTrabajoEnLaUrl(t.id);
+        })
+        .catch((e: Error) => {
+          // Borrado del disco, o un id que no existe en la URL: se olvida y se sigue.
+          olvidarUltimoTrabajo();
+          ponerTrabajoEnLaUrl(null);
+          setFase({ tipo: "inicio" });
+          setNota(`No se pudo abrir el trabajo ${id}: ${e.message}`);
+          refrescarLista();
+        });
+    },
+    [refrescarLista],
+  );
+
+  // Al cargar: el trabajo de `?trabajo=<id>` si lo hay, si no el último (localStorage).
+  useEffect(() => {
+    if (arranque.current) return;
+    arranque.current = true;
+    const id = trabajoDeLaUrl() ?? ultimoTrabajoId();
+    if (id) abrir(id);
+  }, [abrir]);
+
+  // La lista, al empezar y cada vez que un trabajo termina (así aparece el nuevo).
+  const terminado = fase.tipo === "listo" ? fase.trabajo.id : fase.tipo === "error" ? "error" : null;
+  useEffect(() => {
+    refrescarLista();
+  }, [terminado, refrescarLista]);
 
   // Sondeo mientras el backend trabaja.
   const idEnCurso = fase.tipo === "procesando" ? fase.trabajo.id : null;
@@ -67,6 +117,7 @@ export default function Pagina() {
       const t = await subirVideo(archivo, alturaM, (p) => setFase({ tipo: "subiendo", pct: p, nombre: archivo.name }));
       setCuadro(0);
       setFase({ tipo: "procesando", trabajo: t });
+      ponerTrabajoEnLaUrl(t.id);
     } catch (e) {
       setFase({ tipo: "error", mensaje: (e as Error).message });
     }
@@ -82,6 +133,7 @@ export default function Pagina() {
   );
 
   const ocupado = fase.tipo === "subiendo" || fase.tipo === "procesando";
+  const abiertoId = fase.tipo === "listo" || fase.tipo === "procesando" ? fase.trabajo.id : null;
 
   return (
     <main className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-6">
@@ -93,6 +145,10 @@ export default function Pagina() {
       <section className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
         <Subida ocupado={ocupado} onSubir={subir} />
       </section>
+
+      <ListaTrabajos filas={filas} actual={abiertoId} cargando={lista.cargando} error={lista.error} onElegir={abrir} />
+
+      {nota && <p className="text-sm text-amber-300">{nota}</p>}
 
       {fase.tipo === "subiendo" && (
         <Progreso titulo={`subiendo ${fase.nombre}`} fraccion={fase.pct} detalle={`${Math.round(fase.pct * 100)} %`} />
@@ -163,6 +219,8 @@ function Resultado({
   return (
     <>
       <section className="rounded-lg border border-amber-800/60 bg-amber-950/20 p-3 text-sm">
+        {/* El rótulo de un ejemplo lo trae `trabajo.json`: acá no se inventa ninguno. */}
+        {trabajo.origen === "ejemplo" && <p className="mb-1 font-medium text-emerald-300">{trabajo.etiqueta ?? "ejemplo"}</p>}
         <p>{r.aviso}</p>
         {r.gate_diria.length > 0 && (
           <p className="mt-1 text-amber-200">
