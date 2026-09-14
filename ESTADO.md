@@ -3,6 +3,158 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 14 de septiembre de 2026 — encargo 07: un swing de mocap real (CMU) y el primer número de nivel 1
+
+Prompt: `docs/prompts/07-ejemplo-mocap.md`. Informe:
+`docs/informes/2026-09-14-07-ejemplo-mocap.md`. Commit `313acd5`. Corrió en
+paralelo con el 09 (`service/`, `web/`, `tests/conftest.py`,
+`tests/test_service.py`) y el 10 (`kinelab/metrics/`, `tests/test_fase2.py`),
+que ya commitearon.
+
+### Qué existe ahora
+
+- **Datos de mocap real en el repo**: `data/examples/cmu-mocap/` con `64.asf`,
+  `64_01.amc`, `64_02.amc` (1,5 MB) y `ATRIBUCION.md` — el texto que CMU pide,
+  la licencia como la declara el sitio, el sha256 de cada archivo, por qué el
+  sujeto 64 (es el único de golf: tomas 1–10 «Swing», 11–15 «Putt», 16–30 poner
+  el tee y la bola) y por qué esos dos trials. Las tres preguntas de ADR-010
+  contestadas por separado.
+- **`truth/kinelab_truth/mocap.py`**: parser propio ASF/AMC en numpy (**sin
+  dependencia nueva**), cinemática directa, mapeo a los 26 puntos Halpe26 con
+  sus diez aproximaciones escritas en `APPROX_NOTES` (que viaja dentro del
+  `pose.npz`), traslado al marco del arnés y proyección con su cámara virtual a
+  1080×1920 con el sujeto al 80 % exacto del alto. Escribe un `pose.npz` con
+  `source: cmu-mocap`, trial, sha256 de los dos archivos, fps 120, cámara
+  `sin_verificar`, `scores` en 1,0 y `model`/`detector` en `null`.
+
+  ```bash
+  cd truth && .venv/bin/python -m kinelab_truth.mocap 64_01 --vista face_on \
+      --out ../data/exploracion/ejemplo-cmu-64_01-face_on --nivel1 --etiqueta "…"
+  ```
+
+- **`explore()` puede arrancar de un `pose.npz` ya calculado**
+  (`prepare_take_from_pose`): sin video, sin estimador, con el `capture.json`
+  armado desde la `provenance` del `.npz`. Cuando la toma no tiene
+  `original.<ext>`, el overlay se dibuja sobre **fondo liso** (`_frames`,
+  `FONDO_LISO`). La línea que se quema en cada cuadro y el aviso de dónde sale
+  el eje del tiempo los pone quien llama (`banner`, `nota_fuente`).
+- **El aviso del camino declarado se reemplaza, no se agrega.** Con una pose que
+  no vino de un video, la frase de ADR-016 («el archivo reproduce a la velocidad
+  de captura», «filmá el cronómetro») es falsa. `nota_fuente` la reemplaza y
+  sigue yendo primero en `warnings[]`, y es también el `fps_aviso` de
+  `datos-eventos.json`. **La procedencia sigue siendo `sin_verificar`**: el enum
+  tiene dos valores y sólo el cronómetro da `medido_aqui`. Ningún
+  `judgment_allowed` verdadero en el ejemplo.
+- **Camino de captura: el default `desconocido-video`**, no se inventó ninguno
+  para el mocap.
+- **El ejemplo**, en las dos vistas, en `data/exploracion/ejemplo-cmu-64_01-face_on/`
+  y `…-down_the_line/`, con `trabajo.json` en `estado: listo`, `origen: ejemplo`
+  y su etiqueta. **No se commitea** (`data/exploracion/` está ignorado y el
+  prompt prohibía el `overlay.mp4`): se rehace con el comando de arriba en ~7 s.
+  El ejemplo de mentira del 08 (`ejemplo-a-mano-cortado-face_on`) está borrado.
+- **`--nivel1`**: compara lo que el motor mide desde la proyección 2-D contra la
+  verdad 3-D del mocap en los mismos instantes, y deja `nivel1-mocap.json` en la
+  toma. Los eventos 3-D salen de `events_3d()`, con su criterio geométrico
+  escrito.
+- `_ascii` de `kinelab/tools/interpolar.py` pasa a `ascii_para_quemar`, pública:
+  dos módulos queman texto en un cuadro y la tabla de transliteración tiene que
+  ser una sola.
+
+### Medido
+
+**El ejemplo** (448 cuadros a 120 fps, cuerpo 1536 px = 80,0 % del alto,
+estatura declarada 1,6405 m sacada de los largos de hueso del ASF):
+
+| | `face_on` | `down_the_line` |
+|---|---|---|
+| address · top · impacto | **141 · 270 · 329** | **146 · 327 · 332** |
+| backswing / downswing | 1075,0 / 491,7 ms (tempo 2,19 : 1) | 1508,3 / 41,7 ms |
+| sub-cuadro del impacto | 329→330, 0,1419, ±0,089 cuadros | `null` por vista |
+| focal de la cámara virtual | 3077,7 px | 3193,5 px |
+| calidad | `confiable`, detección 1,0 | `confiable` |
+
+**Nivel 1, trial 64_01, `face_on`.** Eventos leídos sobre las curvas 3-D:
+145 / 269 / 330. Sesgo partido en dos — con los cuadros del motor sale el error
+de la medición sola; con los 3-D, el total:
+
+| métrica | motor 2-D | verdad 3-D | sesgo (medición) | sesgo total | MDC |
+|---|---|---|---|---|---|
+| `pelvis_sway_top_cm` | −19,4 | −17,69 | **−1,71** | −1,89 | 2,87 |
+| `pelvis_sway_impact_cm` | 6,9 | 6,29 | +0,61 | −0,03 | 2,48 |
+| `thorax_sway_top_cm` | −10,9 | −9,37 | −1,53 | −1,34 | 3,46 |
+| `head_sway_top_cm` | −10,7 | −8,45 | −2,25 | −2,01 | 3,82 |
+| `backswing_duration_ms` | 1075,0 | 1075,0 | 0,0 | **+41,7** | 12,6 |
+| `downswing_duration_ms` | 491,7 | 491,7 | 0,0 | **−16,6** | 13,0 |
+
+**Todos los desplazamientos caen bajo su MDC; ninguna duración lo hace cuando
+entra el error de eventos** (+41,7 ms son 3,3 × el MDC del backswing). Todo el
+error de las duraciones es error de EVENTOS, no de medición. Se repite en 64_02
+(sway top −19,5 contra −17,61, sesgo −1,89). **Es un solo sujeto: primera
+lectura, no tabla. De acá no sale ningún MDC ni ninguna referencia.**
+
+El sway está sobre-leído **+10,0 %**, y se descompone: **+12,7 % de la
+convención de `px_to_cm`** (divide por la altura cabeza→tobillos en px —1,4554 m
+en un golfista inclinado— y multiplica por la estatura declarada, 1,6405 m) y
+−2,4 % de la proyección.
+
+Lo que el mocap dice de este golfista: la pelvis se corre **17,7 cm** al lado
+trasero entre address y top y vuelve +6,3 cm al impacto, con 46,8° de giro de
+caderas y sin dar un paso. El pico de velocidad de las manos (3,79 m/s) cae **en
+el acompañamiento, cuadro 359, no en el impacto** — el cementerio 7 de
+`HERENCIA.md`, ahora sobre un humano real.
+
+Suites: **261 en verde** en el motor (~40 s), **13** en el arnés. Nuevos: 9 en
+`truth/tests/test_mocap.py`, 1 en `tests/test_perception.py`.
+
+### Qué falta o no se probó
+
+- **Desde `down_the_line` el detector de top falla, y está medido por qué.** El
+  motor pone el top en 327 y el impacto en 332: 5 cuadros de downswing. ADR-008
+  toma el **último** cambio de signo de la velocidad de las manos proyectada
+  sobre el eje principal address→impact. En `face_on` ese eje está a 63° de la
+  vertical y hay dos cambios (145 y **270**): el último es el top. En
+  `down_the_line` el eje queda casi vertical —el movimiento hacia el objetivo
+  cae sobre el eje óptico— y hay tres (158, **263** que es el top de verdad, y
+  **328**, el fondo del arco antes del impacto): gana el 328. **El top está en
+  la señal; lo pierde la regla del "último".** No se tocó: mover eso es reabrir
+  ADR-008, no ajustar un umbral. Address e impacto desde esa vista salen bien.
+- **La convención de `px_to_cm` mete +12,7 % en toda métrica en cm de un gesto
+  agachado.** El arnés no puede verlo: su verdad y su medición comparten la
+  convención. Decisión del orquestador; toca `kinelab/metrics/core.py`.
+- `hip_line_rate_deg_s` llega a **3244 °/s** en el ejemplo (la de hombros, 453,
+  es plausible): la línea de caderas mide 15,2 cm y al girar 90° su proyección
+  se acorta hasta casi cero. Es columna descriptiva, no métrica registrada, pero
+  es la misma geometría que alimenta `summary.gain`.
+- **`follow_end` queda en `null`** en los dos trials: cortan antes del finish
+  quieto. No es un error, es el material.
+- **El rótulo quemado cae sobre la cabeza.** Con el cuerpo al 80 % del alto los
+  keypoints van de y=14 a y=1917 en 1920: no hay margen. Es consecuencia del
+  encuadre de `CAPTURA.md`.
+- **La cámara virtual es un teleobjetivo**: 3078 px de focal para el 80 % del
+  alto a 3 m, ~2,1 × la principal de un teléfono. Con un celular real habría que
+  estar a ~0,8 m, o filmar horizontal. **El 80 % del alto en vertical no es
+  alcanzable con un celular a una distancia usable.**
+- El swing de este sujeto es lento (downswing ~500 ms, pico de manos 3,8 m/s):
+  un golfista real de laboratorio, no un profesional.
+- **El front no se abrió** (regla de trabajo) ni se tocó `web/` ni `service/`.
+  Lo verificado acá es que `service/exploracion.py` lista los dos ejemplos con
+  su `origen`, su etiqueta y sus ocho archivos servibles, llamándolo desde
+  Python.
+
+### Desviaciones
+
+- Ninguna del contrato: `pose.npz` y `capture.json` conservan su forma; los
+  campos nuevos del `provenance` son libres por contrato.
+- Del prompt, una que el código obligó: el aviso del eje del tiempo **reemplaza**
+  al de camino declarado en vez de sumarse, porque con mocap esa frase es falsa
+  de punta a punta. La procedencia queda igual en `sin_verificar`.
+- Del prompt, otra de alcance: se guardaron **dos** trials (64_01 y 64_02) de los
+  tres que se miraron; 64_03 se descargó, se midió y no se commiteó.
+- El ejemplo **no se commitea**: `data/exploracion/` está en `.gitignore` y el
+  prompt prohibía el `overlay.mp4`. Se rehace con un comando.
+
+---
+
 ## 14 de septiembre de 2026 — encargo 09: ficha del archivo, selector de camino y los avisos primero
 
 Prompt: `docs/prompts/09-ficha-y-selector.md`. Informe:
