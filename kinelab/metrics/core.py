@@ -13,7 +13,7 @@ from typing import Callable
 
 import numpy as np
 
-from kinelab.metrics.registry import Metric, judgment_allowed
+from kinelab.metrics.registry import Metric, fps_min_met, judgment_allowed
 
 
 @dataclass
@@ -68,14 +68,15 @@ def _confidence(ctx: MetricContext, metric: Metric, joints: tuple[int, ...]) -> 
 
 
 def evaluate(metric: Metric, ctx: MetricContext, *, joints: tuple[int, ...] = ()) -> dict:
-    fps_min_met = ctx.fps >= metric.fps_min
+    # La comparación con `fps_min` vive en el registro, con su tolerancia (FPS_MIN_TOL).
+    met = fps_min_met(metric, ctx.fps)
     base = {
         "unit": metric.unit,
         "view": ctx.view,
         "mdc": metric.mdc,
         "level": metric.level,
         "fps_min": metric.fps_min,
-        "fps_min_met": fps_min_met,
+        "fps_min_met": met,
         "fps_provenance": ctx.fps_provenance,
         "judgment_allowed": judgment_allowed(metric, view=ctx.view, fps_real=ctx.fps, fps_provenance=ctx.fps_provenance),
         "confidence": None,
@@ -83,7 +84,7 @@ def evaluate(metric: Metric, ctx: MetricContext, *, joints: tuple[int, ...] = ()
     }
     if ctx.view not in metric.views:
         return {"value": None, **base, "judgment_allowed": False, "null_reason": f"vista {ctx.view} no válida para esta métrica (válidas: {', '.join(metric.views)})"}
-    if not fps_min_met:
+    if not met:
         return {"value": None, **base, "judgment_allowed": False, "null_reason": f"fps_real {ctx.fps:g} por debajo de fps_min {metric.fps_min:g}"}
     missing = [e for e in metric.anchored_to if e not in ctx.events]
     if missing:

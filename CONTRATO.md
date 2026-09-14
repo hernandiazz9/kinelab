@@ -344,6 +344,17 @@ Cuando la métrica no se puede calcular, `value` es `null` y `null_reason` dice
 por qué en una frase: `"fps_real 59.94 por debajo de fps_min 100"`,
 `"vista down_the_line no válida para esta métrica"`, `"MDC no medido"`.
 
+`fps_min_met` es `fps_real >= fps_min · (1 − 0,005)`, con **tolerancia del
+0,5 %**: la tabla del arnés barre en fps nominales enteros (240 · 120 · 60 · 30)
+y las tasas de video reales son NTSC (239,76 · 119,88 · 59,94 · 29,97) más el
+redondeo del propio teléfono —29,998 medido en el Galaxy S22 Ultra—, así que sin
+tolerancia ningún clip real de 30 fps llegaría a un `fps_min` de 30. La
+constante es `FPS_MIN_TOL` y está en un solo lugar
+(`kinelab/metrics/registry.py`, función `fps_min_met`); `null_reason` sigue
+diciendo los dos números sin redondear. Es otra regla que
+`fps_min_for_gesture`, el chequeo del gate, que compara contra el umbral del
+deporte **sin** tolerancia (`CAPTURA.md` §El gate de ingesta).
+
 `judgment_allowed` se deriva en código, nunca se escribe a mano:
 
 ```

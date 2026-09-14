@@ -20,11 +20,16 @@ from kinelab.events.segmentation import SegmentationParams, segment_reps
 from kinelab.events.signal import principal_axis
 from kinelab.ingest.__main__ import ingest_clip
 from kinelab.ingest.capture_paths import load_capture_paths
-from kinelab.metrics.registry import Metric, Reference, Registry, judgment_allowed
+from kinelab.metrics.core import MetricContext, evaluate
+from kinelab.metrics.registry import FPS_MIN_TOL, Metric, Reference, Registry, fps_min_met, judgment_allowed
+from kinelab.perception.gaps import interpolate_gaps
+from kinelab.perception.keypoints import J
 from kinelab.perception.posestore import PoseData, save_pose
 from kinelab.tools.golfdb_eval import event_error_stats
 from sports.golf.config import GOLF
 from sports.golf.events import GOLF_SEGMENTATION, GOLF_SPORT_EVENTS, detect_golf_events
+from sports.golf.metrics import JOINTS as GOLF_JOINTS
+from sports.golf.metrics import REGISTRY as GOLF_METRICS
 from tests.helpers.synth_swing import synth_swing
 
 REPO = Path(__file__).resolve().parents[1]
@@ -94,6 +99,93 @@ def test_registry_rules_and_judgment():
     assert judgment_allowed(wide, **ok) is False, "MDC mayor que el rango: no es juicio"
     with pytest.raises(ValueError, match="repetida"):
         r.register(m)
+
+
+# --- la tolerancia de `fps_min` (encargo 10) ----------------------------------
+#
+# La tabla del arnés barre en fps NOMINALES enteros (240 · 120 · 60 · 30) y las tasas
+# de video reales son NTSC (239,76 · 119,88 · 59,94 · 29,97), más el redondeo del
+# teléfono: el original del S22 da 29,998. Sin tolerancia, ningún clip real de 30 fps
+# llega a un `fps_min` de 30. La constante vive en un solo lugar del registro.
+
+
+def _fps_metric(fps_min: float) -> Metric:
+    return Metric(id="m", unit="cm", level=1, views=("face_on",), fps_min=fps_min, anchored_to=(), reference_frame="image_px", mdc=1.0)
+
+
+@pytest.mark.parametrize(
+    "fps_real,fps_min,met",
+    [
+        (29.998, 30.0, True),   # el original del Galaxy S22 Ultra, medido
+        (29.97, 30.0, True),    # NTSC
+        (119.88, 120.0, True),  # NTSC
+        (59.94, 60.0, True),
+        (239.76, 240.0, True),
+        (30.0, 30.0, True),     # el nominal exacto sigue pasando
+        (120.0, 30.0, True),    # de sobra
+        (29.8, 30.0, False),    # 0,67 % abajo: no pasa
+        (29.0, 30.0, False),
+        (60.0, 120.0, False),   # la tasa de abajo entera: nunca
+    ],
+)
+def test_fps_min_tolerates_ntsc_rates_against_the_nominal_table(fps_real, fps_min, met):
+    m = _fps_metric(fps_min)
+    assert fps_min_met(m, fps_real) is met
+    assert judgment_allowed(m, view="face_on", fps_real=fps_real, fps_provenance="medido_aqui") is met
+
+
+def test_fps_min_tolerance_is_half_a_percent_and_lives_in_one_place():
+    assert FPS_MIN_TOL == 0.005
+    m = _fps_metric(30.0)
+    borde = 30.0 * (1.0 - FPS_MIN_TOL)  # 29,85
+    assert fps_min_met(m, borde) is True and fps_min_met(m, borde - 1e-6) is False
+    # El sextuplo lo reporta con la misma regla, no con una comparación propia.
+    ctx = MetricContext(keypoints=np.zeros((10, J, 2), np.float32), scores=np.ones((10, J), np.float32), fps=29.998, view="face_on", body_height_px=np.full(10, 900.0), events={}, frame_start=0, frame_end=9)
+    assert evaluate(m, ctx)["fps_min_met"] is True
+    assert evaluate(_fps_metric(60.0), ctx)["fps_min_met"] is False
+
+
+def _golf_metrics_at(fps: float, view: str = "face_on") -> dict:
+    """Las métricas de golf sobre la primera repetición de un swing sintético a `fps`."""
+    sw = synth_swing(fps, n_reps=2)
+    sig = swing_signals(_pose(sw), sw.fps, view=view)
+    cands, rejected = segment_reps(sig.speed, sw.fps, GOLF_SEGMENTATION)
+    assert cands, rejected
+    events, reason = detect_golf_events(sig, cands[0])
+    assert reason is None, reason
+    ctx = MetricContext(
+        keypoints=interpolate_gaps(sw.keypoints, 5), scores=sw.scores, fps=sw.fps, view=view,
+        body_height_px=sig.body_height, events={k: v.frame for k, v in events.items() if v},
+        frame_start=cands[0].start, frame_end=cands[0].end, fps_provenance="medido_aqui",
+        athlete_height_m=1.80, hands_speed=sig.speed,
+    )
+    return {m.id: evaluate(m, ctx, joints=GOLF_JOINTS.get(m.id, ())) for m in GOLF_METRICS}
+
+
+def test_a_2997_fps_swing_computes_the_30fps_metrics_and_nulls_the_rest():
+    """Un clip NTSC de 30 fps: las métricas de `fps_min` 30 dan número; las de 60
+    y 120 quedan en `null` con la razón. Antes de la tolerancia no daba ninguna."""
+    m = _golf_metrics_at(29.97)
+    por_fps: dict[float, list[str]] = {}
+    for mid, v in m.items():
+        por_fps.setdefault(v["fps_min"], []).append(mid)
+    assert set(por_fps) == {30.0, 60.0, 120.0}, por_fps
+
+    for mid in por_fps[30.0]:
+        v = m[mid]
+        assert v["fps_min_met"] is True, mid
+        if "face_on" not in GOLF_METRICS.get(mid).views:
+            # `pelvis_thrust_top_cm` es de la otra vista: muere por vista, no por fps.
+            assert v["value"] is None and "vista" in v["null_reason"], mid
+            continue
+        assert v["value"] is not None and v["null_reason"] is None, (mid, v["null_reason"])
+
+    for fps_min in (60.0, 120.0):
+        for mid in por_fps[fps_min]:
+            v = m[mid]
+            assert v["value"] is None and v["fps_min_met"] is False, mid
+            assert v["null_reason"] == f"fps_real 29.97 por debajo de fps_min {fps_min:g}", mid
+            assert v["judgment_allowed"] is False, mid
 
 
 def test_manual_edits_keep_detected_and_reject_collisions():

@@ -16,6 +16,16 @@ from typing import Any, Callable
 PROVENANCES = ("medido_aqui", "pares", "fabricante", "estimacion", "sin_verificar")
 _SLUG = re.compile(r"^[a-z][a-z0-9_]*$")
 
+# Tolerancia de la comparación `fps_real >= fps_min`, en un solo lugar.
+# El arnés barre en fps NOMINALES enteros (240, 120, 60, 30) y escribe esa tabla
+# en `mdc.yaml`; las tasas de video reales son NTSC (239,76 · 119,88 · 59,94 ·
+# 29,97) y un teléfono entrega además su propio redondeo (29,998 medido en el
+# Galaxy S22 Ultra). Sin tolerancia, todo clip real de 30 fps pierde las
+# métricas de `fps_min: 30` por milésimas. 0,5 % cubre el hueco NTSC (0,1 %) con
+# margen y no alcanza para colar un clip de la tasa de abajo (29,8 contra 30 no
+# pasa). Ver CONTRATO.md §El sextuplo de toda métrica.
+FPS_MIN_TOL = 0.005
+
 
 @dataclass(frozen=True)
 class Reference:
@@ -67,6 +77,13 @@ class Metric:
             raise ValueError(f"{self.id}: el MDC tiene que ser positivo")
 
 
+def fps_min_met(metric: Metric, fps_real: float) -> bool:
+    """`fps_real >= fps_min · (1 − FPS_MIN_TOL)`. El único lugar donde se compara
+    la tasa de la toma contra el mínimo de la métrica: lo usan `judgment_allowed`,
+    `null_metric` y `metrics.core.evaluate`."""
+    return fps_real >= metric.fps_min * (1.0 - FPS_MIN_TOL)
+
+
 def judgment_allowed(metric: Metric, *, view: str, fps_real: float, fps_provenance: str) -> bool:
     """La regla del MDC, tal cual CONTRATO.md; nunca se escribe a mano.
 
@@ -74,12 +91,11 @@ def judgment_allowed(metric: Metric, *, view: str, fps_real: float, fps_provenan
     `medido_aqui` —cronómetro filmado en un camino calibrado— habilita juicio.
     Con un camino declarado (`sin_verificar`, ADR-016) el número se muestra,
     pero no se compara contra nada: el eje del tiempo es un supuesto."""
-    fps_min_met = fps_real >= metric.fps_min
     ref = metric.reference
     return (
         metric.level == 1
         and metric.mdc is not None
-        and fps_min_met
+        and fps_min_met(metric, fps_real)
         and fps_provenance == "medido_aqui"
         and view in metric.views
         and (ref is None or ref.range_width is None or metric.mdc <= ref.range_width)
@@ -97,7 +113,7 @@ def null_metric(metric: Metric, reason: str, *, view: str, fps_real: float, fps_
         "mdc": metric.mdc,
         "level": metric.level,
         "fps_min": metric.fps_min,
-        "fps_min_met": fps_real >= metric.fps_min,
+        "fps_min_met": fps_min_met(metric, fps_real),
         "fps_provenance": fps_provenance,
         "judgment_allowed": False,
         "null_reason": reason,
