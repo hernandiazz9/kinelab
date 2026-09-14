@@ -3,6 +3,82 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 14 de septiembre de 2026 — encargo 10: `fps_min` con tolerancia del 0,5 %
+
+Prompt: `docs/prompts/10-fps-min-tolerancia.md`. Informe:
+`docs/informes/2026-09-14-10-fps-min-tolerancia.md`. Commit `e2204ee`. Cierra la
+pregunta 1 del informe del 06. Corrió en paralelo con el 07 (`truth/`,
+`data/examples/`, `kinelab/explore.py`) y el 09 (`service/`, `web/`), que
+todavía no commitearon.
+
+### Qué existe ahora
+
+- **`FPS_MIN_TOL = 0.005` en `kinelab/metrics/registry.py`**, y una función
+  `fps_min_met(metric, fps_real)` = `fps_real >= fps_min · (1 − FPS_MIN_TOL)`.
+  Es el **único** lugar donde se compara la tasa de la toma contra el mínimo de
+  la métrica: la llaman `judgment_allowed`, `null_metric` y
+  `metrics.core.evaluate`, que antes tenían cada uno su propio `>=`.
+- **El porqué está escrito** en el comentario de la constante y en `CONTRATO.md`
+  §El sextuplo de toda métrica: el arnés barre en fps nominales enteros
+  (240 · 120 · 60 · 30), las tasas de video reales son NTSC
+  (239,76 · 119,88 · 59,94 · 29,97) y el S22 Ultra entrega además 29,998.
+- **`null_reason` no cambió**: sigue diciendo los dos números sin redondear
+  (`"fps_real 29.998 por debajo de fps_min 120"`).
+- **El gate no se tocó.** `fps_min_for_gesture` compara contra el umbral del
+  deporte (golf: 100) **sin** tolerancia, y así queda; está aclarado en
+  `CONTRATO.md`. Tampoco se tocaron `CAPTURA.md`, `sports/golf/mdc.yaml` ni
+  `truth/` — que además no se ve afectado: `harness.py:84` evalúa con
+  `fps_min=1.0`.
+
+### Medido
+
+**Original del S22 con `s22ultra-video-fhd30-cable`** (265 cuadros, 29,998 fps,
+`sin_verificar`): **7 de las 12 métricas pasan de `null` a tener valor** —
+`pelvis_sway_top_cm` −0,8 · `pelvis_sway_impact_cm` 7,7 · `pelvis_lift_top_cm`
+−2,6 · `thorax_sway_top_cm` 0,7 · `thorax_lift_top_cm` −3,0 · `head_sway_top_cm`
+5,2 · `head_lift_top_cm` −5,7, todas en cm. Siguen en `null` las tres duraciones
+(`fps_min` 120), el tempo (60) y `pelvis_thrust_top_cm` (por **vista**, no por
+fps: su `fps_min_met` ya es `true`). **Ningún `judgment_allowed` en `true`**: el
+camino es declarado. La tolerancia habilita medición, no juicio.
+
+**`cortado.mp4` con `desconocido-video`** (76 cuadros, 29,999 fps): las mismas 7
+con valor y las mismas 5 en `null`, cada una con su banda de ±1 cuadro
+(`pelvis_sway_impact_cm` 7,6 [7,6 · 8,6], `head_lift_top_cm` −5,1 [−6,2 · −5,1]).
+
+**Ninguna medición se movió.** Eventos y tiempos idénticos a los del 04 y el 06:
+S22 address 3,7 s · top 4,7 · impacto 4,9 · fin 7,3, backswing 1000,1 ms,
+downswing 200,0; `cortado.mp4` address 7 · top 39 · impacto 44, 1066,7 y
+166,7 ms. Lo único que cambió es cuáles métricas se muestran.
+
+Suites: **252 en verde** en el motor (26 s; eran 240 al cerrar el 06, y los 12
+de diferencia son exactamente los casos nuevos de este encargo), **4** en el
+arnés. Los 12 tests no son decorativos: con `FPS_MIN_TOL = 0.0` fallan 7, y con
+`0.05` fallan los 3 que exigen que 29,8 contra 30 **no** pase.
+
+### Qué falta o no se probó
+
+- **Los 7 números son los primeros que el motor muestra sobre video real y no
+  están validados contra nada.** Su MDC sale del nivel 0 del arnés (proyección +
+  ruido, sin estimador) y su procedencia es `sin_verificar`. Que se vean no los
+  vuelve defendibles.
+- `follow_duration_ms` en `cortado.mp4` está doblemente en `null` (fps 120 y
+  falta `follow_end`); gana el fps por el orden de chequeos de `evaluate`.
+- La tolerancia **no acerca nada al gate**: golf sigue pidiendo 100 fps y
+  29,998 no se le acerca. Esto sólo cambia qué muestra el modo exploración de un
+  clip que el gate rechaza.
+- El 0,5 % es una decisión, no una medición: cubre NTSC (0,1 %) con margen de 5×
+  y deja afuera la tasa de abajo entera. Un teléfono que declare 30 y entregue
+  29,7 no lo salva la tolerancia, y está bien: ése necesita cronómetro.
+- **El front no se abrió** (regla de trabajo) ni se tocó `web/` ni `service/`.
+  Hoy nadie consume `fps_min_met` fuera del motor.
+
+### Desviaciones
+
+Ninguna: el prompt se implementó tal cual, y la decisión ya estaba en
+`docs/PLAN.md`. No hay preguntas para el orquestador.
+
+---
+
 ## 14 de septiembre de 2026 — encargo 06: caminos de captura declarados (ADR-016)
 
 Prompt: `docs/prompts/06-camino-declarado.md`. Informe:
