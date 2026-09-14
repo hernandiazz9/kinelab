@@ -3,6 +3,62 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 14 de septiembre de 2026 — encargo 03: `fps_truth` y el primer delta de PTS
+
+Prompt: `docs/prompts/03-fps-truth-primer-delta.md`. Informe:
+`docs/informes/2026-09-14-03-fps-truth-primer-delta.md`.
+
+### Qué existe ahora
+
+- `kinelab/tools/fps_truth.py` reporta, además de los números brutos que no
+  cambiaron, `delta_first_s`, `vfr_ratio_excl_first` y
+  `fps_playback_excl_first`, más tres propiedades derivadas:
+  `first_delta_is_the_only_outlier`, `vfr_ratio_effective` y
+  `fps_playback_effective`. Los seis viajan en el JSON de `to_dict()`, así que
+  `PUT /api/fps-truth` los devuelve sin tocar `service/`.
+- El corregido se usa **sólo** si el primer delta es el único fuera de lugar
+  (ratio bruto > 1,10 y sin el primero ≤ 1,10). Un clip realmente VFR sigue
+  dando `VFR` y su efectivo es el bruto.
+- Método: span sin el primer delta, `(n−2)/(pts_último − pts_segundo)`, no la
+  mediana de deltas: el span promedia el error de cuantización del time base
+  sobre todos los deltas; la mediana lo hereda de uno solo.
+- El veredicto, el `stretch_factor` y el contraste con `r_frame_rate` se
+  calculan con el fps efectivo. Hay nota legible en los dos sentidos: cuando
+  el arranque explica todo, y cuando excluirlo no alcanza.
+- Fixture `first_delta30_h264` en `tests/conftest.py`: 120 cuadros a 30 fps con
+  el primer delta de 0,2 s exactos, hecho con `setpts` (conserva los cuadros).
+- **Medido, original del S22 (`~/Desktop/20260907_170638.mp4`, 265 cuadros):**
+  primer delta 0,20148 s; ratio 6,044 → 1,000; reproducción 29,436 → 29,998 fps
+  (**1,91 % de corrección**); veredicto `VFR` → `SIN_DURACION_REAL`.
+  `~/Desktop/cortado.mp4` no cambia en nada (su primer delta ya era normal:
+  el recorte arranca en el cuadro 103). Suite: **180 tests en verde** (173 + 7).
+
+### Qué falta o no se probó
+
+- **El gate no se tocó**, por encargo, y sigue leyendo `vfr_ratio` y
+  `fps_playback` **brutos**. Medido: el original del S22 lo rechazaría hoy por
+  `vfr_ratio_le_1_10` con 6,044 (con el efectivo pasaría), y `fps_matches_path`
+  contra un camino de 30,000 fps da 1,88 % de desvío con el bruto contra 0,01 %
+  con el efectivo — pasa raspando la tolerancia del 2 %.
+- **`explore.py` no toma el corregido solo:** usa `c.fps_playback` en
+  `prepare_take()` (`kinelab/explore.py:59` y `:61`). Es reemplazarlo por
+  `c.fps_playback_effective`; **no se hizo** porque el encargo 02 está en ese
+  archivo. Mientras tanto, los `t_s` y duraciones del original de 9 s siguen
+  1,9 % largos; sobre `cortado.mp4` no cambia nada.
+- El delta de arranque se midió en un solo teléfono y un solo modo. Cuando se
+  filme el cronómetro conviene anotar cuánto mide el primer delta en cada modo:
+  si a 240 fps el arranque dura varios cuadros, "el primero y sólo el primero"
+  puede quedar corto.
+
+### Desviaciones
+
+Ninguna del contrato: `capture.json` no cambió de forma ni de significado. La
+decisión de qué número usa el gate queda planteada en el informe como pregunta
+para el orquestador, con los números de los dos chequeos afectados; es un
+cambio a `CAPTURA.md` y entra como encargo propio.
+
+---
+
 ## 12 de septiembre de 2026 — quinta sesión (en curso): el impacto entre dos cuadros
 
 Pedido de Hernán: en `cortado.mp4` (30 fps) el cuadro marcado como impacto (44)
