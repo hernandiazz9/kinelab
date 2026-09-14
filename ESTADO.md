@@ -3,6 +3,103 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 14 de septiembre de 2026 — encargo 08: lista de trabajos y ejemplos en la pantalla
+
+Prompt: `docs/prompts/08-lista-de-trabajos.md`. Informe:
+`docs/informes/2026-09-14-08-lista-de-trabajos.md`. Commits `cee7585` (backend)
+y `d5aebbc` (front). Corrió en paralelo con el 06, que tiene tocado
+`kinelab/` y `tests/conftest.py` sin commitear.
+
+### Qué existe ahora
+
+- **`GET /api/datos`**: una fila por trabajo, del más nuevo al más viejo, con
+  `id`, `video`, `creado`, `terminado`, `estado`, `origen`, `etiqueta`,
+  `altura_m`, `vista`, `segundos`, `error` y —sólo si está listo— `fps_archivo`,
+  `cuadros` y `eventos_frame`. Sin el resumen entero (son ~20 KB por trabajo).
+- **El disco manda.** `listar()` y `get()` releen los `trabajo.json` de
+  `data/exploracion/` en cada llamada. La única excepción es el trabajo que
+  está corriendo en este proceso: ahí manda la memoria, que lleva el progreso
+  por cuadro (a disco sólo va al cambiar de etapa). Por eso aparecen los
+  trabajos de sesiones anteriores y las carpetas que deje otro proceso, sin
+  reiniciar el servidor.
+- **El id de un trabajo es el nombre de su carpeta**, no el campo `id` del
+  JSON: es lo que resuelve la URL. `JOB_ID` acepta ahora también un slug
+  (`ejemplo-cmu-64_01-face_on`), sin barras y sin empezar con punto.
+- **La forma de un ejemplo, para el encargo 07** (está en el encabezado de
+  `service/exploracion.py`): una carpeta más en `data/exploracion/`, con los
+  mismos archivos, y un `trabajo.json` con `"estado": "listo"`,
+  `"origen": "ejemplo"` y `"etiqueta"` (el rótulo que muestra la pantalla; acá
+  no se inventa ninguno). `estado` es lo único obligatorio: `video` cae en el
+  nombre de la carpeta y `creado` en la fecha del archivo si faltan. Sin
+  `origen`, el trabajo es `subida`.
+- **En la pantalla**, debajo de «Subir video», la lista «Trabajos anteriores y
+  ejemplos» (`web/src/components/ListaTrabajos.tsx`): nombre, fecha, vista,
+  estado, fps, cuadros y los cuadros de cada evento; los ejemplos con su
+  rótulo, en la lista y arriba del resultado. Clic → se abre ese trabajo como
+  si acabara de terminar, sin volver a subir el video.
+- **`?trabajo=<id>`** abre ese trabajo al cargar; al elegir uno de la lista (o
+  al terminar una subida) la URL se actualiza con `history.replaceState` —la
+  forma que documenta Next 16— sin recargar. Un id que ya no existe se olvida
+  (localStorage incluido), se avisa en una línea y la página sigue.
+- Lo ilegible se saltea **y se registra**: un `trabajo.json` roto o sin
+  `estado` deja una línea por lectura; una carpeta sin `trabajo.json`, una sola
+  vez por carpeta (puede ser una subida a medio recibir).
+
+### Medido
+
+Backend nuevo en el 8765 y el `next dev` que ya corría en el 3000; todo por el
+proxy con `curl`, sin abrir el navegador.
+
+| | |
+|---|---|
+| trabajos listados | 8 (5 de sesiones anteriores + 2 subidas de `cortado.mp4` + 1 ejemplo); quedan **7** en disco |
+| orden | por `creado`, del más nuevo al más viejo |
+| `cortado.mp4` en la fila | 29,999 fps · 76 cuadros · address 7 · top 39 · impacto 44 |
+| `20260907_170638.mp4` (12/9) | 29,436 fps · 265 cuadros · address 111 · top 141 · impacto 147 · fin 219 |
+| `GET /api/datos` | 2504 bytes · 3,0–3,3 ms en el backend · 4,4–5,3 ms por el proxy |
+| ejemplo armado a mano | se abre por su slug: `origen: ejemplo`, etiqueta, 8 archivos, `overlay.mp4` con 206, PNG 200 |
+| trabajo borrado del disco | una de las dos subidas: desaparece de la lista, y su `GET` y el de sus archivos dan 404 |
+
+Los dos trabajos del 12/9 sobre el original del S22 conservan su
+`fps_archivo` 29,436, el **bruto**: se calcularon antes del encargo 04. Nada
+recalcula un trabajo viejo, y está bien que sea así.
+
+Suites: **239 en verde** en el motor (233 + 6 nuevos en `tests/test_service.py`,
+que pasa de 41 a 47), ~25 s — con el trabajo sin commitear del 06 adentro.
+`cd web && pnpm lint && pnpm build`, limpios.
+
+### Qué falta o no se probó
+
+- **La pantalla no se abrió en un navegador** (regla de trabajo). Lo que más
+  puede fallar sin haberlo visto: el alto de la lista (`max-h-72` con scroll)
+  cuando hay muchos trabajos, y que `?trabajo=` conviva bien con el router de
+  Next al recargar.
+- **El ejemplo que hay es armado a mano y no es mocap**: una copia de
+  `cortado.mp4` con su `trabajo.json` escrito aparte, para probar la lista. Su
+  etiqueta lo dice con todas las letras. Se borra con
+  `rm -rf data/exploracion/ejemplo-a-mano-cortado-face_on`; el del encargo 07
+  lo reemplaza.
+- Sin paginado: la lista devuelve todos los trabajos. Con 8 son 2,5 KB y 3 ms;
+  con cientos habría que cortar.
+- No se borra nada desde la pantalla, por encargo. `rm -rf
+  data/exploracion/<id>` y listo: la lista se entera sola.
+- Un trabajo a medio correr de **otro** proceso se lista con su estado tal
+  cual; sólo el arranque del propio servidor marca como `error` lo que quedó a
+  medias. No se escribe sobre el `trabajo.json` de otro.
+
+### Desviaciones
+
+- Ninguna del contrato: `trabajo.json` es de `service/`, no del contrato de
+  datos; no se tocó `analysis.json`, `capture.json` ni `pose.npz`.
+- **Se mató el backend viejo del 8765** (PID 16524, del 12/9 17:28, con código
+  anterior a los encargos 02–06) para poder probar por el proxy: Next 16 no
+  deja levantar un segundo `next dev` sobre el mismo directorio, así que había
+  que usar el que ya corría en el 3000, y ése habla con el 8765. En su lugar
+  quedó corriendo el backend de hoy. El `next dev` de Hernán (PID 16850) no se
+  tocó.
+
+---
+
 ## 14 de septiembre de 2026 — encargo 05: la lámina interpolada (para mirar)
 
 Prompt: `docs/prompts/05-lamina-interpolada.md`. Informe:
