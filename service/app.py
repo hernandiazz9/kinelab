@@ -7,7 +7,9 @@ en `service/static/index.html`.
   disco con su `capture.json`, pase o no.
 - `GET /api/sessions`   lista los `capture.json` que hay en `data/sessions/`.
 - `PUT /api/datos`      sube un video y encola el modo exploración
-  (`kinelab.explore`): 202 con el id del trabajo. Ver `service/exploracion.py`.
+  (`kinelab.explore`): 202 con el id del trabajo. `camino` es el camino de
+  captura declarado (ADR-016), por defecto el genérico "no sé con qué se
+  filmó"; se valida ANTES de recibir el archivo. Ver `service/exploracion.py`.
 - `GET /api/datos`      la lista de trabajos que hay en disco, del más nuevo al
   más viejo: los de sesiones anteriores y los ejemplos que deje otro proceso.
 - `GET /api/datos/{id}` estado del trabajo; cuando está `listo`, trae el
@@ -36,8 +38,8 @@ from fastapi.responses import FileResponse
 from starlette.concurrency import run_in_threadpool
 
 from kinelab.ingest.__main__ import ingest_clip
-from kinelab.ingest.capture_paths import CapturePaths, load_capture_paths
-from kinelab.ingest.gate import CaptureJson
+from kinelab.ingest.capture_paths import GENERIC_VIDEO_ID, CapturePaths, load_capture_paths, resolve_path_id
+from kinelab.ingest.gate import CaptureJson, slomo_declared_reason
 from kinelab.ingest.session import validate_slug
 from kinelab.tools.fps_truth import FfprobeError, analyze
 from service.exploracion import ARCHIVOS, Exploracion
@@ -239,11 +241,21 @@ def create_app(data_dir: Path | None = None, sport_id: str = "golf", estimator: 
         filename: str = Query(...),
         altura_m: float | None = Query(None, gt=0.5, lt=2.6, description="altura del atleta en metros; sin ella no hay cm"),
         vista: str = Query("face_on"),
+        camino: str = Query(GENERIC_VIDEO_ID, description="id de capture-paths.yaml: con qué se filmó (ADR-016)"),
     ) -> dict[str, Any]:
         base, _suffix = safe_filename(filename)
         if vista not in sport.views:
             raise HTTPException(400, f"Vista '{vista}' desconocida. Válidas: {', '.join(sport.views)}.")
-        job = exploracion.new(base, altura_m, vista)
+        # El camino se valida antes de recibir el archivo: un id que no existe o
+        # un Slo-Mo sin cronómetro no arrancan un trabajo cuyo eje de tiempo no
+        # se conoce (ADR-016). La frase del slomo es la misma que da el gate.
+        try:
+            path = resolve_path_id(camino, capture_paths())
+        except ValueError as e:
+            raise HTTPException(400, str(e)) from e
+        if not path.calibrated and path.mode == "slomo":
+            raise HTTPException(400, slomo_declared_reason(path))
+        job = exploracion.new(base, altura_m, vista, path.id)
         upload = job.dir / "subida" / base
         try:
             await _receive_to(request, upload)

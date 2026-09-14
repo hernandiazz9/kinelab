@@ -64,7 +64,7 @@ def test_config_lists_sport_and_capture_paths(client, data_dir):
     assert cfg["sport"]["fps_min"] == 100
     assert [p["id"] for p in cfg["capture_paths"]] == [
         "test-hevc-120-cfr", "test-h264-240-cfr", "test-h264-slomo-240-to-30", "test-h264-30-cfr",
-        "test-declarado-video", "test-declarado-video-h264", "test-declarado-slomo",
+        "test-declarado-video", "test-declarado-video-h264", "test-declarado-slomo", "desconocido-video",
     ]
     # La API ofrece los declarados con su bandera: quien elige el camino en la
     # pantalla tiene que poder ver que ése no tiene cronómetro (ADR-016).
@@ -270,6 +270,84 @@ def client_datos(data_dir: Path):
 
     with TestClient(create_app(data_dir=data_dir, estimator=FakeEstimator(True))) as c:
         yield c
+
+
+class _EstimadorQueEspera:
+    """El estimador falso, frenado en el primer cuadro por un `Event`.
+
+    Deja mirar el trabajo con la pose a medio correr sin dormir un tiempo fijo:
+    el test espera a `empezo`, revisa, y recién ahí suelta `seguir`.
+    """
+
+    def __init__(self) -> None:
+        import threading
+
+        from tests.test_perception import FakeEstimator
+
+        self._real = FakeEstimator(True)
+        self.empezo = threading.Event()
+        self.seguir = threading.Event()
+
+    def reset(self):
+        self._real.reset()
+
+    def provenance(self):
+        return self._real.provenance()
+
+    def __call__(self, frame):
+        self.empezo.set()
+        self.seguir.wait(timeout=60)
+        return self._real(frame)
+
+
+class _EstimadorDeSwing:
+    """Devuelve, cuadro a cuadro, el swing sintético de `tests/helpers/synth_swing.py`.
+
+    El video sólo aporta la cantidad de cuadros. Es la única forma de ver una
+    métrica CON número a través del servicio: con el estimador quieto no hay
+    ninguna repetición, y sin repeticiones no hay métricas de ningún tipo.
+    """
+
+    def __init__(self, fps: float) -> None:
+        from tests.helpers.synth_swing import synth_swing
+
+        self.swing = synth_swing(fps, n_reps=1)
+        self.i = 0
+
+    def reset(self) -> None:
+        self.i = 0
+
+    def provenance(self) -> dict:
+        return {"model": "swing sintético", "provider": "falso"}
+
+    def __call__(self, frame):
+        import numpy as np
+
+        from kinelab.perception.estimator import FrameEstimate
+
+        i = min(self.i, self.swing.keypoints.shape[0] - 1)
+        self.i += 1
+        k, sc = self.swing.keypoints[i], self.swing.scores[i]
+        (x0, y0), (x1, y1) = np.nanmin(k, axis=0), np.nanmax(k, axis=0)
+        return FrameEstimate(k[None], sc[None], np.array([[x0, y0, x1, y1]], np.float32), True)
+
+
+@pytest.fixture
+def client_datos_swing(data_dir: Path):
+    with TestClient(create_app(data_dir=data_dir, estimator=_EstimadorDeSwing(120.0))) as c:
+        yield c
+
+
+@pytest.fixture
+def client_datos_lento(data_dir: Path):
+    """El cliente con un estimador que se frena en el primer cuadro; devuelve
+    `(cliente, estimador)` para poder soltarlo."""
+    est = _EstimadorQueEspera()
+    with TestClient(create_app(data_dir=data_dir, estimator=est)) as c:
+        try:
+            yield c, est
+        finally:
+            est.seguir.set()
 
 
 def _wait(client: TestClient, job_id: str, timeout_s: float = 120.0) -> dict:
@@ -495,6 +573,135 @@ def test_datos_borrado_del_disco_desaparece_sin_romper(client_datos, clips, data
     assert client_datos.get("/api/datos").json() == []
     assert client_datos.get(f"/api/datos/{j['id']}").status_code == 404, "el que guardó el navegador ya no está"
     assert client_datos.get(f"/api/datos/{j['id']}/archivos/overlay.mp4").status_code == 404
+
+
+# --- exploración: el camino de captura y la ficha del archivo ----------------------
+
+
+def test_datos_camino_declarado_viaja_al_trabajo_y_al_capture(client_datos, clips, data_dir):
+    import json
+
+    src = _need(clips, "hevc120")
+    j = _wait(client_datos, _put(client_datos, "/api/datos", src, camino="test-declarado-video").json()["id"])
+    assert j["estado"] == "listo", j["error"]
+    assert j["camino"] == "test-declarado-video"
+
+    guardado = json.loads((data_dir / "exploracion" / j["id"] / "trabajo.json").read_text(encoding="utf-8"))
+    assert guardado["camino"] == "test-declarado-video", "el camino queda en disco, no sólo en memoria"
+    assert "archivo" not in guardado, "la ficha no se copia al trabajo.json: vive en capture.json"
+
+    capture = client_datos.get(f"/api/datos/{j['id']}/archivos/capture.json").json()
+    assert capture["capture_path_id"] == "test-declarado-video"
+    assert capture["capture_path_calibrated"] is False
+    assert capture["fps_provenance"] == "sin_verificar"
+    assert j["resumen"]["camino"] == "test-declarado-video"
+    assert j["resumen"]["fps_aviso"], "el aviso del camino declarado, antes de cualquier número (ADR-016)"
+
+
+def test_datos_camino_por_defecto_es_el_generico(client_datos, clips):
+    src = _need(clips, "hevc120")
+    j = client_datos.put("/api/datos", params={"filename": src.name}, content=src.read_bytes()).json()
+    assert j["camino"] == "desconocido-video", "sin elegir nada, 'no sé con qué se filmó'"
+    _wait(client_datos, j["id"])
+
+
+def test_datos_camino_inexistente_es_400_con_la_lista(client_datos, clips, data_dir):
+    src = _need(clips, "hevc120")
+    r = _put(client_datos, "/api/datos", src, camino="no-existe-este-camino")
+    assert r.status_code == 400
+    detalle = r.json()["detail"]
+    assert "no-existe-este-camino" in detalle
+    assert "test-declarado-video" in detalle and "desconocido-video" in detalle, "dice cuáles hay"
+    assert not (data_dir / "exploracion").exists() or not list((data_dir / "exploracion").glob("*"))
+
+
+def test_datos_slomo_sin_calibrar_es_400_con_la_frase_del_gate(client_datos, clips, data_dir):
+    """ADR-016: sin cronómetro el factor de estiramiento es desconocido. No se
+    arranca un trabajo cuyo eje de tiempo no se conoce, y la frase es la misma
+    que da el gate."""
+    from kinelab.ingest.capture_paths import load_capture_paths
+    from kinelab.ingest.gate import slomo_declared_reason
+
+    src = _need(clips, "hevc120")
+    r = _put(client_datos, "/api/datos", src, camino="test-declarado-slomo")
+    assert r.status_code == 400
+    esperada = slomo_declared_reason(load_capture_paths(data_dir / "capture-paths.yaml").get("test-declarado-slomo"))
+    assert r.json()["detail"] == esperada
+    assert "estiramiento es desconocido" in esperada
+    assert not (data_dir / "exploracion").exists() or not list((data_dir / "exploracion").glob("*"))
+
+
+def test_datos_la_ficha_del_archivo_llega_antes_que_la_pose(client_datos_lento, clips):
+    """La ficha sale del `capture.json`, que `prepare_take` escribe antes de
+    correr el modelo: la pantalla la muestra mientras la pose sigue."""
+    client, est = client_datos_lento
+    src = _need(clips, "hevc120")
+    job_id = _put(client, "/api/datos", src, camino="test-declarado-video").json()["id"]
+    assert est.empezo.wait(timeout=60), "el estimador nunca arrancó"
+
+    j = client.get(f"/api/datos/{job_id}").json()
+    assert j["estado"] == "detectando_pose", j
+    assert j["resumen"] is None, "todavía no hay ningún número derivado"
+    a = j["archivo"]
+    assert a is not None, "la ficha del archivo ya está"
+    assert a["codec"] == "hevc" and a["cuadros"] == 480
+    assert a["fps_reproduccion"] == 120.0 and a["rotacion_deg"] == 0 and a["tasa_variable"] is False
+    assert a["camino"] == "test-declarado-video" and a["camino_calibrado"] is False
+    assert a["fps_provenance"] == "sin_verificar", "la procedencia viaja al lado del fps"
+
+    est.seguir.set()
+    fin = _wait(client, job_id)
+    assert fin["estado"] == "listo", fin["error"]
+    assert fin["archivo"] == a, "la ficha no cambia cuando termina la pose"
+
+
+def test_datos_ficha_con_el_primer_delta_corregido(client_datos, clips):
+    """El clip cuyo primer delta de PTS es el arranque de la cámara: el efectivo
+    y el bruto viajan los dos, y `fps_note` explica por qué difieren."""
+    src = _need(clips, "first_delta30_h264")
+    j = _wait(client_datos, _put(client_datos, "/api/datos", src, camino="test-declarado-video").json()["id"])
+    assert j["estado"] == "listo", j["error"]
+    a = j["archivo"]
+    assert a["fps_reproduccion"] == 30.0 and a["fps_reproduccion_bruto"] < 30.0
+    assert a["tasa_variable"] is False and a["vfr_ratio_bruto"] > a["vfr_ratio_max"]
+    assert a["primer_delta_s"] > 0.1
+    assert a["fps_note"] and "arranque de la cámara" in a["fps_note"]
+
+
+def test_datos_lista_trae_camino_y_procedencia(client_datos, clips):
+    src = _need(clips, "hevc120")
+    j = _wait(client_datos, _put(client_datos, "/api/datos", src, camino="test-declarado-video").json()["id"])
+    assert j["estado"] == "listo", j["error"]
+    fila = client_datos.get("/api/datos").json()[0]
+    assert fila["camino"] == "test-declarado-video"
+    assert fila["fps_provenance"] == "sin_verificar", "el fps de la fila no se lee sin su procedencia"
+
+
+def test_datos_analysis_trae_las_metricas_con_su_razon(client_datos_swing, clips):
+    """El bloque «Con este archivo» de la pantalla sale de acá: cada métrica del
+    registro, con valor y unidad o con la razón por la que no se calculó."""
+    src = _need(clips, "hevc120")
+    j = _wait(client_datos_swing, _put(client_datos_swing, "/api/datos", src, altura_m=1.75, camino="test-declarado-video").json()["id"])
+    assert j["estado"] == "listo", j["error"]
+    analysis = client_datos_swing.get(f"/api/datos/{j['id']}/archivos/analysis.json").json()
+    assert analysis["header"]["source"]["fps_provenance"] == "sin_verificar"
+    assert analysis["warnings"][0].startswith("EXPLORACIÓN")
+    metricas = analysis["reps"][0]["metrics"]
+    assert len(metricas) == 12
+    for id_, m in metricas.items():
+        assert set(m) >= {"value", "unit", "view", "mdc", "level", "fps_min", "fps_provenance", "judgment_allowed", "null_reason"}, id_
+        assert (m["value"] is None) == (m["null_reason"] is not None), f"{id_}: o hay número, o hay razón"
+        assert m["judgment_allowed"] is False, f"{id_}: con la tasa sin verificar nada es juicio (ADR-016)"
+    con_numero = {i: m for i, m in metricas.items() if m["value"] is not None}
+    assert con_numero, "a 120 fps, con un swing de verdad, alguna métrica tiene que dar un número"
+    for id_, m in con_numero.items():
+        # Nunca un float solo (invariante 3). `confidence` sigue en null en todo
+        # el registro de golf: lo llena la Fase 3, y la pantalla tiene que
+        # aguantarlo sin inventar nada.
+        assert m["unit"] and m["uncertainty"], f"{id_}: valor sin unidad ni banda"
+        assert m["uncertainty"]["method"], id_
+    sin_numero = {i: m["null_reason"] for i, m in metricas.items() if m["value"] is None}
+    assert any("vista" in r for r in sin_numero.values()), "pelvis_thrust_top_cm sólo vale desde down_the_line"
 
 
 def test_datos_el_id_es_la_carpeta_y_no_se_sale_de_ella(client_datos, data_dir):

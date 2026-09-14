@@ -209,6 +209,13 @@ paths:
     transfer: test
     calibrated: false
     nominal_fps: 240
+  # El genérico del repo, con el mismo id: es el default del modo exploración
+  # y el que elige "No sé" en la pantalla, así que el fixture lo tiene que traer.
+  - id: desconocido-video
+    device: desconocido
+    mode: video
+    transfer: desconocido
+    calibrated: false
 """,
         encoding="utf-8",
     )

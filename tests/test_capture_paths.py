@@ -51,7 +51,7 @@ def _yaml_with(tmp_path: Path, *paths: dict) -> Path:
 def test_load_fixture(capture_paths_yaml):
     cp = load_capture_paths(capture_paths_yaml)
     assert cp.schema_version == "1.0.0"
-    assert len(cp.paths) == 7
+    assert len(cp.paths) == 8  # los 7 de prueba más el genérico `desconocido-video`
     p = cp.get("test-h264-slomo-240-to-30")
     assert p is not None
     assert p.mode == "slomo"

@@ -75,6 +75,38 @@ export const DURACIONES: Record<string, string> = {
 
 export const EVENTOS: Record<string, string> = { address: "address", top: "top", impact: "impacto", follow_end: "fin" };
 
+/** Nombre legible de cada métrica del registro (`sports/golf/metrics.py`). Lo
+ *  que no esté acá se muestra con su id: nada se esconde. */
+export const METRICAS: Record<string, string> = {
+  backswing_duration_ms: "backswing (address → top)",
+  downswing_duration_ms: "downswing (top → impacto)",
+  tempo_ratio: "tempo (backswing ÷ downswing)",
+  follow_duration_ms: "impacto → fin del follow-through",
+  pelvis_sway_top_cm: "pelvis: corrimiento lateral en el top",
+  pelvis_sway_impact_cm: "pelvis: corrimiento lateral en el impacto",
+  pelvis_lift_top_cm: "pelvis: subida en el top",
+  thorax_sway_top_cm: "tórax: corrimiento lateral en el top",
+  thorax_lift_top_cm: "tórax: subida en el top",
+  pelvis_thrust_top_cm: "pelvis: acercamiento a la pelota en el top",
+  head_sway_top_cm: "cabeza: corrimiento lateral en el top",
+  head_lift_top_cm: "cabeza: subida en el top",
+};
+
+/** De dónde sale el fps con el que se midió el tiempo (ADR-016). Va SIEMPRE al
+ *  lado del número: un eje de tiempo supuesto no se lee igual que uno medido. */
+export const PROCEDENCIA: Record<string, string> = {
+  medido_aqui: "medido con cronómetro",
+  sin_verificar: "sin verificar",
+};
+
+/** "Galaxy S22 Ultra · video 30 fps · sin cronómetro", con el genérico aparte. */
+export function etiquetaCamino(c: { id: string; device: string; mode: string; nominal_fps: number | null; calibrated: boolean }): string {
+  if (c.id === "desconocido-video") return "No sé con qué se filmó";
+  const partes = [c.device, c.nominal_fps === null ? c.mode : `${c.mode} ${c.nominal_fps} fps`];
+  partes.push(c.calibrated ? "cronómetro filmado" : "sin cronómetro");
+  return partes.join(" · ");
+}
+
 /** "entre el cuadro 44 y el 45 (0,44 ± 0,11)", o la razón por la que no hay número. */
 export function textoSubcuadro(sf: { frame_before: number | null; frame_after: number | null; fraction: number | null; uncertainty_frames: number | null; null_reason: string | null } | null | undefined): string | null {
   if (!sf) return null;

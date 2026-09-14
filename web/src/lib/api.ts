@@ -24,6 +24,56 @@ export interface Subcuadro {
   null_reason: string | null;
 }
 
+/** De dónde sale el fps con el que se midió el tiempo (CONTEXTO.md §procedencia).
+ *  `sin_verificar` = camino declarado, sin cronómetro: ADR-016. */
+export type Procedencia = "medido_aqui" | "sin_verificar";
+
+/** Un camino de captura de `capture-paths.yaml`, tal como lo da `GET /api/config`. */
+export interface CaminoCaptura {
+  id: string;
+  device: string;
+  mode: "video" | "slomo";
+  transfer: string;
+  calibrated: boolean;
+  nominal_fps: number | null;
+  codec_expected: string | null;
+  notes: string;
+}
+
+export interface Config {
+  sport: { id: string; gestures: string[]; views: string[]; fps_min: number };
+  capture_paths: CaminoCaptura[];
+  data_dir: string;
+}
+
+/** La ficha del archivo tal como llegó, del `capture.json`. Está antes que la
+ *  pose: `prepare_take` la escribe antes de correr el modelo. Los pares
+ *  efectivo/bruto viajan juntos y `fps_note` dice por qué difieren. */
+export interface FichaArchivo {
+  codec: string;
+  ancho: number;
+  alto: number;
+  rotacion_deg: number;
+  cuadros: number;
+  duracion_s: number;
+  duracion_reproduccion_s: number;
+  fps_real: number | null;
+  fps_reproduccion: number;
+  fps_reproduccion_bruto: number | null;
+  stretch_factor: number | null;
+  vfr_ratio: number;
+  vfr_ratio_bruto: number | null;
+  tasa_variable: boolean;
+  vfr_ratio_max: number;
+  primer_delta_s: number | null;
+  fps_note: string | null;
+  camino: string;
+  camino_calibrado: boolean | null;
+  fps_provenance: Procedencia;
+  original: string;
+  grabado: string | null;
+}
+
 /** El contenido de `datos-eventos.json` tal como lo escribe `kinelab.explore`. */
 export interface Resumen {
   aviso: string;
@@ -32,6 +82,11 @@ export interface Resumen {
   cuadros: number;
   altura_m: number | null;
   gate_diria: string[];
+  /** Los cuatro de ADR-016. Faltan en un trabajo anterior al encargo 06. */
+  camino?: string;
+  camino_calibrado?: boolean | null;
+  fps_provenance?: Procedencia;
+  fps_aviso?: string | null;
   eventos_frame: Eventos;
   eventos_t_s: Eventos;
   eventos_subcuadro?: Partial<Record<EventoId, Subcuadro>>;
@@ -50,6 +105,10 @@ export interface Trabajo {
   origen: Origen;
   /** El rótulo de un ejemplo, tal como lo escribió quien lo armó. Acá no se inventa ninguno. */
   etiqueta: string | null;
+  /** El camino de captura con el que se subió (ADR-016); null en un trabajo viejo. */
+  camino: string | null;
+  /** La ficha del archivo. Llega ANTES que la pose: se muestra mientras el modelo corre. */
+  archivo: FichaArchivo | null;
   progreso: { cuadros: number; total: number | null };
   error: string | null;
   video: string;
@@ -75,9 +134,36 @@ export interface TrabajoFila {
   terminado: string | null;
   segundos: number | null;
   error: string | null;
+  camino: string | null;
+  /** Va al lado del fps: un fps sin procedencia no se puede leer (ADR-016). */
+  fps_provenance: Procedencia | null;
   fps_archivo: number | null;
   cuadros: number | null;
   eventos_frame: Eventos | null;
+}
+
+/** Una métrica del registro en `analysis.json`, con su sextuplo (CONTRATO.md).
+ *  O tiene `value` con su unidad y su banda, o tiene `null_reason`: nunca las dos. */
+export interface Metrica {
+  value: number | null;
+  unit: string;
+  confidence: { value: number; method: string } | null;
+  uncertainty: { low: number; high: number; method: string } | null;
+  view: string;
+  mdc: number | null;
+  level: number;
+  fps_min: number;
+  fps_min_met: boolean;
+  fps_provenance: Procedencia;
+  judgment_allowed: boolean;
+  null_reason: string | null;
+}
+
+/** Lo que la pantalla usa de `analysis.json`; el archivo tiene bastante más. */
+export interface Analysis {
+  header: { schema_version: string; engine_version: string; registry_version: string; source: { fps_real: number; fps_provenance: Procedencia | null; capture_path_id: string } };
+  reps: { rep: number; frame_start: number; frame_end: number; metrics: Record<string, Metrica> }[];
+  warnings: string[];
 }
 
 export const ETAPA: Record<Estado, string> = {
@@ -91,6 +177,9 @@ export const ETAPA: Record<Estado, string> = {
 };
 
 const CLAVE_ULTIMO = "kinelab:ultimo-trabajo";
+const CLAVE_CAMINO = "kinelab:camino";
+/** El camino genérico de `capture-paths.yaml`: "no sé con qué se filmó". Es el default. */
+export const CAMINO_DESCONOCIDO = "desconocido-video";
 
 async function leerError(r: Response): Promise<string> {
   try {
@@ -103,9 +192,16 @@ async function leerError(r: Response): Promise<string> {
   }
 }
 
+/** GET /api/config: el deporte y los caminos de captura de `capture-paths.yaml`. */
+export async function getConfig(): Promise<Config> {
+  const r = await fetch("/api/config", { cache: "no-store" });
+  if (!r.ok) throw new Error(await leerError(r));
+  return (await r.json()) as Config;
+}
+
 /** PUT /api/datos con el archivo como cuerpo crudo. XHR porque fetch no informa el progreso de subida. */
-export function subirVideo(archivo: File, alturaM: number | null, onProgreso: (fraccion: number) => void): Promise<Trabajo> {
-  const q = new URLSearchParams({ filename: archivo.name });
+export function subirVideo(archivo: File, alturaM: number | null, camino: string, onProgreso: (fraccion: number) => void): Promise<Trabajo> {
+  const q = new URLSearchParams({ filename: archivo.name, camino });
   if (alturaM !== null) q.set("altura_m", String(alturaM));
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -171,6 +267,23 @@ export function olvidarUltimoTrabajo(): void {
   }
 }
 
+/** El último camino elegido. Se recuerda porque el teléfono no cambia entre clips. */
+export function caminoRecordado(): string | null {
+  try {
+    return localStorage.getItem(CLAVE_CAMINO);
+  } catch {
+    return null;
+  }
+}
+
+export function recordarCamino(id: string): void {
+  try {
+    localStorage.setItem(CLAVE_CAMINO, id);
+  } catch {
+    /* sin localStorage, sólo hay que volver a elegirlo */
+  }
+}
+
 /** URL de un archivo del trabajo; `descargar` pide Content-Disposition: attachment. */
 export function archivoUrl(t: Trabajo, nombre: string, descargar = false): string | null {
   const u = t.archivos[nombre];
@@ -182,6 +295,14 @@ export async function bajarTexto(url: string): Promise<string> {
   const r = await fetch(url, { cache: "no-store" });
   if (!r.ok) throw new Error(await leerError(r));
   return r.text();
+}
+
+/** El `analysis.json` del trabajo: de ahí salen las métricas del registro, cada
+ *  una con su valor o con la razón por la que no se pudo calcular. Son ~15 KB. */
+export async function bajarAnalysis(url: string): Promise<Analysis> {
+  const r = await fetch(url, { cache: "no-store" });
+  if (!r.ok) throw new Error(await leerError(r));
+  return (await r.json()) as Analysis;
 }
 
 // --- `?trabajo=<id>` en la barra de direcciones: un enlace local a un trabajo ------

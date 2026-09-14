@@ -6,7 +6,7 @@
 // nada desde acá.
 
 import { ETAPA, type EventoId, type TrabajoFila } from "@/lib/api";
-import { EVENTOS, fecha, fmt } from "@/lib/etiquetas";
+import { EVENTOS, PROCEDENCIA, fecha, fmt } from "@/lib/etiquetas";
 
 interface Props {
   filas: TrabajoFila[];
@@ -23,7 +23,8 @@ function detalle(f: TrabajoFila): string {
   if (f.estado !== "listo") return f.error ? `error · ${f.error}` : (ETAPA[f.estado] ?? f.estado);
   const partes: string[] = [];
   if (f.cuadros !== null) partes.push(`${f.cuadros} cuadros`);
-  if (f.fps_archivo !== null) partes.push(`${fmt(f.fps_archivo, 3)} fps`);
+  // El fps nunca solo: al lado, de dónde sale (ADR-016).
+  if (f.fps_archivo !== null) partes.push(`${fmt(f.fps_archivo, 3)} fps${f.fps_provenance ? ` (${PROCEDENCIA[f.fps_provenance] ?? f.fps_provenance})` : ""}`);
   partes.push(f.altura_m !== null ? `${fmt(f.altura_m, 2)} m` : "sin altura");
   const ev = f.eventos_frame;
   if (ev) {
@@ -63,6 +64,7 @@ export default function ListaTrabajos({ filas, actual, cargando, error, onElegir
                     <span className="font-medium">{f.video}</span>
                     <span className="text-xs text-zinc-500">
                       {fecha(f.creado)} · {f.vista}
+                      {f.camino && ` · ${f.camino}`}
                       {f.estado !== "listo" && ` · ${f.estado}`}
                     </span>
                   </span>

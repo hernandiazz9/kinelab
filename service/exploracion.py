@@ -10,6 +10,12 @@ volver a servir.
 Estados, en orden: `en_cola` → `cargando_modelo` (sólo el primero) →
 `detectando_pose` → `calculando` → `dibujando` → `listo`, o `error`.
 
+**La ficha del archivo llega antes que la pose.** `prepare_take` escribe el
+`capture.json` —codec, tamaño, rotación, cuadros, duración, las dos tasas de
+reproducción y la nota del primer delta— antes de correr el modelo, así que
+`ficha()` la puede devolver mientras el trabajo sigue en `detectando_pose`. No
+se vuelve a sondear el archivo: sale del `capture.json` que ya está en disco.
+
 **El disco manda.** `listar()` y `get()` releen los `trabajo.json` que hay en
 `data/exploracion/` cada vez, en lugar de creerle a la memoria del proceso: así
 aparecen los trabajos de sesiones anteriores y las carpetas que deja otro
@@ -31,7 +37,9 @@ una carpeta más, con los mismos archivos y un `trabajo.json` así:
 `estado` es lo único obligatorio: `video` cae en el nombre de la carpeta y
 `creado` en la fecha del archivo si faltan. Sin `origen` el trabajo es
 `subida`. `etiqueta` es el texto que la pantalla muestra al lado del resultado;
-lo escribe quien arma el ejemplo, acá no se inventa ninguno.
+lo escribe quien arma el ejemplo, acá no se inventa ninguno. `camino` es el
+camino de captura declarado al subir (ADR-016); si falta, sale del
+`capture.json` de la propia carpeta.
 """
 
 from __future__ import annotations
@@ -48,6 +56,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from kinelab.ingest.capture_paths import CAPTURE_PATHS_FILE, GENERIC_VIDEO_ID, load_capture_paths
+from kinelab.ingest.gate import VFR_RATIO_MAX, CaptureJson
 from kinelab.sport import SportConfig
 
 # Un id es el nombre de una carpeta dentro de `data/exploracion/`: los 32 hex de
@@ -55,6 +65,7 @@ from kinelab.sport import SportConfig
 # sin empezar con punto: no se puede salir de la carpeta con un id.
 JOB_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 TRABAJO_JSON = "trabajo.json"
+CAPTURE_JSON = "capture.json"
 ESTADOS_FINALES = ("listo", "error")
 ORIGEN_SUBIDA = "subida"
 
@@ -78,11 +89,15 @@ class Trabajo:
     estado: str = "en_cola"
     origen: str = ORIGEN_SUBIDA
     etiqueta: str | None = None
+    # El camino de captura con el que se subió (ADR-016). `None` en un trabajo
+    # anterior a este campo: ahí lo dice el `capture.json` de la carpeta.
+    camino: str | None = None
     progreso: dict[str, Any] = field(default_factory=lambda: {"cuadros": 0, "total": None})
     error: str | None = None
     terminado: str | None = None
     segundos: float | None = None
     _resumen: dict[str, Any] | None = field(default=None, repr=False)
+    _archivo: dict[str, Any] | None = field(default=None, repr=False)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -90,6 +105,7 @@ class Trabajo:
             "estado": self.estado,
             "origen": self.origen,
             "etiqueta": self.etiqueta,
+            "camino": self.camino,
             "progreso": dict(self.progreso),
             "error": self.error,
             "video": self.video,
@@ -99,6 +115,10 @@ class Trabajo:
             "terminado": self.terminado,
             "segundos": self.segundos,
             "archivos": self.archivos(),
+            # La ficha del archivo está apenas se escribió el `capture.json`,
+            # o sea antes de la pose: la pantalla la muestra mientras el
+            # modelo todavía corre.
+            "archivo": self.ficha(),
             "resumen": self.resumen() if self.estado == "listo" else None,
         }
 
@@ -106,9 +126,12 @@ class Trabajo:
         """Una línea de la lista de trabajos: lo justo para elegir uno.
 
         Sin el resumen entero (son ~20 KB por trabajo): de ahí salen sólo el fps
-        y los eventos, y sólo cuando el trabajo está listo.
+        y los eventos, y sólo cuando el trabajo está listo. El camino y la
+        procedencia del fps sí van siempre —salen del `capture.json`, que son
+        2 KB— porque un fps sin procedencia al lado no se puede leer (ADR-016).
         """
         r = self.resumen() if self.estado == "listo" else None
+        f = self.ficha() or {}
         return {
             "id": self.id,
             "estado": self.estado,
@@ -121,6 +144,8 @@ class Trabajo:
             "terminado": self.terminado,
             "segundos": self.segundos,
             "error": self.error,
+            "camino": self.camino or f.get("camino"),
+            "fps_provenance": f.get("fps_provenance"),
             "fps_archivo": r.get("fps_archivo") if r else None,
             "cuadros": r.get("cuadros") if r else None,
             "eventos_frame": r.get("eventos_frame") if r else None,
@@ -128,6 +153,22 @@ class Trabajo:
 
     def archivos(self) -> dict[str, str]:
         return {n: f"/api/datos/{self.id}/archivos/{n}" for n in ARCHIVOS if (self.dir / n).is_file()}
+
+    def ficha(self) -> dict[str, Any] | None:
+        """La ficha del archivo, del `capture.json`. `None` hasta que exista.
+
+        Se escribe antes de correr el modelo, así que ya está mientras el
+        trabajo sigue en `detectando_pose`. Se cachea sólo cuando se pudo leer:
+        un `None` de "todavía no está" tiene que volver a intentarse.
+        """
+        if self._archivo is None:
+            p = self.dir / CAPTURE_JSON
+            if p.is_file():
+                try:
+                    self._archivo = ficha_de_captura(CaptureJson.model_validate_json(p.read_text(encoding="utf-8")))
+                except (ValueError, OSError) as e:
+                    _log(f"{self.id}/{CAPTURE_JSON} ilegible: {e.__class__.__name__}: {e}")
+        return self._archivo
 
     def resumen(self) -> dict[str, Any] | None:
         if self._resumen is None:
@@ -141,8 +182,12 @@ class Trabajo:
 
     def save(self) -> None:
         d = self.to_dict()
+        # Nada de lo que se relee de otro archivo se copia acá: el resumen sale
+        # de `datos-eventos.json`, la ficha de `capture.json` y los archivos del
+        # propio directorio. Duplicarlos sería tener dos verdades.
         d.pop("resumen", None)
         d.pop("archivos", None)
+        d.pop("archivo", None)
         tmp = self.dir / (TRABAJO_JSON + ".tmp")
         tmp.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
         tmp.replace(self.dir / TRABAJO_JSON)
@@ -157,7 +202,7 @@ class Trabajo:
             # El id es la carpeta, no el campo: es lo que resuelve la URL.
             id=dir.name, dir=dir, video=d.get("video") or dir.name, altura_m=d.get("altura_m"),
             vista=d.get("vista", "face_on"), creado=d.get("creado") or _mtime(f), estado=d["estado"],
-            origen=d.get("origen") or ORIGEN_SUBIDA, etiqueta=d.get("etiqueta"),
+            origen=d.get("origen") or ORIGEN_SUBIDA, etiqueta=d.get("etiqueta"), camino=d.get("camino"),
             progreso=d.get("progreso") or {"cuadros": 0, "total": None},
             error=d.get("error"), terminado=d.get("terminado"), segundos=d.get("segundos"),
         )
@@ -165,6 +210,41 @@ class Trabajo:
 
 def _mtime(f: Path) -> str:
     return dt.datetime.fromtimestamp(f.stat().st_mtime, dt.timezone.utc).isoformat(timespec="seconds")
+
+
+def ficha_de_captura(c: CaptureJson) -> dict[str, Any]:
+    """El `capture.json` reducido a la ficha del archivo tal como llegó.
+
+    Los pares efectivo/bruto viajan juntos y `fps_note` explica en una frase por
+    qué difieren, `null` cuando coinciden (CONTRATO.md §El fps efectivo y el
+    bruto): un número corregido sin la corrección al lado sería una corrección
+    en silencio. `tasa_variable` se decide acá con el umbral del motor y no en
+    la pantalla, para que el 1,10 esté en un solo lugar.
+    """
+    return {
+        "codec": c.codec,
+        "ancho": c.width,
+        "alto": c.height,
+        "rotacion_deg": c.rotation_deg,
+        "cuadros": c.frames_decoded,
+        "duracion_s": c.duration_s,
+        "duracion_reproduccion_s": c.duration_playback_s,
+        "fps_real": c.fps_real,
+        "fps_reproduccion": c.fps_playback,
+        "fps_reproduccion_bruto": c.fps_playback_raw,
+        "stretch_factor": c.stretch_factor,
+        "vfr_ratio": c.vfr_ratio,
+        "vfr_ratio_bruto": c.vfr_ratio_raw,
+        "tasa_variable": bool(c.vfr_ratio > VFR_RATIO_MAX),
+        "vfr_ratio_max": VFR_RATIO_MAX,
+        "primer_delta_s": c.first_delta_s,
+        "fps_note": c.fps_note,
+        "camino": c.capture_path_id,
+        "camino_calibrado": c.capture_path_calibrated,
+        "fps_provenance": c.fps_provenance,
+        "original": c.original_name,
+        "grabado": c.recorded_at,
+    }
 
 
 # Lo único que se sirve de la carpeta de un trabajo, con su media type. Cualquier
@@ -187,6 +267,9 @@ class Exploracion:
 
     def __init__(self, data_dir: Path, sport: SportConfig, estimator: Any | None = None) -> None:
         self.root = data_dir / "exploracion"
+        # Los caminos del MISMO `data/` que los trabajos, no los del repo: en los
+        # tests el data_dir es un tmp_path con su propio YAML.
+        self.paths_file = data_dir / CAPTURE_PATHS_FILE
         self.sport = sport
         self._estimator = estimator
         self.jobs: dict[str, Trabajo] = {}
@@ -232,11 +315,11 @@ class Exploracion:
             shutil.rmtree(job.dir / "subida", ignore_errors=True)
             self.jobs[job.id] = job
 
-    def new(self, video_name: str, altura_m: float | None, vista: str) -> Trabajo:
+    def new(self, video_name: str, altura_m: float | None, vista: str, camino: str = GENERIC_VIDEO_ID) -> Trabajo:
         job_id = uuid.uuid4().hex
         d = self.root / job_id
         d.mkdir(parents=True, exist_ok=False)
-        job = Trabajo(id=job_id, dir=d, video=video_name, altura_m=altura_m, vista=vista, creado=_now())
+        job = Trabajo(id=job_id, dir=d, video=video_name, altura_m=altura_m, vista=vista, camino=camino, creado=_now())
         with self._lock:
             self.jobs[job_id] = job
         return job
@@ -311,7 +394,9 @@ class Exploracion:
 
         try:
             est = self._estimator_for(job)
-            explore(upload, job.dir, self.sport, height_m=job.altura_m, view=job.vista, progress=progress, estimator=est, stage=stage)
+            paths = load_capture_paths(self.paths_file) if self.paths_file.is_file() else None
+            explore(upload, job.dir, self.sport, height_m=job.altura_m, view=job.vista, camino=job.camino or GENERIC_VIDEO_ID,
+                    capture_paths=paths, progress=progress, estimator=est, stage=stage)
             if job.resumen() is None:
                 raise RuntimeError("terminó sin escribir datos-eventos.json")
             job.estado = "listo"

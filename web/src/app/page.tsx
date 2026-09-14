@@ -4,21 +4,31 @@
 // reproductor con cámara lenta, cuadro a cuadro y zoom; las fotos por evento;
 // y toda la data que el motor produce, en tablas. Sin login, sin sesiones, sin
 // gate, sin puntaje.
+//
+// El orden de arriba hacia abajo no es estético: primero los avisos (bajo qué
+// supuesto se midió el tiempo, ADR-016), después la ficha del archivo, y recién
+// ahí los números derivados. La ficha aparece apenas el motor la escribió, con
+// la pose todavía corriendo.
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Avisos from "@/components/Avisos";
 import DosCuadros from "@/components/DosCuadros";
+import FichaArchivo from "@/components/FichaArchivo";
 import ListaTrabajos from "@/components/ListaTrabajos";
+import Metricas from "@/components/Metricas";
 import Reproductor, { COLOR_EVENTO, type ReproductorHandle } from "@/components/Reproductor";
 import Subida from "@/components/Subida";
 import TablaCuadros from "@/components/TablaCuadros";
 import TablaEventos from "@/components/TablaEventos";
 import {
+  CAMINO_DESCONOCIDO,
   ETAPA,
   archivoUrl,
   getTrabajo,
   listarTrabajos,
   olvidarUltimoTrabajo,
   ponerTrabajoEnLaUrl,
+  recordarCamino,
   recordarTrabajo,
   subirVideo,
   trabajoDeLaUrl,
@@ -27,7 +37,7 @@ import {
   type Trabajo,
   type TrabajoFila,
 } from "@/lib/api";
-import { EVENTOS, fmt, textoSubcuadro } from "@/lib/etiquetas";
+import { EVENTOS, PROCEDENCIA, fmt, textoSubcuadro } from "@/lib/etiquetas";
 
 type Fase =
   | { tipo: "inicio" }
@@ -50,6 +60,7 @@ export default function Pagina() {
   const [filas, setFilas] = useState<TrabajoFila[]>([]);
   const [lista, setLista] = useState<{ cargando: boolean; error: string | null }>({ cargando: true, error: null });
   const [nota, setNota] = useState<string | null>(null);
+  const [camino, setCamino] = useState(CAMINO_DESCONOCIDO);
   const reproductor = useRef<ReproductorHandle>(null);
   const arranque = useRef(false);
 
@@ -93,6 +104,14 @@ export default function Pagina() {
     if (id) abrir(id);
   }, [abrir]);
 
+  // El camino de captura arranca en el genérico y lo confirma `Subida` cuando
+  // llegó la lista de `GET /api/config`: sólo ahí se sabe si el que quedó
+  // recordado sigue existiendo y se puede usar.
+  const elegirCamino = useCallback((id: string) => {
+    setCamino(id);
+    recordarCamino(id);
+  }, []);
+
   // La lista, al empezar y cada vez que un trabajo termina (así aparece el nuevo).
   const terminado = fase.tipo === "listo" ? fase.trabajo.id : fase.tipo === "error" ? "error" : null;
   useEffect(() => {
@@ -111,17 +130,20 @@ export default function Pagina() {
     return () => clearInterval(timer);
   }, [idEnCurso]);
 
-  const subir = useCallback(async (archivo: File, alturaM: number | null) => {
-    setFase({ tipo: "subiendo", pct: 0, nombre: archivo.name });
-    try {
-      const t = await subirVideo(archivo, alturaM, (p) => setFase({ tipo: "subiendo", pct: p, nombre: archivo.name }));
-      setCuadro(0);
-      setFase({ tipo: "procesando", trabajo: t });
-      ponerTrabajoEnLaUrl(t.id);
-    } catch (e) {
-      setFase({ tipo: "error", mensaje: (e as Error).message });
-    }
-  }, []);
+  const subir = useCallback(
+    async (archivo: File, alturaM: number | null) => {
+      setFase({ tipo: "subiendo", pct: 0, nombre: archivo.name });
+      try {
+        const t = await subirVideo(archivo, alturaM, camino, (p) => setFase({ tipo: "subiendo", pct: p, nombre: archivo.name }));
+        setCuadro(0);
+        setFase({ tipo: "procesando", trabajo: t });
+        ponerTrabajoEnLaUrl(t.id);
+      } catch (e) {
+        setFase({ tipo: "error", mensaje: (e as Error).message });
+      }
+    },
+    [camino],
+  );
 
   const ir = useCallback((n: number) => reproductor.current?.irACuadro(n), []);
   const irArriba = useCallback(
@@ -133,7 +155,8 @@ export default function Pagina() {
   );
 
   const ocupado = fase.tipo === "subiendo" || fase.tipo === "procesando";
-  const abiertoId = fase.tipo === "listo" || fase.tipo === "procesando" ? fase.trabajo.id : null;
+  const trabajo = fase.tipo === "listo" || fase.tipo === "procesando" ? fase.trabajo : null;
+  const abiertoId = trabajo?.id ?? null;
 
   return (
     <main className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-6">
@@ -143,12 +166,18 @@ export default function Pagina() {
       </header>
 
       <section className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
-        <Subida ocupado={ocupado} onSubir={subir} />
+        <Subida ocupado={ocupado} camino={camino} onCamino={elegirCamino} onSubir={subir} />
       </section>
 
       <ListaTrabajos filas={filas} actual={abiertoId} cargando={lista.cargando} error={lista.error} onElegir={abrir} />
 
       {nota && <p className="text-sm text-amber-300">{nota}</p>}
+
+      {/* Los avisos, antes de cualquier número derivado (ADR-016). */}
+      {fase.tipo === "listo" && <Avisos resumen={fase.trabajo.resumen!} archivo={fase.trabajo.archivo} />}
+
+      {/* Y la ficha del archivo, que está desde antes de la pose. */}
+      {trabajo?.archivo && <FichaArchivo ficha={trabajo.archivo} procesando={fase.tipo === "procesando"} />}
 
       {fase.tipo === "subiendo" && (
         <Progreso titulo={`subiendo ${fase.nombre}`} fraccion={fase.pct} detalle={`${Math.round(fase.pct * 100)} %`} />
@@ -218,17 +247,15 @@ function Resultado({
 
   return (
     <>
-      <section className="rounded-lg border border-amber-800/60 bg-amber-950/20 p-3 text-sm">
+      {/* El aviso y la ficha ya se mostraron arriba; acá queda la identidad del
+          trabajo. El fps va con su procedencia al lado, siempre (ADR-016). */}
+      <section className="rounded-lg border border-zinc-800 p-3 text-sm">
         {/* El rótulo de un ejemplo lo trae `trabajo.json`: acá no se inventa ninguno. */}
         {trabajo.origen === "ejemplo" && <p className="mb-1 font-medium text-emerald-300">{trabajo.etiqueta ?? "ejemplo"}</p>}
-        <p>{r.aviso}</p>
-        {r.gate_diria.length > 0 && (
-          <p className="mt-1 text-amber-200">
-            El gate diría: {r.gate_diria.join(" · ")}
-          </p>
-        )}
-        <p className="mt-1 text-zinc-400">
-          {r.video} · {r.cuadros} cuadros a {fmt(r.fps_archivo, 3)} fps del archivo · altura {r.altura_m ? `${fmt(r.altura_m, 2)} m` : "sin declarar (sin cm)"} · procesado en {fmt(trabajo.segundos, 1)} s
+        <p className="text-zinc-400">
+          {r.video} · {r.cuadros} cuadros a {fmt(r.fps_archivo, 3)} fps
+          {r.fps_provenance && <span className="text-amber-300"> ({PROCEDENCIA[r.fps_provenance] ?? r.fps_provenance})</span>}
+          {r.camino && ` · camino ${r.camino}`} · altura {r.altura_m ? `${fmt(r.altura_m, 2)} m` : "sin declarar (sin cm)"} · procesado en {fmt(trabajo.segundos, 1)} s
         </p>
       </section>
 
@@ -281,6 +308,15 @@ function Resultado({
               </figure>
             );
           })}
+        </section>
+      )}
+
+      {/* Qué se pudo medir con ESTE archivo, métrica por métrica y con la razón
+          cuando no se pudo. Antes de las tablas de exploración, que son la lupa. */}
+      {archivoUrl(trabajo, "analysis.json") && (
+        <section>
+          {/* `key`: al abrir otro trabajo se re-monta y vuelve a leer el JSON. */}
+          <Metricas key={archivoUrl(trabajo, "analysis.json")!} url={archivoUrl(trabajo, "analysis.json")!} />
         </section>
       )}
 
