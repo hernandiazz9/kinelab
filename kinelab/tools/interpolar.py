@@ -109,12 +109,14 @@ _ASCII = str.maketrans({
 })
 
 
-def _ascii(texto: str) -> str:
+def ascii_para_quemar(texto: str) -> str:
+    """El texto listo para `cv2.putText`. Público porque lo usa también el overlay
+    de `kinelab.explore`: una sola tabla de transliteración, en un solo lugar."""
     return texto.translate(_ASCII).encode("ascii", "replace").decode("ascii")
 
 
 def _medir(texto: str, fs: float, grosor: int) -> tuple[int, int]:
-    (w, h), _ = cv2.getTextSize(_ascii(texto), FONT, fs, grosor)
+    (w, h), _ = cv2.getTextSize(ascii_para_quemar(texto), FONT, fs, grosor)
     return w, h
 
 
@@ -155,7 +157,7 @@ def _ajustar(lineas: list[str], ancho: int, grosor: int, techo: float) -> float:
 
 
 def _texto(img: np.ndarray, texto: str, x: int, y: int, fs: float, grosor: int, color) -> None:
-    t = _ascii(texto)
+    t = ascii_para_quemar(texto)
     cv2.putText(img, t, (int(x), int(y)), FONT, fs, NEGRO, grosor + 2, cv2.LINE_AA)
     cv2.putText(img, t, (int(x), int(y)), FONT, fs, color, grosor, cv2.LINE_AA)
 

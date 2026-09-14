@@ -321,3 +321,74 @@ def test_explore_mode_writes_everything_even_without_a_person(clips, tmp_path):
     assert r["cuadros"] == 480 and "elbow_left_deg" in r["columnas"] and "pelvis_dx_vs_address_cm" in r["columnas"]
     assert r["aviso"].startswith("EXPLORACIÓN")
     assert r["eventos_frame"] == {} and r["eventos_subcuadro"] == {}, "sin eventos no hay instante entre cuadros, y la clave está igual"
+
+
+def _pose_sintetica(tmp_path, fps=120.0, width=1080, height=1920):
+    """Un `pose.npz` como el que escribe `kinelab_truth.mocap`: puntos ya en
+    píxeles, sin video y sin estimador, con la `provenance` que hace falta para
+    que el motor sepa a qué tasa se generaron."""
+    from tests.helpers.synth_swing import synth_swing
+
+    sw = synth_swing(fps, n_reps=1, frame=(height, width), body_height_px=0.8 * height, amplitude_px=300.0)
+    T = sw.keypoints.shape[0]
+    d = tmp_path / "pose-fuente"
+    d.mkdir(parents=True, exist_ok=True)
+    prov = {
+        "source": "sintetico", "fps_real": fps, "frames": T, "frame_size": [width, height],
+        "rotation_deg": 0, "source_name": "synth_swing.py", "source_sha256": "0" * 64,
+        "framing": {"body_height_px_median": sw.body_height_px, "body_height_px_min": sw.body_height_px,
+                    "body_height_px_max": sw.body_height_px, "frac_of_frame": sw.body_height_px / height,
+                    "detection_rate": 1.0, "multi_subject_frac": 0.0, "camera_motion_px": None},
+        "plausibility_counts": {}, "camera_motion_px": 0.0,
+    }
+    lo, hi = np.nanmin(sw.keypoints, axis=1), np.nanmax(sw.keypoints, axis=1)
+    save_pose(d, PoseData(sw.keypoints, sw.scores, np.concatenate([lo, hi], axis=1),
+                          np.arange(T) / fps, np.zeros(T, np.uint8), prov), overwrite=True)
+    return d / "pose.npz", sw
+
+
+def test_explore_arranca_de_un_pose_npz_sin_video_ni_estimador(tmp_path):
+    """El camino del ejemplo de mocap: entra un `pose.npz` ya calculado y salen
+    los mismos archivos que con un video, con el overlay sobre fondo liso y el
+    aviso de dónde sale el eje del tiempo puesto por quien llama."""
+    import cv2
+
+    from kinelab.explore import FONDO_LISO, explore
+
+    pose_npz, sw = _pose_sintetica(tmp_path)
+    nota = "fps 120 exacto por construcción (prueba), cámara virtual, no es video"
+    out = tmp_path / "out"
+    r = explore(None, out, GOLF, height_m=1.8, pose_npz=pose_npz, nota_fuente=nota, banner="prueba · cámara virtual · no es video")
+
+    # no se copió ningún video y la pose es la que entró
+    assert not list(out.glob("original.*"))
+    assert (out / "pose.npz").is_file()
+    assert np.array_equal(load_pose(out).keypoints, sw.keypoints)
+
+    cj = CaptureJson.model_validate_json((out / "capture.json").read_text(encoding="utf-8"))
+    assert cj.fps_real == 120.0 and cj.fps_playback == 120.0 and cj.stretch_factor == 1.0
+    assert cj.fps_provenance == "sin_verificar", "sólo el cronómetro filmado da medido_aqui (ADR-016)"
+    assert cj.codec == "ninguno" and (cj.width, cj.height) == (1080, 1920)
+    assert cj.frames_decoded == sw.keypoints.shape[0]
+    assert nota in cj.fps_source
+
+    # el aviso del camino declarado se reemplaza por el de quien produjo la pose,
+    # y sigue yendo antes que cualquier número
+    a = json.loads((out / "analysis.json").read_text(encoding="utf-8"))
+    assert nota in a["warnings"][:2]
+    assert not any(w.startswith("Tasa de cuadros sin verificar") for w in a["warnings"])
+    assert r["fps_aviso"] == nota
+    assert all(not m["judgment_allowed"] for m in a["reps"][0]["metrics"].values())
+
+    # los eventos salen igual que desde un video
+    t = sw.truth[0]
+    assert abs(r["eventos_frame"]["address"] - t["address"]) <= 3
+    assert abs(r["eventos_frame"]["impact"] - t["impact"]) <= 2
+
+    # el overlay se dibujó sobre fondo liso y con el rótulo quemado
+    assert (out / "overlay.mp4").is_file() and (out / "datos-por-cuadro.csv").is_file()
+    png = cv2.imread(str(out / "evento-impact.png"))
+    assert png.shape == (1920, 1080, 3)
+    assert tuple(int(v) for v in png[1900, 1060]) == FONDO_LISO, "una esquina sin dibujo es el fondo liso"
+    fila_rotulo = png[: int(0.20 * 1920)]
+    assert (fila_rotulo != np.array(FONDO_LISO, np.uint8)).any(), "el rótulo está quemado arriba"

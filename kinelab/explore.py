@@ -11,6 +11,14 @@ nada acá: deja escrito con qué se dice que se filmó y que la tasa de cuadros 
 un supuesto, no una medición (ADR-016). Va al `capture.json`, al `header` del
 `analysis.json`, a cada métrica, a `datos-eventos.json` y quemado en el overlay.
 
+También se puede arrancar de un `pose.npz` YA calculado, sin video y sin
+estimador (`explore(..., pose_npz=…)`): es lo que usa el ejemplo de mocap de
+`kinelab_truth.mocap`. De ahí para abajo el camino es el mismo — eventos,
+ángulos, CSV, JSON, overlay —, con dos diferencias: la toma no tiene
+`original.<ext>` y el overlay se dibuja sobre fondo liso, y el aviso de dónde
+sale el eje del tiempo lo pone quien llama (`nota_fuente`), porque no hay
+archivo que reproduzca ni cronómetro que filmar.
+
 Deja en DIR (por defecto <video>.kinelab/):
     overlay.mp4          el video con los palitos, ángulos y eventos dibujados
     evento-<id>.png      una foto por evento con el esqueleto y los números
@@ -41,11 +49,12 @@ from kinelab.perception.estimator import EstimatorConfig
 from kinelab.perception.gaps import interpolate_gaps
 from kinelab.perception.keypoints import HALPE26_LIMBS, HALPE26_NAMES, H, LEFT_RIGHT_PAIRS
 from kinelab.perception.plausibility import angle_deg
-from kinelab.perception.posestore import finite_or_none, load_pose
+from kinelab.perception.posestore import POSE_FILE, finite_or_none, load_pose
 from kinelab.perception.run import run_perception
 from kinelab.perception.video import ffmpeg_bin, iter_frames
 from kinelab.sport import SportConfig
 from kinelab.tools.fps_truth import analyze as fps_analyze, first_delta_note
+from kinelab.tools.interpolar import ascii_para_quemar
 
 AVISO = "EXPLORACIÓN: sin gate, sin MDC, tasa de cuadros del archivo sin calibrar. Números descriptivos para mirar, no para juzgar."
 EVENT_ORDER = ("address", "top", "impact", "follow_end")
@@ -93,6 +102,43 @@ def prepare_take(video: Path, out_dir: Path, *, view: str, camino: str = GENERIC
         vfr_ratio=round(c.vfr_ratio_effective, 3), vfr_ratio_raw=round(c.vfr_ratio, 3), first_delta_s=round(c.delta_first_s, 6),
         fps_note=first_delta_note(c), recorded_at=d.creation_time, sha256_original=sha256_file(original), original_name=video.name,
         gate=Gate(verdict="ok", checks=[Check(id="exploracion", passed=None, value=path.id, reason=f"{AVISO} Camino: {declared_reason(path) if not path.calibrated else fuente}")], reasons=[]),
+    )
+    (out_dir / "capture.json").write_text(cj.model_dump_json(indent=2), encoding="utf-8")
+    return out_dir
+
+
+def prepare_take_from_pose(pose_npz: Path, out_dir: Path, *, view: str, note: str, camino: str = GENERIC_VIDEO_ID, capture_paths: CapturePaths | None = None, athlete: str = "exploracion") -> Path:
+    """Arma una toma desde un `pose.npz` ya calculado: no hay video, no se corre
+    el estimador y no hay tasa de cuadros que medir de un archivo.
+
+    El `fps_real` sale de la `provenance` del propio `.npz`, que es quien sabe a
+    qué tasa se generaron esos puntos. La procedencia sigue siendo
+    `sin_verificar` (ADR-016: sólo el cronómetro filmado da `medido_aqui`), y
+    `note` es la frase que explica de dónde sale el eje del tiempo en este caso
+    —la escribe quien llama, porque el motor no sabe qué produjo la pose—. Va al
+    `fps_source`, al registro del chequeo y a `warnings[0]`."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = resolve_path_id(camino, capture_paths)
+    target = out_dir / POSE_FILE
+    if pose_npz.resolve() != target.resolve():
+        shutil.copy2(pose_npz, target)
+    pose = load_pose(out_dir)
+    prov = pose.provenance
+    fps = float(prov.get("fps_real") or 0.0)
+    if fps <= 0:
+        raise ValueError(f"{pose_npz}: la provenance del pose.npz no dice `fps_real`; sin eje de tiempo no hay nada que calcular.")
+    w, h = prov.get("frame_size") or [0, 0]
+    T = int(pose.keypoints.shape[0])
+    cj = CaptureJson(
+        athlete=athlete, gesture="driver", view=view, capture_path_id=path.id,
+        capture_path_calibrated=path.calibrated, fps_provenance="sin_verificar",
+        fps_real=fps, fps_playback=fps, fps_playback_raw=fps, stretch_factor=1.0,
+        fps_source=f"pose.npz:{prov.get('source') or 'desconocido'} · {note}",
+        codec="ninguno", width=int(w), height=int(h), rotation_deg=int(prov.get("rotation_deg") or 0),
+        frames_decoded=T, duration_s=round(T / fps, 3), duration_playback_s=round(T / fps, 3),
+        vfr_ratio=1.0, vfr_ratio_raw=1.0, first_delta_s=round(1.0 / fps, 6), fps_note=prov.get("fps_note"),
+        recorded_at=prov.get("captured_on"), sha256_original=str(prov.get("source_sha256") or ""), original_name=str(prov.get("source_name") or pose_npz.name),
+        gate=Gate(verdict="ok", checks=[Check(id="exploracion", passed=None, value=path.id, reason=f"{AVISO} {note}")], reasons=[]),
     )
     (out_dir / "capture.json").write_text(cj.model_dump_json(indent=2), encoding="utf-8")
     return out_dir
@@ -213,15 +259,34 @@ def capture_banner(capture: CaptureJson) -> str:
     return f"camino {capture.capture_path_id} | fps {capture.fps_real:g} | {capture.fps_provenance}"
 
 
-def render(take_dir: Path, pose, rows: list[dict], events: dict[str, int], fps: float, capture: CaptureJson, progress_cb=None) -> tuple[Path, list[Path]]:
-    original = next(take_dir.glob("original.*"))
+# Gris oscuro parejo para las tomas que no tienen video (mocap): que se note que
+# el fondo no es una imagen, y que los palitos blancos y verdes se lean encima.
+FONDO_LISO = (32, 32, 32)
+
+
+def _frames(take_dir: Path, capture: CaptureJson, progress_cb=None):
+    """Los cuadros sobre los que se dibuja: los del video si la toma tiene uno,
+    y si no —una pose que no vino de un video— un fondo liso del tamaño
+    declarado en el `capture.json`."""
+    original = next(take_dir.glob("original.*"), None)
+    if original is not None:
+        yield from iter_frames(original, rotation_deg=capture.rotation_deg, display_size=(capture.width, capture.height), progress_cb=progress_cb)
+        return
+    fondo = np.full((capture.height, capture.width, 3), FONDO_LISO, np.uint8)
+    for i in range(capture.frames_decoded):
+        yield i, fondo.copy()
+        if progress_cb is not None and (i + 1) % 10 == 0:
+            progress_cb(i + 1)
+
+
+def render(take_dir: Path, pose, rows: list[dict], events: dict[str, int], fps: float, capture: CaptureJson, progress_cb=None, banner: str | None = None) -> tuple[Path, list[Path]]:
     frame_events = {f: name for name, f in events.items()}
     out = take_dir / "overlay.mp4"
-    banner = capture_banner(capture)
+    banner = ascii_para_quemar(banner or capture_banner(capture))
     proc = None
     snaps: list[Path] = []
     try:
-        for i, frame in iter_frames(original, rotation_deg=capture.rotation_deg, display_size=(capture.width, capture.height), progress_cb=progress_cb):
+        for i, frame in _frames(take_dir, capture, progress_cb):
             if i >= len(rows):
                 break
             label = frame_events.get(i)
@@ -243,24 +308,39 @@ def render(take_dir: Path, pose, rows: list[dict], events: dict[str, int], fps: 
     return out, snaps
 
 
-def explore(video: Path, out_dir: Path, sport: SportConfig, *, height_m: float | None, view: str = "face_on", camino: str = GENERIC_VIDEO_ID, capture_paths: CapturePaths | None = None, cpu: bool = False, progress=None, estimator=None, stage=None) -> dict:
+def explore(video: Path | None, out_dir: Path, sport: SportConfig, *, height_m: float | None, view: str = "face_on", camino: str = GENERIC_VIDEO_ID, capture_paths: CapturePaths | None = None, cpu: bool = False, progress=None, estimator=None, stage=None, pose_npz: Path | None = None, nota_fuente: str | None = None, banner: str | None = None) -> dict:
     """`progress(i)` recibe el índice del cuadro que se está procesando (en la pose y
     después en el dibujo); `stage(nombre, info)` avisa el cambio de etapa:
-    `detectando_pose` (info: total de cuadros), `calculando`, `dibujando` (total)."""
+    `detectando_pose` (info: total de cuadros), `calculando`, `dibujando` (total).
+
+    Con `pose_npz` la toma arranca de una pose ya calculada: no hay video, no se
+    corre el estimador, y `nota_fuente` (la frase de dónde sale el eje del
+    tiempo) y `banner` (la línea que se quema en cada cuadro) los pone quien
+    llama. `video` puede ser `None` en ese caso."""
 
     def _stage(name: str, **info) -> None:
         if stage is not None:
             stage(name, info)
 
-    take = prepare_take(video, out_dir, view=view, camino=camino, capture_paths=capture_paths)
-    _stage("detectando_pose", total=CaptureJson.model_validate_json((take / "capture.json").read_text(encoding="utf-8")).frames_decoded)
-    cfg = EstimatorConfig(providers=("CPUExecutionProvider",)) if cpu else EstimatorConfig()
-    run_perception(take, sport, cfg, overwrite=True, progress_cb=progress, estimator=estimator)
+    if pose_npz is not None:
+        take = prepare_take_from_pose(pose_npz, out_dir, view=view, note=nota_fuente or "", camino=camino, capture_paths=capture_paths)
+    else:
+        take = prepare_take(video, out_dir, view=view, camino=camino, capture_paths=capture_paths)
+        _stage("detectando_pose", total=CaptureJson.model_validate_json((take / "capture.json").read_text(encoding="utf-8")).frames_decoded)
+        cfg = EstimatorConfig(providers=("CPUExecutionProvider",)) if cpu else EstimatorConfig()
+        run_perception(take, sport, cfg, overwrite=True, progress_cb=progress, estimator=estimator)
     _stage("calculando")
     capture = CaptureJson.model_validate_json((take / "capture.json").read_text(encoding="utf-8"))
     gate_notes = [c.reason for c in capture.gate.checks if c.passed is False and c.reason]
     pose = load_pose(take)
     analysis = build_analysis(take, capture, pose, sport, height_m=height_m)
+    if nota_fuente:
+        # El aviso que arma `build_analysis` habla de un camino declarado y de un
+        # archivo que reproduce; con una pose que no vino de un video las dos
+        # cosas son falsas. Se reemplaza por la frase de quien la produjo, que
+        # sigue yendo PRIMERO: el supuesto del eje del tiempo se lee antes que
+        # cualquier número (ADR-016).
+        analysis["warnings"] = [nota_fuente, *(w for w in analysis["warnings"] if not w.startswith("Tasa de cuadros sin verificar"))]
     analysis["warnings"] = [AVISO, *gate_notes, *analysis["warnings"]]
     from kinelab.contract.write import write_analysis
 
@@ -293,11 +373,11 @@ def explore(video: Path, out_dir: Path, sport: SportConfig, *, height_m: float |
     if "address" in events and "top" in events and "impact" in events and events["impact"] > events["top"]:
         durations["tempo_ratio"] = round((events["top"] - events["address"]) / (events["impact"] - events["top"]), 2)
     peaks = {k: (None if not np.isfinite(v := np.nanmax([r[k] for r in rows if r[k] is not None] or [np.nan])) else round(float(v), 2)) for k in ("hands_speed_bh_s", "hands_speed_cm_s", "shoulder_line_rate_deg_s", "hip_line_rate_deg_s", "arm_left_rate_deg_s") if k in names}
-    summary = {"aviso": AVISO, "video": video.name, "camino": capture.capture_path_id, "camino_calibrado": capture.capture_path_calibrated,
-               "fps_provenance": capture.fps_provenance, "fps_aviso": next((w for w in analysis["warnings"] if w.startswith("Tasa de cuadros sin verificar")), None),
+    summary = {"aviso": AVISO, "video": capture.original_name, "camino": capture.capture_path_id, "camino_calibrado": capture.capture_path_calibrated,
+               "fps_provenance": capture.fps_provenance, "fps_aviso": nota_fuente or next((w for w in analysis["warnings"] if w.startswith("Tasa de cuadros sin verificar")), None),
                "fps_archivo": fps, "cuadros": len(rows), "altura_m": height_m, "gate_diria": gate_notes, "eventos_frame": events, "eventos_t_s": {k: round(f / fps, 3) for k, f in events.items()}, "eventos_subcuadro": subframes, "duraciones": durations, "picos": peaks, "en_cada_evento": finite_or_none(at), "diferencias_vs_address": deltas, "calidad": analysis["quality"], "columnas": names}
     (take / "datos-eventos.json").write_text(json.dumps(finite_or_none(summary), ensure_ascii=False, indent=2), encoding="utf-8")
     _stage("dibujando", total=len(rows))
-    overlay, snaps = render(take, pose, rows, events, fps, capture, progress_cb=progress)
+    overlay, snaps = render(take, pose, rows, events, fps, capture, progress_cb=progress, banner=banner)
     summary["archivos"] = [str(take / "datos-por-cuadro.csv"), str(take / "datos-eventos.json"), str(overlay), *map(str, snaps)]
     return summary
