@@ -71,6 +71,13 @@ arnés. Los 12 tests no son decorativos: con `FPS_MIN_TOL = 0.0` fallan 7, y con
   29,7 no lo salva la tolerancia, y está bien: ése necesita cronómetro.
 - **El front no se abrió** (regla de trabajo) ni se tocó `web/` ni `service/`.
   Hoy nadie consume `fps_min_met` fuera del motor.
+- **Un test en rojo que no es de este encargo, para la sesión del 07:** su
+  `tests/conftest.py` sin commitear agregó un octavo camino
+  (`desconocido-video`) al fixture `capture_paths_yaml` y
+  `tests/test_capture_paths.py::test_load_fixture` sigue afirmando
+  `len(cp.paths) == 7` (`assert 8 == 7`). Se arregla con ese 7 → 8 en el commit
+  del 07. Sobre HEAD limpio la suite da **252 en verde** (verificado con un
+  `git archive HEAD` extraído aparte).
 
 ### Desviaciones
 

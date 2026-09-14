@@ -143,8 +143,15 @@ Eventos de siempre: address 0,233 s (cuadro 7), top 1,3 s (39), impacto 1,467 s
 - Sesiones en paralelo: al cerrar quedan sin commitear `kinelab/explore.py`,
   `kinelab/tools/interpolar.py`, `service/app.py`, `service/exploracion.py`,
   `tests/conftest.py`, `tests/test_service.py`, `truth/kinelab_truth/mocap.py`
-  y `data/examples/cmu-mocap/` — son del 07 y del 09. No los toqué; los 252
-  tests verdes incluyen ese trabajo adentro.
+  y `data/examples/cmu-mocap/` — son del 07 y del 09. No los toqué.
+- **Aviso para la sesión del 07:** después de mi commit, el árbol de trabajo
+  pasó a tener **1 test en rojo que no es mío**.
+  `tests/conftest.py` (sin commitear) agregó un octavo camino
+  (`desconocido-video`) al fixture `capture_paths_yaml`, y
+  `tests/test_capture_paths.py::test_load_fixture` sigue afirmando
+  `len(cp.paths) == 7` → `assert 8 == 7`. Se arregla cambiando ese 7 por 8 en
+  el test, en el commit del 07. **Sobre HEAD limpio la suite da 252 en verde**,
+  verificado con un `git archive HEAD` extraído aparte: mi trabajo no lo toca.
 
 ## Para que pruebe Hernán
 
