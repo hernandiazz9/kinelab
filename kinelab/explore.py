@@ -39,7 +39,7 @@ from kinelab.perception.posestore import finite_or_none, load_pose
 from kinelab.perception.run import run_perception
 from kinelab.perception.video import ffmpeg_bin, iter_frames
 from kinelab.sport import SportConfig
-from kinelab.tools.fps_truth import analyze as fps_analyze
+from kinelab.tools.fps_truth import analyze as fps_analyze, first_delta_note
 
 AVISO = "EXPLORACIÓN: sin gate, sin MDC, tasa de cuadros del archivo sin calibrar. Números descriptivos para mirar, no para juzgar."
 EVENT_ORDER = ("address", "top", "impact", "follow_end")
@@ -55,12 +55,17 @@ def prepare_take(video: Path, out_dir: Path, *, view: str, athlete: str = "explo
         shutil.copy2(video, original)
     t = fps_analyze(original)
     c, d = t.counted, t.declared
+    # La tasa EFECTIVA, no la bruta: un solo delta de arranque no es tasa
+    # variable y contamina `(n-1)/span` (medido en el S22: 29,436 en vez de
+    # 29,998, todos los tiempos 1,9 % largos). Los brutos quedan al lado.
+    fps = c.fps_playback_effective
     cj = CaptureJson(
         athlete=athlete, gesture="driver", view=view, capture_path_id="exploracion",
-        fps_real=round(c.fps_playback, 3), fps_playback=round(c.fps_playback, 3), stretch_factor=1.0,
+        fps_real=round(fps, 3), fps_playback=round(fps, 3), fps_playback_raw=round(c.fps_playback, 3), stretch_factor=1.0,
         fps_source=AVISO, codec=d.codec, width=d.display_size[0], height=d.display_size[1], rotation_deg=d.rotation_deg,
-        frames_decoded=c.frames_decoded, duration_s=round(c.frames_decoded / c.fps_playback, 3), duration_playback_s=round(c.playback_span_s, 3),
-        vfr_ratio=round(c.vfr_ratio, 3), recorded_at=d.creation_time, sha256_original=sha256_file(original), original_name=video.name,
+        frames_decoded=c.frames_decoded, duration_s=round(c.frames_decoded / fps, 3), duration_playback_s=round(c.playback_span_s, 3),
+        vfr_ratio=round(c.vfr_ratio_effective, 3), vfr_ratio_raw=round(c.vfr_ratio, 3), first_delta_s=round(c.delta_first_s, 6),
+        fps_note=first_delta_note(c), recorded_at=d.creation_time, sha256_original=sha256_file(original), original_name=video.name,
         gate=Gate(verdict="ok", checks=[Check(id="exploracion", passed=None, reason=AVISO)], reasons=[]),
     )
     (out_dir / "capture.json").write_text(cj.model_dump_json(indent=2), encoding="utf-8")

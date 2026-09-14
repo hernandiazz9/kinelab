@@ -287,6 +287,28 @@ def test_run_perception_refuses_rejected_take(clips, capture_paths_yaml, tmp_pat
     assert not (take / "pose.npz").exists()
 
 
+def test_explore_uses_the_effective_fps_not_the_raw_one(clips, tmp_path):
+    """Con un solo delta de arranque, `(n-1)/span` da 28,79 fps y todos los
+    tiempos salen 4 % largos. Exploración usa el efectivo: 30,00 (medido en el
+    S22 original, 29,436 → 29,998; informe 2026-09-14-03)."""
+    from kinelab.explore import explore
+    from kinelab.ingest.gate import CaptureJson
+
+    if "first_delta30_h264" not in clips:
+        pytest.skip("sin fixture first_delta30_h264")
+    r = explore(clips["first_delta30_h264"], tmp_path / "out", GOLF, height_m=1.8, estimator=FakeEstimator(True))
+    assert r["fps_archivo"] == pytest.approx(30.0, abs=0.01)
+    assert r["cuadros"] == 120
+
+    cj = CaptureJson.model_validate_json((tmp_path / "out" / "capture.json").read_text(encoding="utf-8"))
+    assert cj.fps_real == cj.fps_playback == pytest.approx(30.0, abs=0.01)
+    assert cj.fps_playback_raw == pytest.approx(28.79, abs=0.05), "el bruto queda a la vista"
+    assert cj.vfr_ratio == pytest.approx(1.0, abs=0.01) and cj.vfr_ratio_raw == pytest.approx(6.0, abs=0.05)
+    assert cj.first_delta_s == pytest.approx(0.2, abs=1e-3)
+    assert cj.fps_note and "arranque de la cámara" in cj.fps_note
+    assert cj.duration_s == pytest.approx(4.0, abs=0.01), "120 cuadros a 30 fps"
+
+
 def test_explore_mode_writes_everything_even_without_a_person(clips, tmp_path):
     """Modo exploración: sin gate; con el clip sintético (nadie) deja overlay, CSV y JSON igual."""
     from kinelab.explore import explore

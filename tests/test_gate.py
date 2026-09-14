@@ -97,7 +97,7 @@ def test_hevc120_on_calibrated_path_is_ok_end_to_end(clips, paths, tmp_path):
     assert [c.id for c in capture.gate.checks] == CHECK_ORDER
 
     # Lo que dice el capture.json es lo que dice el contrato.
-    assert capture.schema_version == "1.0.0"
+    assert capture.schema_version == "1.1.0"
     assert capture.codec == "hevc"
     assert (capture.width, capture.height) == (96, 96)
     assert capture.rotation_deg == 0
@@ -109,6 +109,12 @@ def test_hevc120_on_calibrated_path_is_ok_end_to_end(clips, paths, tmp_path):
     assert capture.duration_s == pytest.approx(4.0, abs=0.05)
     assert capture.duration_playback_s == pytest.approx(479 / 120, abs=0.05)
     assert capture.vfr_ratio <= 1.10
+    # Un CFR de punta a punta no cambia en nada con el fps efectivo: el bruto y
+    # el corregido son el mismo número y no hay nada que explicar.
+    assert capture.vfr_ratio_raw == capture.vfr_ratio
+    assert capture.fps_playback_raw == capture.fps_playback
+    assert capture.fps_note is None
+    assert capture.first_delta_s == pytest.approx(1 / 120, abs=1e-3)
     assert capture.original_name == src.name
     assert capture.athlete == "test"
 
@@ -200,10 +206,13 @@ def test_short_clip_fails_duration(clips, paths):
 
 
 def test_vfr_clip_fails_vfr_ratio(clips, paths):
+    """El clip realmente VFR (120 fps y después 60) sigue rechazado: excluir el
+    primer delta no perdona nada, y el chequeo no menciona ningún arranque."""
     g = _gate(_need(clips, "hevc120_vfr"), paths, "test-hevc-120-cfr")
     assert g.verdict == "reject"
     assert "vfr_ratio_le_1_10" in _failed(g)
     assert "tasa variable" in _check(g, "vfr_ratio_le_1_10").reason
+    assert "arranque" not in _check(g, "vfr_ratio_le_1_10").reason
     assert _check(g, "vfr_ratio_le_1_10").value > 1.10
 
 
@@ -242,6 +251,66 @@ def test_every_check_is_reported_even_after_the_first_failure(clips, paths):
     # la duración real sale 1 s: también falla.
     assert _failed(g) == ["codec_matches_path", "fps_matches_path", "duration_plausible", "view_declared", "gesture_known"]
     assert len(g.reasons) == 5
+
+
+# --- el primer delta de PTS no es tasa variable ------------------------------
+
+
+def test_first_delta_clip_passes_both_checks_with_the_effective_numbers(clips, paths):
+    """El caso medido en el Galaxy S22 Ultra: un solo delta de arranque. Con los
+    números brutos el gate rechazaba cualquier clip de esa cámara; con los
+    efectivos pasa, y cada chequeo dice de dónde salió su número."""
+    clip = _need(clips, "first_delta30_h264")
+    g = _gate(clip, paths, "test-h264-30-cfr")
+
+    vfr, fps = _check(g, "vfr_ratio_le_1_10"), _check(g, "fps_matches_path")
+    assert vfr.passed is True and fps.passed is True
+    assert vfr.value == pytest.approx(1.0, abs=0.01), "el ratio sin el primer delta"
+    assert fps.value == pytest.approx(30.0, abs=0.05), "la reproducción sin el primer delta"
+
+    # Con los brutos los dos fallaban: ratio 6,0 y 28,79 fps contra 30 (4 %).
+    c = analyze(clip).counted
+    assert c.vfr_ratio > 1.10
+    assert abs(c.fps_playback - 30.0) / 30.0 > 0.02
+
+    # Y no en silencio: el chequeo lo dice aunque pase.
+    assert "arranque de la cámara" in vfr.reason and "bruto 6.0" in vfr.reason
+    assert "arranque de la cámara" in fps.reason and "bruto 28.79" in fps.reason
+    # Pero no es una razón de rechazo: `reasons` sólo lleva lo que falló.
+    assert vfr.reason not in g.reasons and fps.reason not in g.reasons
+    assert _failed(g) == ["fps_min_for_gesture"], "lo único que falla es que 30 fps no alcanzan para golf"
+
+
+def test_first_delta_clip_capture_json_keeps_both_numbers(clips, paths, tmp_path):
+    _, capture = _ingest(_need(clips, "first_delta30_h264"), paths, tmp_path, "test-h264-30-cfr")
+    assert capture.fps_playback == pytest.approx(30.0, abs=0.05)
+    assert capture.fps_playback_raw == pytest.approx(28.79, abs=0.05)
+    assert capture.vfr_ratio == pytest.approx(1.0, abs=0.01)
+    assert capture.vfr_ratio_raw == pytest.approx(6.0, abs=0.05)
+    assert capture.first_delta_s == pytest.approx(0.2, abs=1e-3)
+    assert capture.fps_note and "arranque de la cámara" in capture.fps_note
+    # El span de PTS es el que se midió, con el hueco del arranque adentro.
+    assert capture.duration_playback_s == pytest.approx(119 / 30 + 0.2 - 1 / 30, abs=0.02)
+
+
+def test_a_capture_json_1_0_0_still_validates(tmp_path):
+    """Campo nuevo y opcional = minor: un `capture.json` escrito antes de esto
+    sigue parseando, con los brutos en `null` (CONTRATO.md §Versionado)."""
+    viejo = {
+        "schema_version": "1.0.0", "athlete": "hernan", "gesture": "driver", "view": "face_on",
+        "capture_path_id": "x", "fps_real": 120.0, "fps_playback": 119.85, "stretch_factor": 1.0,
+        "fps_source": "capture-paths.yaml:x", "codec": "hevc", "width": 1920, "height": 1080,
+        "rotation_deg": 0, "frames_decoded": 2398, "duration_s": 19.98, "duration_playback_s": 20.0,
+        "vfr_ratio": 1.004, "recorded_at": None, "sha256_original": "abc", "original_name": "IMG.MOV",
+        "gate": {"verdict": "ok", "checks": [], "reasons": []},
+    }
+    import json
+
+    c = CaptureJson.model_validate_json(json.dumps(viejo))
+    assert c.schema_version == "1.0.0"
+    assert c.fps_playback == 119.85
+    assert c.fps_playback_raw is None and c.vfr_ratio_raw is None
+    assert c.first_delta_s is None and c.fps_note is None
 
 
 # --- la sesión en disco -----------------------------------------------------

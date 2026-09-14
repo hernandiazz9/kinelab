@@ -20,7 +20,21 @@ de PTS de los dos últimos son idénticos: 0,033333 s uniformes.
 
 Ni `r_frame_rate`, ni `avg_frame_rate`, ni el histograma de deltas separan
 "preservado pero lento" de "destruido". Sólo el conteo de cuadros contra una
-duración real conocida. Por eso:
+duración real conocida.
+
+**Y un solo delta de arranque no es tasa variable.** Medido en el original del
+Galaxy S22 Ultra (265 cuadros): 263 deltas de 0,0333 s y **uno** de 0,2015 s,
+el primero — la cámara tarda en entregar el segundo cuadro. Contado entero, el
+clip daba ratio 6,04 y reproducía a 29,436 fps en vez de 29,998: los tiempos,
+1,9 % largos, y el gate lo habría rechazado por tasa variable. Por eso el gate
+y el motor trabajan con el ratio y el fps **efectivos** — sin el primer delta,
+y sólo cuando ése es el único fuera de lugar —, guardan los brutos al lado en
+`capture.json` (`vfr_ratio_raw`, `fps_playback_raw`, `first_delta_s`,
+`fps_note`) y lo dicen en el registro del chequeo. En un clip realmente de tasa
+variable, el efectivo es el bruto: no se perdona nada. Ver el informe
+`docs/informes/2026-09-14-03-fps-truth-primer-delta.md`.
+
+Por eso:
 
 1. La tasa real de cada camino se mide **una vez** con un cronómetro filmado y
    se guarda en `capture-paths.yaml`.
@@ -151,8 +165,8 @@ pero se reportan todos.
 |---|---|---|
 | `capture_path_known` | `capture_path_id` existe en `capture-paths.yaml` | "Este camino de captura no está calibrado. Filmá el cronómetro primero." |
 | `codec_matches_path` | `codec == camino.codec_expected` | "El clip está en H.264 y el camino espera HEVC: pasó por 'Más compatible' o por un transcodificador." |
-| `vfr_ratio_le_1_10` | `delta_max / delta_min ≤ 1,10` | "El video tiene tasa variable. Volvé a exportarlo desde el original." |
-| `fps_matches_path` | `abs(fps_playback − camino.fps_playback) / camino.fps_playback ≤ 0,02` | "El clip reproduce a N fps y el camino declara M. Algo lo recomprimió, o vino por otro camino." |
+| `vfr_ratio_le_1_10` | `delta_max / delta_min ≤ 1,10`, **efectivo** | "El video tiene tasa variable. Volvé a exportarlo desde el original." |
+| `fps_matches_path` | `abs(fps_playback − camino.fps_playback) / camino.fps_playback ≤ 0,02`, con el `fps_playback` **efectivo** | "El clip reproduce a N fps y el camino declara M. Algo lo recomprimió, o vino por otro camino." |
 | `fps_min_for_gesture` | `fps_real ≥ sports.<g>.fps_min` (golf: 100) | "A esta tasa no se pueden medir los tiempos del swing." |
 | `duration_plausible` | 3 s ≤ duración ≤ 180 s | |
 | `rotation_normalized` | rotación aplicada en `master.mp4`; ancho/alto reales | |
@@ -161,6 +175,12 @@ pero se reportan todos.
 | `single_subject` (Fase 1) | una sola persona de tamaño dominante | "Hay más de una persona en cuadro." |
 | `view_declared` | `view ∈ sports.<d>.views` | |
 | `gesture_known` | `gesture ∈ sports.<d>.gestures` | |
+
+**Efectivo** quiere decir sin el primer delta de PTS, y sólo cuando ése es el
+único fuera de lugar (ver arriba). Cuando el efectivo difiere del bruto, los
+dos chequeos lo dicen en su propio registro aunque pasen — *"ratio 1.000 sin el
+primer delta de 0.201 s (arranque de la cámara); bruto 6.044"* —, y
+`capture.json` guarda los dos números. Nunca una corrección en silencio.
 
 Un `reject` no borra nada: el clip queda en disco con su `capture.json` y sus
 razones, para poder corregir y re-ingestar.

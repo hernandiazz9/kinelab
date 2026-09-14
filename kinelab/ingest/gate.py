@@ -4,6 +4,13 @@ Bloqueante. Cada chequeo tiene id, resultado, valor observado, valor esperado
 y una frase para el entrenador. El orden de evaluación es fijo; el primero que
 falla ya decide `reject`, pero se reportan todos (CAPTURA.md §El gate).
 
+`vfr_ratio_le_1_10` y `fps_matches_path` evalúan los números EFECTIVOS de
+`fps_truth` — sin el primer delta de PTS cuando el arranque de la cámara es la
+única anomalía —, que son los mismos que usa el motor. Los brutos viajan igual
+en el `capture.json` (`vfr_ratio_raw`, `fps_playback_raw`, `first_delta_s`) y,
+cuando difieren, el chequeo lo dice en su propio registro: nunca en silencio.
+Ver CAPTURA.md §El gate de ingesta y el informe 2026-09-14-03.
+
 Los chequeos de la Fase 1 (encuadre, tasa de detección, una sola persona)
 todavía no existen: necesitan pose, y la pose necesita clips reales que hayan
 pasado por acá primero.
@@ -17,9 +24,12 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from kinelab.ingest.capture_paths import CapturePath, CapturePaths
 from kinelab.sport import SportConfig
-from kinelab.tools.fps_truth import Truth
+from kinelab.tools.fps_truth import Counted, Truth, first_delta_note
 
-CAPTURE_SCHEMA_VERSION = "1.0.0"
+# 1.1.0: `fps_playback` y `vfr_ratio` pasan a ser los EFECTIVOS y aparecen
+# `fps_playback_raw`, `vfr_ratio_raw`, `first_delta_s` y `fps_note`, los
+# cuatro opcionales (un capture.json 1.0.0 sigue validando, con `null`).
+CAPTURE_SCHEMA_VERSION = "1.1.0"
 
 DURATION_MIN_S = 3.0
 DURATION_MAX_S = 180.0
@@ -59,7 +69,14 @@ class CaptureJson(BaseModel):
     view: str
     capture_path_id: str
     fps_real: float | None = Field(description="tasa de captura, del camino calibrado; None si el camino es desconocido")
-    fps_playback: float = Field(description="tasa de reproducción medida de los PTS del clip")
+    fps_playback: float = Field(
+        description="tasa de reproducción EFECTIVA, medida de los PTS: sin el primer delta cuando el arranque "
+        "de la cámara es la única anomalía. Es la que evalúa el gate."
+    )
+    fps_playback_raw: float | None = Field(
+        default=None,
+        description="la misma tasa sobre todos los deltas, el primero incluido; None en un capture.json 1.0.0",
+    )
     stretch_factor: float | None
     fps_source: str
     codec: str
@@ -68,8 +85,11 @@ class CaptureJson(BaseModel):
     rotation_deg: int
     frames_decoded: int
     duration_s: float = Field(description="duración REAL: frames_decoded / fps_real cuando el camino es conocido")
-    duration_playback_s: float
-    vfr_ratio: float
+    duration_playback_s: float = Field(description="span de PTS medido, con el hueco del arranque adentro si lo hubo")
+    vfr_ratio: float = Field(description="delta_max/delta_min EFECTIVO, con el mismo criterio que fps_playback")
+    vfr_ratio_raw: float | None = Field(default=None, description="el mismo cociente sobre todos los deltas; None en un capture.json 1.0.0")
+    first_delta_s: float | None = Field(default=None, description="el primer delta de PTS, el del arranque de la cámara")
+    fps_note: str | None = Field(default=None, description="por qué el efectivo difiere del bruto; None cuando coinciden")
     recorded_at: str | None
     sha256_original: str
     original_name: str
@@ -86,6 +106,30 @@ def _ok(check_id: str, **kw: Any) -> Check:
 
 def _skip(check_id: str, reason: str) -> Check:
     return Check(id=check_id, passed=None, reason=reason)
+
+
+# Lo que cada chequeo agrega a su propio registro cuando el número que evaluó no
+# es el bruto del archivo. El entrenador tiene que ver que hubo una corrección y
+# de cuánto; nunca en silencio (CAPTURA.md §El gate de ingesta). `None` cuando
+# los dos números coinciden, que es el caso normal.
+
+
+def _startup_vfr_note(c: Counted) -> str | None:
+    if not c.first_delta_is_the_only_outlier:
+        return None
+    return (
+        f"ratio {c.vfr_ratio_effective:.3f} sin el primer delta de {c.delta_first_s:.3f} s "
+        f"(arranque de la cámara); bruto {c.vfr_ratio:.3f}."
+    )
+
+
+def _startup_fps_note(c: Counted) -> str | None:
+    if not c.first_delta_is_the_only_outlier:
+        return None
+    return (
+        f"reproducción {c.fps_playback_effective:.3f} fps sin el primer delta de {c.delta_first_s:.3f} s "
+        f"(arranque de la cámara); bruto {c.fps_playback:.3f} fps."
+    )
 
 
 def run_gate(
@@ -130,36 +174,43 @@ def run_gate(
             reason = f"El clip está en {d.codec} y el camino espera {path.codec_expected}."
         checks.append(_fail("codec_matches_path", reason, value=d.codec, expected=path.codec_expected))
 
-    # 3. Tasa variable.
-    if c.vfr_ratio <= VFR_RATIO_MAX:
-        checks.append(_ok("vfr_ratio_le_1_10", value=round(c.vfr_ratio, 4), expected=f"<= {VFR_RATIO_MAX}"))
+    # 3. Tasa variable. Se juzga el ratio EFECTIVO: un solo delta de arranque no
+    #    es tasa variable (informe 2026-09-14-03). Cuando difiere del bruto, el
+    #    chequeo lo dice en su propio registro, pase o no.
+    nota_vfr = _startup_vfr_note(c)
+    if c.vfr_ratio_effective <= VFR_RATIO_MAX:
+        checks.append(_ok("vfr_ratio_le_1_10", value=round(c.vfr_ratio_effective, 4), expected=f"<= {VFR_RATIO_MAX}", reason=nota_vfr))
     else:
         checks.append(
             _fail(
                 "vfr_ratio_le_1_10",
-                f"El video tiene tasa variable (delta_max/delta_min = {c.vfr_ratio:.2f}). "
+                f"El video tiene tasa variable (delta_max/delta_min = {c.vfr_ratio_effective:.2f}). "
                 "Volvé a exportarlo desde el original, o revisá si el teléfono grabó a la tasa que dice.",
-                value=round(c.vfr_ratio, 4),
+                value=round(c.vfr_ratio_effective, 4),
                 expected=f"<= {VFR_RATIO_MAX}",
             )
         )
 
-    # 4. La reproducción del clip tiene que coincidir con la del camino.
+    # 4. La reproducción del clip tiene que coincidir con la del camino, con la
+    #    misma tasa efectiva que usa el motor.
     if path is None:
         checks.append(_skip("fps_matches_path", "no evaluado: camino desconocido"))
     else:
-        rel = abs(c.fps_playback - path.fps_playback) / path.fps_playback
+        fps = c.fps_playback_effective
+        nota_fps = _startup_fps_note(c)
+        rel = abs(fps - path.fps_playback) / path.fps_playback
         if rel <= FPS_TOLERANCE:
             checks.append(
-                _ok("fps_matches_path", value=round(c.fps_playback, 3), expected=path.fps_playback, tolerance=FPS_TOLERANCE)
+                _ok("fps_matches_path", value=round(fps, 3), expected=path.fps_playback, tolerance=FPS_TOLERANCE, reason=nota_fps)
             )
         else:
             checks.append(
                 _fail(
                     "fps_matches_path",
-                    f"El clip reproduce a {c.fps_playback:.2f} fps y el camino '{path.id}' declara "
-                    f"{path.fps_playback:g}. Algo lo recomprimió, o vino por otro camino.",
-                    value=round(c.fps_playback, 3),
+                    f"El clip reproduce a {fps:.2f} fps y el camino '{path.id}' declara "
+                    f"{path.fps_playback:g}. Algo lo recomprimió, o vino por otro camino."
+                    + (f" ({nota_fps})" if nota_fps else ""),
+                    value=round(fps, 3),
                     expected=path.fps_playback,
                     tolerance=FPS_TOLERANCE,
                 )
@@ -253,7 +304,8 @@ def build_capture_json(
         view=view,
         capture_path_id=capture_path_id,
         fps_real=fps_real,
-        fps_playback=round(c.fps_playback, 4),
+        fps_playback=round(c.fps_playback_effective, 4),
+        fps_playback_raw=round(c.fps_playback, 4),
         stretch_factor=stretch,
         fps_source=fps_source,
         codec=d.codec,
@@ -263,7 +315,10 @@ def build_capture_json(
         frames_decoded=c.frames_decoded,
         duration_s=round(duration, 4),
         duration_playback_s=round(c.playback_span_s, 4),
-        vfr_ratio=round(c.vfr_ratio, 4),
+        vfr_ratio=round(c.vfr_ratio_effective, 4),
+        vfr_ratio_raw=round(c.vfr_ratio, 4),
+        first_delta_s=round(c.delta_first_s, 6),
+        fps_note=first_delta_note(c),
         recorded_at=d.creation_time,
         sha256_original=sha256_original,
         original_name=original_name,

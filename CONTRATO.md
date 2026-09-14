@@ -75,7 +75,7 @@ Escrito por `kinelab.ingest`. Nunca a mano después de la Fase 0.
 
 ```json
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "athlete": "hernan",
   "gesture": "driver",
   "view": "face_on",
@@ -83,6 +83,7 @@ Escrito por `kinelab.ingest`. Nunca a mano después de la Fase 0.
   "fps_real": 119.88,
   "fps_source": "capture-paths.yaml:iphone17pro-video-1080p120-airdrop",
   "fps_playback": 119.85,
+  "fps_playback_raw": 119.85,
   "stretch_factor": 1.0,
   "codec": "hevc",
   "width": 1920,
@@ -92,6 +93,9 @@ Escrito por `kinelab.ingest`. Nunca a mano después de la Fase 0.
   "duration_s": 20.003,
   "duration_playback_s": 20.0,
   "vfr_ratio": 1.004,
+  "vfr_ratio_raw": 1.004,
+  "first_delta_s": 0.008342,
+  "fps_note": null,
   "recorded_at": "2026-09-14T10:32:11.000000Z",
   "sha256_original": "…",
   "original_name": "IMG_0412.MOV",
@@ -113,8 +117,30 @@ Escrito por `kinelab.ingest`. Nunca a mano después de la Fase 0.
 }
 ```
 
+### El fps efectivo y el bruto
+
+`fps_playback` y `vfr_ratio` son los números **efectivos**: los de todos los
+deltas de PTS menos el primero, cuando el arranque de la cámara es la única
+anomalía (`vfr_ratio` bruto > 1,10 y sin el primer delta ≤ 1,10). Son los que
+evalúa el gate y los que usa el motor. Los brutos viajan al lado en
+`fps_playback_raw` y `vfr_ratio_raw`, el delta de arranque en `first_delta_s`,
+y `fps_note` explica en una frase por qué difieren — `null` cuando coinciden,
+que es el caso normal.
+
+Por qué: medido en el original del Galaxy S22 Ultra (265 cuadros), 263 deltas
+de 0,0333 s y **uno** de 0,2015 s, el primero. Contado entero, el clip se
+declaraba de tasa variable con ratio 6,04 y reproducía a 29,436 fps en vez de
+29,998: todos los tiempos 1,9 % largos. Un solo delta de arranque no es tasa
+variable. Ver el informe `docs/informes/2026-09-14-03-fps-truth-primer-delta.md`
+y `CAPTURA.md` §El gate de ingesta.
+
+En un clip realmente de tasa variable el efectivo **es** el bruto: excluir el
+primer delta no perdona nada.
+
 `duration_s` es la duración **real** (`frames_decoded / fps_real`);
-`duration_playback_s`, la del contenedor. En un Slo-Mo estirado ×8 difieren ×8.
+`duration_playback_s`, el span de PTS medido, con el hueco del arranque adentro
+si lo hubo — por eso no tiene que coincidir con `frames_decoded / fps_playback`.
+En un Slo-Mo estirado ×8 difieren ×8.
 `passed` puede ser `null`: el chequeo no se pudo evaluar (por ejemplo, sin
 camino calibrado no hay contra qué comparar el codec); no cuenta como fallo,
 pero queda visible. `rotation_deg` es en sentido horario: un iPhone filmando en
@@ -123,6 +149,12 @@ vertical da 90.
 Cuando `verdict` es `reject`, `reasons` es una lista de frases que el
 entrenador puede leer: *"El clip está en H.264: pasó por 'Más compatible' o
 por un transcodificador. Volvé a exportarlo con 'Mantener originales'."*
+
+Un chequeo que **pasa** también puede llevar `reason`: es su propio registro, y
+no entra en `reasons` (que sólo lleva lo que falló). Es donde
+`vfr_ratio_le_1_10` y `fps_matches_path` dicen que el número que evaluaron no
+es el bruto del archivo: *"ratio 1.000 sin el primer delta de 0.201 s (arranque
+de la cámara); bruto 6.044."* Nunca una corrección en silencio.
 
 ---
 
@@ -351,6 +383,11 @@ homografía.
   nombre viejo. Métrica nueva y opcional es minor. Va en **1.1.0** desde el
   `subframe` de los eventos (campo nuevo y opcional): un `analysis.json` de
   1.0.0 sigue validando.
+- `capture.json` lleva su propio `schema_version`, hoy **1.1.0**: agregó
+  `fps_playback_raw`, `vfr_ratio_raw`, `first_delta_s` y `fps_note`, los cuatro
+  opcionales. Un `capture.json` de 1.0.0 sigue validando, con esos cuatro en
+  `null`. El mismo bump cambió de qué número hablan `fps_playback` y
+  `vfr_ratio` (bruto → efectivo): está anotado en §Desviaciones.
 - `registry_version` aparte, y `metric_version` por métrica. Con un solo
   número, mejorar una métrica invalida el historial del atleta.
 - `engine_version` en `provenance` y en `header`.
@@ -377,4 +414,15 @@ Toda desviación respecto de este contrato se anota acá con fecha, qué se
 cambió y por qué. Es la sección que hizo posible auditar el prototipo anterior
 sin haberlo escrito.
 
-*(vacío)*
+- **2026-09-14 · `capture.json` 1.0.0 → 1.1.0 con `fps_playback` y `vfr_ratio`
+  cambiando de significado** (bruto → efectivo), en un bump **minor**.
+  §Versionado dice que renombrar un campo o cambiar una unidad es major, y
+  cambiar de qué número habla un campo está en ese mismo espíritu. Se hizo
+  minor igual, por decisión del orquestador (informe
+  `docs/informes/2026-09-14-03-fps-truth-primer-delta.md`, backlog
+  `docs/PLAN.md`), con tres razones: el nombre y la unidad no cambian; los dos
+  números coinciden salvo cuando el arranque de la cámara es la única anomalía,
+  y ahí el viejo estaba **mal** (29,436 fps en vez de 29,998); y el valor viejo
+  no se pierde, queda en `fps_playback_raw` / `vfr_ratio_raw` con `fps_note`
+  explicando la diferencia. No había ningún `capture.json` fuera de
+  `data/exploracion/`, que se regenera en cada corrida.

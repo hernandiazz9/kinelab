@@ -119,8 +119,8 @@ class Counted:
     es tasa variable: medido en un Galaxy S22 Ultra (`20260907_170638.mp4`,
     265 cuadros), 263 deltas de 0,0333 s y UNO de 0,2015 s, el primero. Con
     ese delta adentro el ratio da 6,04 y la reproducción 29,436 fps; sin él,
-    1,00 y 30,000 fps. Cuál de los dos usa el gate es una decisión de
-    CAPTURA.md, no de esta herramienta: acá se reportan los dos.
+    1,00 y 30,000 fps. Acá se reportan los dos; el gate y el motor usan los
+    `_effective` y guardan los brutos al lado (CAPTURA.md §El gate de ingesta).
     """
 
     frames_decoded: int
@@ -305,6 +305,23 @@ def count_frames(path: str | Path) -> Counted:
     )
 
 
+def first_delta_note(counted: Counted) -> str | None:
+    """La frase que explica por qué el número efectivo difiere del bruto, o
+    `None` si no difieren.
+
+    Vive acá para que haya una sola redacción: la usan `analyze()` para su nota
+    y el gate, que la guarda en el campo `fps_note` del `capture.json`.
+    """
+    if not counted.first_delta_is_the_only_outlier:
+        return None
+    return (
+        f"el primer delta es {counted.delta_first_s:.4f} s (arranque de la cámara); sin él, "
+        f"ratio {counted.vfr_ratio_excl_first:.2f} y reproducción {counted.fps_playback_excl_first:.3f} fps "
+        f"(con él: ratio {counted.vfr_ratio:.2f}, {counted.fps_playback:.3f} fps). "
+        "El resto de los deltas es uniforme: no es tasa variable."
+    )
+
+
 def analyze(
     path: str | Path,
     real_duration_s: float | None = None,
@@ -320,13 +337,9 @@ def analyze(
     # único fuera de lugar, se juzga con los números sin él (`_effective`).
     # Los brutos quedan intactos en `counted`; nadie pierde información.
     fps_playback_eff = counted.fps_playback_effective
-    if counted.first_delta_is_the_only_outlier:
-        notes.append(
-            f"el primer delta es {counted.delta_first_s:.4f} s (arranque de la cámara); sin él, "
-            f"ratio {counted.vfr_ratio_excl_first:.2f} y reproducción {fps_playback_eff:.3f} fps "
-            f"(con él: ratio {counted.vfr_ratio:.2f}, {counted.fps_playback:.3f} fps). "
-            "El resto de los deltas es uniforme: no es tasa variable."
-        )
+    arranque = first_delta_note(counted)
+    if arranque:
+        notes.append(arranque)
 
     fps_capture: float | None = None
     stretch: float | None = None
