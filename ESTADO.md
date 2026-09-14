@@ -3,6 +3,108 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 14 de septiembre de 2026 — encargo 05: la lámina interpolada (para mirar)
+
+Prompt: `docs/prompts/05-lamina-interpolada.md`. Informe:
+`docs/informes/2026-09-14-05-lamina-interpolada.md`. Es el paso 3 —y último— de
+los tres que quedaron definidos en la quinta sesión (más abajo).
+
+### Qué existe ahora
+
+- `kinelab/tools/interpolar.py`: fabrica con `minterpolate` de ffmpeg los
+  cuadros que nunca se grabaron entre dos cuadros medidos, los **etiqueta como
+  no medidos** y los deja en dos archivos aparte. Es un experimento etiquetado,
+  no una medición.
+
+  ```bash
+  .venv/bin/python -m kinelab.tools.interpolar VIDEO --entre A B [--factor 4] \
+      [--contexto 2] [--marca 44.44] [--marca-texto "…"] [--marca-mas-menos 0.11] \
+      [--recorte persona|completo|x0,y0,x1,y1] [--filtro …] [--fps-reproduccion N] [--out DIR]
+  ```
+
+- Agnóstica al deporte: recibe **índices de cuadro**, no "impacto", y el texto
+  de la marca lo pone quien la llama.
+- En `<video>.kinelab/` deja `interpolado-A-B-x<factor>.mp4` (el tramo
+  `[A−contexto, B+contexto]`, H.264 con `-g 12`, cada cuadro con su rótulo
+  quemado: verde `medido | 44`, naranja `cuadro interpolado, no medido | 44,25`)
+  y `lamina-A-B-x<factor>.png` (A, los intermedios y B en fila, recortados al
+  bbox de la persona, con la marca vertical y su banda de ±).
+- **Nada lo lee**, verificado con `grep` sobre `service/`, `web/src/`,
+  `kinelab/explore.py` y `sports/`: cero apariciones. La lista blanca de
+  `service/exploracion.py` sigue con sus 9 nombres.
+- Dos cosas que hubo que resolver y conviene no volver a descubrir:
+  - **Los índices de ffmpeg no son los del motor.** `select=between(n,…)` cuenta
+    después de la edit list; la de `cortado.mp4` esconde 13 muestras. Los
+    cuadros se leen con el mismo `iter_frames` de la percepción.
+  - **`minterpolate` emite `(n−1)·factor` cuadros y se queda sin el último.** Se
+    le entrega el último duplicado y la salida da `(n−1)·factor + 1`, el tramo
+    entero. Y se le entra a **1 fps** pidiéndole `fps=factor`, para que el
+    cuadro de salida `k` caiga en el índice `k/factor` sin redondeo de time base
+    (verificado: PSNR 52,4 dB en los múltiplos de `factor`, que es sólo el ida y
+    vuelta BGR↔YUV del filtro).
+- `tests/test_interpolar.py`: 9 tests con el clip sintético de `conftest.py`.
+  Suite entera: **206 en verde, 17,5 s** (incluye lo del encargo 04, que corrió
+  en paralelo).
+
+### Medido
+
+Corridas sobre `~/Desktop/cortado.mp4`, cuadros 42–47, 1080×2320:
+
+| | factor 4 | factor 8 |
+|---|---|---|
+| cuadros de salida | 21 | 41 |
+| tiempo | 7,6 s | 14,5 s |
+| mp4 | 954 KB · 120,00 fps · 0,175 s | 1787 KB · 239,99 fps · 0,171 s |
+| lámina | 6783 KB · 3215×1693 | 12212 KB · 5775×1856 |
+
+**El techo de `minterpolate` sobre este material**, medido dejando fuera los
+cuadros impares de 38 a 50 y pidiéndole que los reconstruya desde los pares
+(error RMS en una caja de 600×850 px sobre las manos y el palo): congelar el
+cuadro 33,5 niveles · crossfade 27,6 · `mci`+`bidir` **22,2**. La compensación
+de movimiento se lleva 34 % del error de congelar y 20 % del de un crossfade;
+lo que queda es dos tercios del cambio que tenía que explicar (44 contra 45
+difieren 36,3 niveles RMS sobre esa caja).
+
+De las cuatro opciones que sugería el prompt, **`mc_mode` y `vsbmc` no hacen
+nada**: con `obmc`/`vsbmc=0` la salida es byte a byte idéntica en ffmpeg 9.0.1.
+La única que mueve la aguja es `me_mode`, y `bidir` (que no es el default del
+filtro) gana. `search_param` 64–128 aporta 0,1 dB; `me=umh` cuesta 46 s en vez
+de 3,4 s y sale peor.
+
+**Lo que se ve:** el shaft sale fantasma. En los intermedios no hay un palo en
+posición intermedia: hay dos palos translúcidos a la vez, el de 44
+desvaneciéndose y el de 45 apareciendo, y en el medio del hueco ninguno se lee.
+El pantalón sale con la raya duplicada. Los extremos, 44 y 45, intactos. **Lo
+decide Hernán mirando**; acá no hay veredicto.
+
+### Qué falta o no se probó
+
+- **Si sirve o no es de Hernán.** La sesión mide y describe; no hay criterio
+  numérico de "sirve para mirar".
+- El mp4 a `fps × factor` dura 0,17 s: no se mira reproduciéndolo, hay que ir
+  cuadro a cuadro. `--fps-reproduccion` existe y está probado (6 fps → 6,8 s),
+  pero el default es el que pedía el prompt.
+- El recorte por defecto (bbox de la persona, 615×1326 px por panel) obliga a
+  zoom al 100 % para juzgar el palo. Un recorte fijo alrededor de las manos se
+  lee mucho mejor: `--recorte 300,1150,900,2000`, probado, no es el que quedó en
+  los dos archivos entregados.
+- No se corre pose sobre los cuadros interpolados, a propósito.
+
+### Desviaciones
+
+- Ninguna del contrato: no toca `analysis.json`, `capture.json` ni `pose.npz`.
+- Del prompt, una: **`Pillow` no está en el entorno**, contra lo que el prompt
+  suponía ("Pillow o OpenCV, que ya están"). Se dibuja todo con `cv2.putText`,
+  que sólo tiene ASCII, y el texto se translitera **al quemarlo** (`é`→`e`,
+  `·`→`|`, `±`→`+/-`); en el código y en la consola el español queda entero. No
+  se agregó la dependencia (ADR-015).
+- Del prompt, otra de forma: el test de "PSNR alto fuera de la franja del
+  rótulo" se hace sobre los cuadros **antes** de codificar (y por separado, que
+  `rotular` no toca un píxel debajo de la franja, byte a byte); sobre el mp4 ya
+  codificado el número mediría el H.264, no la interpolación.
+
+---
+
 ## 14 de septiembre de 2026 — encargo 04: el gate y `explore` con el fps efectivo
 
 Prompt: `docs/prompts/04-gate-fps-efectivo.md`. Informe:
