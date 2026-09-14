@@ -1,80 +1,80 @@
 # Plan
 
-Última ronda: 2026-09-14 — Hernán quiere un swing de muestra que se vea
-andar en la pantalla (no para comparar). Sale de mocap real de CMU
-(ADR-009, nivel 1): encargo 07 después del 06, y 08 (lista de trabajos y
-ejemplos en la pantalla) ya, en paralelo. Regla de numeración desde hoy: un
-ítem recibe número cuando se escribe su prompt; los pendientes van sin
-número, en orden de ejecución.
+Última ronda: 2026-09-14 — leídos los informes del 04, 05, 06 y 08. Los
+cuatro cerraron. El experimento de interpolación (05) está contestado: no
+sirve para ver el contacto; el shaft sale fantasma. Decididas las preguntas
+abiertas (abajo). Escritos el 09 (ficha y selector en la pantalla) y el 10
+(tolerancia de `fps_min`); el 07 (ejemplo mocap) se actualizó y quedó
+destrabado. Los tres corren en paralelo.
+
+Regla de numeración: un ítem recibe número cuando se escribe su prompt; los
+pendientes van sin número, en orden de ejecución.
 
 ## Decisiones del orquestador
 
 - 2026-09-14 · Un solo delta de PTS de arranque no es tasa variable. El gate
-  y el motor usan `vfr_ratio` y `fps_playback` efectivos; los brutos quedan
-  en `capture.json` (`*_raw`, `first_delta_s`, `fps_note`) y el chequeo dice
-  cuándo difieren. Evidencia: informe del 03. Se aplica en el 04.
-
-- 2026-09-14 · Caminos de captura declarados sin calibrar (ADR-016, lo
-  escribe el 06): dispositivo y modo declarados, `fps_real` asumido igual al
-  de reproducción con procedencia `sin_verificar`, nunca juicio, `slomo` sin
-  cronómetro se rechaza. Sustituye en parte a ADR-003: Android entra como
-  camino declarado; calibrado sólo con cronómetro. Evidencia: informe del 03
-  (modo Video del S22 es CFR tras el delta de arranque).
-- 2026-09-14 · Videos de YouTube u otras plataformas no son material: llegan
-  recomprimidos, sin procedencia y sin poder calibrarse (cementerio 1 y 2 de
-  `HERENCIA.md`). Excepción: GolfDB, con licencia para medir (encargo 09).
-
-- 2026-09-14 · Silueta "ideal" armada con ángulos de internet para comparar:
-  no. No existen datos con procedencia (GolfDB da eventos, no ángulos; el
-  X-factor tiene dos definiciones; el tempo 3:1 es mito), los ángulos
-  absolutos monoculares tienen 21–32° de error (ADR-007), y el puntaje del
-  prototipo dio 58 a un hombre hablando (ADR-012). Lo que sí, en Fase 5:
-  comparar dos swings filmados con el mismo protocolo sincronizados por
-  evento con silueta fantasma, y bandas descriptivas con fuente para las
-  métricas de nivel 1.
+  y el motor usan `vfr_ratio` y `fps_playback` efectivos; los brutos quedan en
+  `capture.json`. Hecho en el 04. `duration_playback_s` queda como span
+  medido de PTS (es lo que dura el archivo), documentado en `CONTRATO.md`.
+- 2026-09-14 · Caminos de captura declarados sin calibrar (ADR-016), hecho en
+  el 06. Aprobadas sus dos precisiones: en exploración la procedencia es
+  siempre `sin_verificar` (nadie verificó que el archivo vino por el camino),
+  y `fps_provenance` es obligatorio en `analysis.json` 1.2.0 aunque el bump
+  sea minor (desviación anotada en `CONTRATO.md`: opcional permitiría esconder
+  el supuesto).
+- 2026-09-14 · `fps_min` se compara con tolerancia del 0,5 % en el registro
+  (29,97 · 59,94 · 119,88 son 30 · 60 · 120). La tabla del arnés sigue en
+  enteros. Encargo 10. El umbral del gate (100 para golf) no lleva
+  tolerancia; si algún día muerde, es otra conversación.
+- 2026-09-14 · Interpolación con `minterpolate`: experimento cerrado. No
+  reconstruye el palo (barrido completo en el informe del 05, incluida la
+  búsqueda exhaustiva). Ver el contacto pide material a 120/240 fps. La
+  herramienta `kinelab.tools.interpolar` se queda: es genérica, deja la
+  evidencia rotulada y no la lee nadie. Recorte por defecto: el bbox de la
+  persona (lo que hay); "manos" es decisión de quien llama.
+- 2026-09-14 · Silueta "ideal" con ángulos de internet: no (ADR-007, ADR-012).
+  El swing de muestra sale de mocap real (ADR-009 nivel 1) y es un ejemplo y
+  un dato de validación, nunca "referencia". Videos de YouTube no son
+  material (cementerio 1 y 2); GolfDB sólo para medir.
 
 ## Backlog, en orden
 
-- [hecho] 02 impacto-subcuadro — `5ec9c2e`, `4350e08`. Sólo `face_on`; sin
-  MDC; no distingue cuadro interpolado de medido.
+- [hecho] 02 impacto-subcuadro — `5ec9c2e`, `4350e08`.
 - [hecho] 03 fps-truth-primer-delta — `f1a102e`, `db22fae`.
-- [en curso] 04 gate-fps-efectivo — el gate, `capture.json` (1.1.0) y las
-  dos líneas de `explore.py` pasan al fps efectivo; `CAPTURA.md` lo documenta.
-- [en curso] 05 lamina-interpolada — `kinelab/tools/interpolar.py`: cuadros
-  `minterpolate` rotulados, archivo aparte, lámina PNG con la marca 44,44
-  para que Hernán mire. Paso 3 del pedido.
-- [pendiente] 06 camino-declarado — ADR-016 en el motor y el contrato:
-  `capture-paths.yaml` con `calibrated: false`, gate que avisa, procedencia
-  `sin_verificar` en cada número, sin juicio; `datos --camino`. Después del
-  04. Prompt escrito.
-- [pendiente] 08 lista-de-trabajos — `GET /api/datos` y la lista en la
-  pantalla para abrir trabajos anteriores y ejemplos sin subir; `?trabajo=`
-  en la URL. Puede correr ya. Prompt escrito.
-- [pendiente] 07 ejemplo-mocap — swing real de mocap CMU proyectado con la
+- [hecho] 04 gate-fps-efectivo — `0cd5716`, `f1fd260`. 197 tests.
+- [hecho] 05 lamina-interpolada — `d94dcfd`, `9f3fc0f`, `b7d9b6e`. Contestado:
+  fantasma. Hernán mira las láminas cuando quiera.
+- [hecho] 06 camino-declarado — `4dc8b7f`, `1297df5`. ADR-016; 240 tests;
+  el original del S22 pasa 8 de 9 chequeos, rechazado sólo por 30 < 100 fps.
+- [hecho] 08 lista-de-trabajos — `cee7585`, `d5aebbc`, `d127291`. Hernán
+  prueba la lista y `?trabajo=`.
+- [en curso] 07 ejemplo-mocap — swing real de mocap CMU proyectado con la
   cámara virtual del arnés, corrido por el mismo camino que un video, como
-  trabajo de ejemplo en la pantalla; y el primer número de nivel 1 (sway de
-  pelvis y duraciones 2D contra 3D). Después del 06. Prompt escrito.
-- [pendiente] pantalla-ficha-y-selector — antes de analizar, la ficha del
-  archivo (`PUT /api/fps-truth`: codec, tamaño, cuadros, fps efectivo, VFR,
-  primer delta) y el selector de dispositivo y modo desde `capture-paths.yaml`
-  (más "no sé"); en el resultado, el aviso del camino declarado y la lista de
-  métricas que no se calculan a ese fps con su razón. Después del 06 y del 08.
+  trabajo de ejemplo en la pantalla; primer número de nivel 1 (sway de
+  pelvis y duraciones 2D contra 3D). Borra el ejemplo de mentira del 08.
+- [en curso] 09 ficha-y-selector — selector de camino antes de subir, la
+  ficha del archivo como primera etapa del trabajo, los avisos (camino
+  declarado y fps corregido) antes de cualquier número, y el bloque de las
+  12 métricas calculada / no calculada con razón.
+- [en curso] 10 fps-min-tolerancia — 0,5 % en el registro; a 29,998 fps las
+  métricas de 30 vuelven a calcularse (sin juicio).
 - [pendiente] arnes-ganancia-y-subcuadro — en `truth/`: ganancia de
   velocidad angular pelvis→tórax→brazo con ratios conocidos desde las dos
   vistas (vive con MDC y vistas, o muere), y sesgo/MDC del instante
-  sub-cuadro del impacto con el swing paramétrico (sería el primer evento con
-  número medido). Fase 3.2/3.3 sin cerrar.
-- [pendiente] visor-desde-datos — esqueleto desde `pose.npz` sobre el
-  video en el reproductor de exploración (ADR-014, invariante 10) con
-  `master.mp4` H.264 CFR (4.2) como referencia de cuadros. Cierra la
-  desviación de la cuarta sesión.
-- [pendiente] cola-con-cancelacion — trabajos cancelables, limpieza de
-  `data/exploracion/` (~20 MB por clip), fotos por evento como JPEG (4.1).
+  sub-cuadro del impacto. Fase 3.2/3.3 sin cerrar.
+- [pendiente] visor-desde-datos — esqueleto desde `pose.npz` sobre el video
+  en el reproductor (ADR-014, invariante 10) con `master.mp4` H.264 CFR
+  (4.2). Cierra la desviación de la cuarta sesión.
+- [pendiente] cola-con-cancelacion — cancelar y borrar trabajos desde la
+  pantalla, paginado de la lista, fotos por evento como JPEG (hoy ~20 MB por
+  clip de 3 s, 3,7 MB por PNG), limpieza de `data/exploracion/` (4.1).
 - [bloqueado por Hernán] cronómetro y sesión con el S22 — ver Preguntas.
-  Con eso: calibrar los caminos del S22 en `capture-paths.yaml` (0.7), ADR
-  que cierre lo de Android con números, umbral de encuadre medido (1.3),
+  Con eso: calibrar los caminos del S22 en `capture-paths.yaml` (0.7), un
+  ADR que cierre lo de Android con números, umbral de encuadre medido (1.3),
   intrínsecos con tablero (3.1), re-correr el arnés, pasar los clips por
-  percepción y análisis.
+  percepción y análisis. Anotar el primer delta de cada modo (el 03 lo midió
+  en uno solo: 0,2015 s) y el codec de FHD 60 (`s22ultra-video-fhd60-cable`
+  no lo declara).
 - [pendiente] golfdb-error-de-eventos — bajar el dataset (CC BY-NC, sólo
   para medir) y correr `kinelab.tools.golfdb_eval` (2.5). Después de decidir
   con Hernán si vale bajar 1400 videos ahora.
@@ -82,39 +82,29 @@ número, en orden de ejecución.
   o de dos atletas filmados con el mismo protocolo, sincronizados por evento
   y normalizados por altura, lado a lado y como silueta fantasma
   (`compare.py` de la herencia); bandas descriptivas con procedencia para las
-  métricas de nivel 1 (duraciones, tempo, sway, lift, cabeza), nunca
-  veredicto. No antes de clips reales por el gate y del visor desde datos.
-
-Decisión de hoy sobre el ejemplo: es un ejemplo y un dato de validación,
-nunca "referencia" ni "ideal" (ADR-012).
+  métricas de nivel 1, nunca veredicto. No antes de clips reales por el gate
+  y del visor desde datos.
 
 ## Preguntas para Hernán
 
-- ¿Qué viste de la pantalla del 02? La lista está al final de
-  `docs/informes/2026-09-14-02-impacto-subcuadro.md` (el texto del impacto, el
-  botón de los dos cuadros, y si aparece el aviso ámbar del seek).
-- Filmar el cronómetro con el S22 Ultra (no hace falta el iPhone): un
-  cronómetro con milésimas en pantalla, 10 s en Video FHD 60 y 10 s en Slow
-  motion FHD 240, `Auto FPS` apagado, archivo crudo por cable desde
-  `DCIM/Camera` (y aparte el mismo clip compartido desde Galería, para medir
-  qué hace ese camino). Con eso se calibran los caminos del S22 y se sabe si
-  el 240 sirve: ahí salen todas las métricas. Anotar cuánto mide el primer
-  delta en cada modo. Detalle en `ESTADO.md` §"Lo que le toca filmar a Hernán".
-- ¿A quién filmar como referencia? Alguien que juegue claramente mejor,
-  con la misma cámara, distancia y vistas. Ese es el "mejor swing" contra el
-  que se compara en Fase 5; no hay otro.
-- ¿Tenés o podés conseguir una GoPro? Es un camino de 240 fps real; entra con
-  cronómetro y calibración de lente con tablero (3.1, ya en el plan).
-- GolfDB son 1400 videos de YouTube (CC BY-NC, sólo para medir): ¿bajarlos
-  ahora o después del material propio?
+- Mirar las dos láminas del 05: `open ~/Desktop/cortado.kinelab/lamina-44-45-x*.png`.
+  La sesión dice fantasma; si vos ves otra cosa, se reabre.
+- Probar la pantalla del 08 (lista de trabajos, `?trabajo=`): la lista de
+  seis pasos está al final de `docs/informes/2026-09-14-08-lista-de-trabajos.md`.
+  Y la del 02 si todavía no (texto del impacto y botón de los dos cuadros).
+- Filmar el cronómetro con el S22 Ultra: guía en `docs/filmacion-s22.md`. Es
+  lo único que puede hacer que ese teléfono pase el gate (240 fps en slow
+  motion) y lo único que da métricas con juicio.
+- ¿A quién filmar como referencia para Fase 5? Alguien que juegue claramente
+  mejor, misma cámara, misma distancia, mismas vistas.
+- ¿Tenés o podés conseguir una GoPro? Camino de 240 fps real; entra con
+  cronómetro y tablero.
+- GolfDB: ¿bajar los 1400 videos ahora o después del material propio?
 
 ## Aparcado
 
-- Instante sub-cuadro del top: no pedido. La primitiva de cruce no le sirve
-  (el top es un cambio de dirección: habría que cruzar la velocidad
-  proyectada por cero). Sólo si Hernán lo pide.
-- Lámina interpolada en el front: no hasta que Hernán diga, mirando el PNG,
-  que la interpolación sirve.
+- Instante sub-cuadro del top: no pedido; la primitiva de cruce no aplica.
+- Lámina interpolada en el front: no; el experimento está cerrado.
 - Pádel: sólo cuando golf tenga MDC medidos (invariante 17).
 - SynthPose como segundo estimador (1.5): necesita torch, sólo en `truth/`;
   después de los intrínsecos reales.

@@ -1,7 +1,8 @@
 # 07 — Un swing de muestra desde mocap real (CMU), y el primer número de nivel 1
 
-Para correr: `/encargo 07` en una sesión nueva, **después de que el 06 haya
-cerrado** (toca `kinelab/explore.py`). Leé los informes del 04 y del 06.
+Para correr: `/encargo 07` en una sesión nueva. Leé antes los informes del
+04, 06 y 08 en `docs/informes/`: el 06 dejó `explore()` con `camino` y
+procedencia, y el 08 documentó la forma de un trabajo de ejemplo.
 
 ## Contexto
 
@@ -33,6 +34,17 @@ pantalla que hace el 08); `CONTRATO.md` §pose.npz (provenance).
 - `explore.explore()` corre pose + eventos + overlay + CSV + JSON sobre un
   video. El overlay dibuja esqueleto, ángulos de codos y rodillas y eventos.
 - `data/examples/` **sí** viaja con el repo (`.gitignore` lo exceptúa).
+- La forma de un trabajo de ejemplo está documentada en el encabezado de
+  `service/exploracion.py` (encargo 08): una carpeta en `data/exploracion/`
+  con los mismos archivos y un `trabajo.json` con `estado: listo`,
+  `origen: ejemplo` y `etiqueta`. El id es el nombre de la carpeta.
+- Hay un ejemplo **de mentira** armado a mano por el 08 para probar la
+  lista: `data/exploracion/ejemplo-a-mano-cortado-face_on`. Borralo al dejar
+  el de verdad.
+- En exploración la procedencia del fps es siempre `sin_verificar`
+  (ADR-016). Para el mocap no inventes un camino de captura: dejá el default
+  y que la `etiqueta` y `fps_aviso` digan "fps 120 exacto por construcción
+  (mocap CMU), cámara virtual, no es video". Sin juicio, como todo lo demás.
 
 ## Encargo
 
@@ -89,5 +101,7 @@ el `overlay.mp4` (se genera).
 
 ## En paralelo
 
-El 08 toca `service/` y `web/`. No los toques. El 05 toca
-`kinelab/tools/interpolar.py`.
+El 09 toca `service/` y `web/` (y quizá una línea de `explore.py` en la
+etapa de la ficha); el 10 toca `kinelab/metrics/registry.py`,
+`tests/test_fase2.py` y `CONTRATO.md` §sextuplo. No los toques; si chocás en
+`explore.py`, tu cambio es sólo "arrancar de un `pose.npz`".
