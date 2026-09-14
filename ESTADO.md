@@ -3,6 +3,118 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 14 de septiembre de 2026 — encargo 06: caminos de captura declarados (ADR-016)
+
+Prompt: `docs/prompts/06-camino-declarado.md`. Informe:
+`docs/informes/2026-09-14-06-camino-declarado.md`. Corrió en paralelo con el 08
+(`service/`, `web/`, `tests/test_service.py`), que ya commiteó.
+
+### Qué existe ahora
+
+- **`data/capture-paths.yaml` dejó de estar vacío** y va en **1.1.0**. Campo
+  `calibrated` (default `true`): con `true` los seis campos del cronómetro más
+  `nominal_fps` y `codec_expected` son obligatorios; con `false` los seis van en
+  `null` —declarar no es medir, y el validador lo hace cumplir— y
+  `nominal_fps` / `codec_expected` son opcionales. Los tres declarados que pide
+  ADR-016: `desconocido-video` (el genérico, default de exploración),
+  `s22ultra-video-fhd60-cable` y `s22ultra-video-fhd30-cable`.
+- **El gate acepta un camino declarado y dice bajo qué supuesto.**
+  `capture_path_known` pasa con su `reason` (que no entra en `gate.reasons`);
+  `fps_matches_path` queda en `null` (no hay reproducción medida contra la que
+  comparar); `codec_matches_path` queda en `null` si el camino no declara codec;
+  `fps_min_for_gesture` y `duration_plausible` usan la tasa de captura
+  **asumida** (= reproducción efectiva) y lo dicen. Un `slomo` sin calibrar →
+  `reject`, con la frase del factor de estiramiento desconocido, y los chequeos
+  que necesitan tasa de captura quedan sin evaluar.
+- **`capture.json` en 1.2.0**: `capture_path_calibrated` y `fps_provenance`
+  (`medido_aqui` | `sin_verificar`), opcionales con default conservador;
+  `fps_source` = `declarado:<id>` en un camino declarado. Un 1.0.0 sigue
+  validando.
+- **`analysis.json` en 1.2.0**: `header.source.fps_provenance` y
+  `fps_provenance` en **cada** métrica del sextuplo, los dos **obligatorios**
+  (desviación anotada en `CONTRATO.md`). `judgment_allowed` exige
+  `fps_provenance == "medido_aqui"`: con la tasa sin verificar el número se
+  muestra y no se juzga. `warnings[0]` lleva el aviso.
+- **`python -m kinelab datos VIDEO --camino ID`**, default `desconocido-video`.
+  `datos-eventos.json` agrega `camino`, `camino_calibrado`, `fps_provenance` y
+  `fps_aviso`; el overlay quema una cuarta línea `camino <id> | fps <n> |
+  <procedencia>` (ASCII, escala propia, no encoge las tres de arriba).
+- **En exploración la procedencia es siempre `sin_verificar`**, incluso con un
+  camino calibrado: ahí el gate no corre y nadie verificó que el archivo vino
+  por ese camino. Los números del cronómetro sí se usan si el camino los tiene.
+  Está escrito en ADR-016.
+- Documentado: ADR-016 en `DECISIONES.md`; invariante 2 y glosario en
+  `CONTEXTO.md`; `CAPTURA.md` §Caminos declarados sin calibrar + tabla del gate;
+  `CONTRATO.md` §capture-paths.yaml, §capture.json, §sextuplo, §Versionado,
+  §Desviaciones.
+
+### Medido
+
+**Ingesta real del original del S22 con `s22ultra-video-fhd30-cable`** (en un
+`data/` del scratchpad; nada de eso se commiteó): veredicto `reject` con **una**
+razón, `fps_min_for_gesture` (29,9983 contra 100). **Ocho de nueve chequeos
+pasan, `capture_path_known` entre ellos por primera vez.** `capture.json`:
+`capture_path_calibrated` false · `fps_provenance` `sin_verificar` · `fps_real`
+29,9983 · `stretch_factor` 1,0 · `fps_source` `declarado:s22ultra-video-fhd30-cable`.
+
+**Percepción sobre ese take no corre**, por diseño anterior a este encargo:
+`run_perception` se niega con una toma rechazada (`kinelab/perception/run.py:74`).
+Los números del análisis salieron del mismo clip por exploración con el mismo
+camino: las **12 métricas en `null`** (11 por `fps_min`, `pelvis_thrust_top_cm`
+por vista) y **ningún `judgment_allowed` verdadero**; eventos y tiempos
+idénticos a los del encargo 04 (address 111, top 141, impacto 147, sub-cuadro
+0,4181, backswing 1000,1 ms, downswing 200,0 ms). ADR-016 no movió ninguna
+medición.
+
+Sobre `~/Desktop/cortado.mp4` con el camino por defecto:
+`datos-por-cuadro.csv` **byte a byte idéntico** al de antes y
+`datos-eventos.json` con **sólo** los cuatro campos nuevos de diferencia.
+
+Suites: **240 en verde** en el motor (26 s), **4** en el arnés. Los tres
+archivos de test que se tocaron pasan de 103 a 131 casos.
+
+### Qué falta o no se probó
+
+- **A 29,998 fps mueren también las métricas de `fps_min: 30.0`**, por dos
+  milésimas, y con un camino declarado el `fps_real` es siempre el medido del
+  archivo: va a pasar con todo clip de 30 fps. Decisión del orquestador
+  (tolerancia en la comparación, o `29.9` en `sports/golf/mdc.yaml`, que lo
+  escribe el arnés). No se tocó.
+- El `fps_note` del primer delta **sigue sin subir a la pantalla** (pregunta 1
+  del informe del 04). Ahora el mecanismo existe: es una línea en el mismo
+  lugar donde se arma el aviso del camino declarado.
+- `s22ultra-video-fhd60-cable` no declara codec: sin medir en ese modo.
+- Nada de esto acerca el S22 al gate de golf: 30 y 60 fps están debajo de 100.
+  Lo decide el cronómetro sobre FHD 240, y un `slomo` declarado está rechazado
+  a propósito.
+- **El front no se abrió** (regla de trabajo) ni se tocó `web/` ni `service/`.
+  Los campos que necesita el 07 ya están en `datos-eventos.json`, y
+  `GET /api/config` ya lista los caminos con su `calibrated`.
+
+### Desviaciones
+
+- **Una, anotada en `CONTRATO.md` §Desviaciones:** `fps_provenance` es un campo
+  **obligatorio** nuevo en un bump **minor** de `analysis.json` (1.1.0 → 1.2.0).
+  En rigor un campo requerido nuevo es major. Se hizo minor con tres razones:
+  opcional permitiría escribir un análisis que esconda el supuesto del eje de
+  tiempo (que es justo lo que ADR-016 impide), el validador sólo corre al
+  **escribir** (`contract/write.py`), y no hay `analysis.json` viejo fuera de lo
+  que se regenera. El ejemplo del repo se actualizó a mano.
+- Del prompt, tres precisiones que el código obligó y que quedaron escritas en
+  ADR-016: `nominal_fps` y `codec_expected` pasan a ser opcionales (un camino
+  declarado puede no saberlos); el YAML **acepta** un `slomo` declarado a
+  propósito, para que la frase la diga el gate y no un error de parseo; y en
+  exploración la procedencia es siempre `sin_verificar`.
+- Del prompt, una cosa que no se pudo hacer como estaba escrita: "percepción y
+  análisis sobre ese take" es imposible mientras el veredicto sea `reject`
+  (`run_perception` lo prohíbe, y está bien). Se hizo por exploración, con el
+  mismo clip y el mismo camino.
+- Choque de sesiones paralelas: el cambio de 4 líneas en
+  `tests/test_service.py` (la lista de caminos del fixture creció) quedó
+  commiteado por la sesión del 08 en `cee7585`.
+
+---
+
 ## 14 de septiembre de 2026 — encargo 08: lista de trabajos y ejemplos en la pantalla
 
 Prompt: `docs/prompts/08-lista-de-trabajos.md`. Informe:
