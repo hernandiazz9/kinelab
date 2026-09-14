@@ -3,6 +3,100 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 14 de septiembre de 2026 — encargo 02: el impacto entre dos cuadros
+
+Prompt: `docs/prompts/02-impacto-subcuadro.md`. Informe:
+`docs/informes/2026-09-14-02-impacto-subcuadro.md`. Es el paso 2 de los tres que
+quedaron definidos en la quinta sesión (abajo).
+
+### Qué existe ahora
+
+- **El cuadro entero del impacto no cambió** y ningún umbral de detección se
+  tocó. Lo nuevo es el campo `subframe` del evento: el instante estimado ENTRE
+  dos cuadros, con `frame_before`, `frame_after`, `fraction` (0–1), `t_sub_s`,
+  su incertidumbre y los sumandos a la vista.
+- Primitiva genérica en `kinelab/events/primitives.py`: `subframe_crossing`
+  (cruce de una señal 1-D por un nivel, interpolado entre los dos cuadros) y
+  `still_run_start`. El motor no sabe qué señal es: eso lo pone el deporte.
+- En `sports/golf/events.py`, la definición: la señal es el centro de las dos
+  muñecas **crudo** (huecos ≤ 5 rellenados, sin filtrar) proyectado sobre su
+  dirección de viaje alrededor del impacto; el nivel es la misma proyección en
+  el cuadro de address. El cero de esa señal es el instante de máximo
+  acercamiento a la posición de address: la versión continua del criterio del
+  cuadro entero, que es el de mínima distancia.
+- Incertidumbre, invariante 8 aplicada acá: en vez de ±1 cuadro entero, el
+  cruce recalculado extrapolando **cada segmento vecino** con su velocidad local
+  (`curvature_frames`), más el ruido del clip propagado por la pendiente
+  (`noise_frames`), sumados en cuadratura. El ruido sale de los residuos de la
+  recta ajustada a la racha de quietud del address, en px.
+- Sólo `face_on` (invariante 6): desde `down_the_line` la dirección de viaje de
+  las manos en el impacto apunta al objetivo, casi sobre el eje óptico, y en la
+  imagen queda escorzada. Desde ahí sale `null` con razón.
+- Sin cruce claro no hay número: `fraction` es `null` y `null_reason` dice cuál
+  de los cuatro casos fue (no cruza, cruza más de una vez, el cruce no es
+  contiguo al cuadro del evento, o la vista no vale).
+- Contrato: `subframe` es opcional en cada evento y `schema_version` pasa a
+  **1.1.0** (campo nuevo y opcional = minor); un `analysis.json` 1.0.0 sigue
+  validando. Documentado en `CONTRATO.md` §events[].
+- `datos-eventos.json` lo lleva en `eventos_subcuadro`.
+- Front, lo mínimo pedido: el texto «entre el cuadro 44 y el 45 (0,44 ± 0,11)»
+  en la tabla por evento, en la foto del impacto y debajo del reproductor; y un
+  botón que muestra los cuadros 44 y 45 lado a lado
+  (`web/src/components/DosCuadros.tsx`), con la misma convención de seek que el
+  reproductor —`(n + 0,5) / fps`— y el mismo aviso si el navegador muestra otro.
+
+### Medido
+
+| | `cortado.mp4` | original `20260907_170638.mp4` |
+|---|---|---|
+| cuadros / fps del archivo | 76 · 29,999 | 265 · 29,436 |
+| impacto, cuadro entero | 44 | 147 |
+| cruce | **44,4404** | **147,4181** (= 44,418 del recorte) |
+| `t_sub_s` | 1,481396 s | 5,008089 s |
+| incertidumbre | 0,111 cuadros · 3,7 ms | 0,136 cuadros · 4,6 ms |
+| curvatura / ruido | 0,110 / 0,013 cuadros | 0,115 / 0,072 cuadros |
+| pendiente · ruido de la señal | 115,4 px/cuadro · 1,2 px | 118,3 px/cuadro · 6,9 px |
+
+Los dos clips comparten cuadros bit a bit y la pose se estimó por separado en
+cada uno: **0,022 cuadros (0,74 ms) de diferencia**, dentro de la banda de los
+dos. El instante cae 14,7 ms después del cuadro 44. Entre el 44 y el 45 las
+manos recorren 118 px, el 13,6 % de la altura del cuerpo.
+
+### Qué falta o no se probó
+
+- **Esto no mide la bola.** Mide cuándo las manos pasan por su posición de
+  address, que es el mismo proxy del cuadro entero. Con el shaft adelantado, el
+  contacto real no cae exactamente ahí. Para medir el contacto hace falta el
+  palo, que en golf sí se puede detectar (está en la Fase 3 como geometría del
+  shaft, sin hacer). El front lo dice con todas las letras.
+- **Sin MDC.** Es descriptivo, procedencia `estimacion`. El arnés (`truth/`)
+  puede medirle sesgo y MDC con el swing paramétrico: hoy la única verdad
+  contra la que se comparó es sintética.
+- El cruce se calcula sobre la pose con huecos rellenados y **no distingue** un
+  cuadro interpolado de uno medido. Con las muñecas perdidas justo en el
+  impacto el número saldría igual, sin aviso.
+- El front **no se abrió en un navegador** (regla de trabajo). Lo verificado
+  acá: `pnpm lint` y `pnpm build` limpios, y que el cuadro 44 del `overlay.mp4`
+  es el que lleva el rótulo `IMPACT` (MSE 24 contra 842–875 de sus vecinos).
+- `explore.py` sigue usando `fps_playback` **bruto** y no el efectivo del
+  encargo 03 (`kinelab/explore.py:59` y `:61`): por eso el original de 9 s
+  reproduce a 29,436 fps y sus segundos quedan 1,9 % largos. **La `fraction` no
+  se ve afectada** (va en cuadros); `t_sub_s` sí. No se tocó porque ese cambio
+  es del otro encargo; queda como decisión de una línea para el orquestador.
+
+### Desviaciones
+
+- Ninguna del contrato: el campo es nuevo y opcional, y está documentado.
+- Del prompt, una de nombre: el campo se llama `fraction`, no `fraccion`.
+  `AGENTS.md` fija identificadores de código en inglés, y el resto del contrato
+  lo está. La clave de `datos-eventos.json` sí es española (`eventos_subcuadro`),
+  como sus vecinas `eventos_frame` y `eventos_t_s`.
+- El prompt dejaba elegir entre poner el campo sólo en exploración o también en
+  `analysis.json`: está en los dos, porque el que lo calcula es el detector de
+  eventos y `datos-eventos.json` lo copia de ahí. Con su test de validador.
+
+---
+
 ## 14 de septiembre de 2026 — encargo 03: `fps_truth` y el primer delta de PTS
 
 Prompt: `docs/prompts/03-fps-truth-primer-delta.md`. Informe:

@@ -194,7 +194,9 @@ function Resultado({
                   {verDosCuadros ? "ocultar los dos cuadros" : `ver los cuadros ${parImpacto.antes} y ${parImpacto.despues}`}
                 </button>
               )}
-              <span className="text-xs text-zinc-500">estimado de la señal de las manos, no filmado</span>
+              <span className="text-xs text-zinc-500" title={subImpacto.signal}>
+                estimado: cuándo las manos pasan por su posición de address, no el contacto con la bola
+              </span>
             </div>
           )}
           {verDosCuadros && parImpacto && (
