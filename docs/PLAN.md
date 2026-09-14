@@ -23,6 +23,15 @@ con ficha del archivo y selector es el 07. YouTube como material: no
   recomprimidos, sin procedencia y sin poder calibrarse (cementerio 1 y 2 de
   `HERENCIA.md`). Excepción: GolfDB, con licencia para medir (encargo 09).
 
+- 2026-09-14 · Silueta "ideal" armada con ángulos de internet para comparar:
+  no. No existen datos con procedencia (GolfDB da eventos, no ángulos; el
+  X-factor tiene dos definiciones; el tempo 3:1 es mito), los ángulos
+  absolutos monoculares tienen 21–32° de error (ADR-007), y el puntaje del
+  prototipo dio 58 a un hombre hablando (ADR-012). Lo que sí, en Fase 5:
+  comparar dos swings filmados con el mismo protocolo sincronizados por
+  evento con silueta fantasma, y bandas descriptivas con fuente para las
+  métricas de nivel 1.
+
 ## Backlog, en orden
 
 - [hecho] 02 impacto-subcuadro — `5ec9c2e`, `4350e08`. Sólo `face_on`; sin
@@ -61,8 +70,12 @@ con ficha del archivo y selector es el 07. YouTube como material: no
 - [pendiente] 11 golfdb-error-de-eventos — bajar el dataset (CC BY-NC, sólo
   para medir) y correr `kinelab.tools.golfdb_eval` (2.5). Después de decidir
   con Hernán si vale bajar 1400 videos ahora.
-- [pendiente] Fase 5: repetibilidad primero, comparación de dos repeticiones
-  (`compare.py` de la herencia). No antes de clips reales por el gate.
+- [pendiente] Fase 5: repetibilidad primero; comparación de dos repeticiones
+  o de dos atletas filmados con el mismo protocolo, sincronizados por evento
+  y normalizados por altura, lado a lado y como silueta fantasma
+  (`compare.py` de la herencia); bandas descriptivas con procedencia para las
+  métricas de nivel 1 (duraciones, tempo, sway, lift, cabeza), nunca
+  veredicto. No antes de clips reales por el gate y del visor desde datos.
 
 ## Preguntas para Hernán
 
@@ -76,6 +89,9 @@ con ficha del archivo y selector es el 07. YouTube como material: no
   qué hace ese camino). Con eso se calibran los caminos del S22 y se sabe si
   el 240 sirve: ahí salen todas las métricas. Anotar cuánto mide el primer
   delta en cada modo. Detalle en `ESTADO.md` §"Lo que le toca filmar a Hernán".
+- ¿A quién filmar como referencia? Alguien que juegue claramente mejor,
+  con la misma cámara, distancia y vistas. Ese es el "mejor swing" contra el
+  que se compara en Fase 5; no hay otro.
 - ¿Tenés o podés conseguir una GoPro? Es un camino de 240 fps real; entra con
   cronómetro y calibración de lente con tablero (3.1, ya en el plan).
 - GolfDB son 1400 videos de YouTube (CC BY-NC, sólo para medir): ¿bajarlos
