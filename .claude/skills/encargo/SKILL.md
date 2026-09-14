@@ -34,7 +34,9 @@ workflows cuando convengan. Lo ÚNICO que no hacés es levantar el frontend,
 abrirlo en el navegador, sacar capturas de pantalla o leer la página: eso quema
 el contexto. El front lo prueba Hernán y va diciendo cómo está; vos lo dejás
 listo con los comandos para levantarlo y una lista corta de "probá esto, esto
-y esto". Excepción: sólo si él lo pide explícitamente.
+y esto". Excepción: sólo si él lo pide explícitamente. El backend
+(`.venv/bin/python -m service`) sí se puede levantar para probar con `curl`
+o con el TestClient: lo que no se levanta es `next dev` ni el navegador.
 
 ## 4. Lo que aplica siempre (además de `AGENTS.md`)
 
@@ -58,6 +60,10 @@ Puede haber **otra sesión trabajando en este mismo directorio** en otro
 encargo; el prompt lo dice en "En paralelo" y nombra los archivos que toca la
 otra. El repo es uno solo y el índice de git también, así que:
 
+- **Dos sesiones nunca editan el mismo archivo.** `git commit -- ruta` lleva
+  el estado entero del archivo, incluidas las líneas a medio hacer de la
+  otra sesión. Si el prompt no te asigna un archivo que necesitás, no lo
+  toques: lo que cambiarías va en el informe.
 - Nunca `git add -A`, `git add .` ni `git commit -a`. Siempre rutas explícitas
   de lo que vos tocaste (`git add ruta1 ruta2 && git commit -m …`, o
   `git commit -m … -- ruta1 ruta2`).
