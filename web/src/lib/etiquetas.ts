@@ -75,6 +75,14 @@ export const DURACIONES: Record<string, string> = {
 
 export const EVENTOS: Record<string, string> = { address: "address", top: "top", impact: "impacto", follow_end: "fin" };
 
+/** "entre el cuadro 44 y el 45 (0,44 ± 0,11)", o la razón por la que no hay número. */
+export function textoSubcuadro(sf: { frame_before: number | null; frame_after: number | null; fraction: number | null; uncertainty_frames: number | null; null_reason: string | null } | null | undefined): string | null {
+  if (!sf) return null;
+  if (sf.fraction === null || sf.frame_before === null) return sf.null_reason ? `sin instante entre cuadros: ${sf.null_reason}` : null;
+  const banda = sf.uncertainty_frames === null ? "" : ` ± ${fmt(sf.uncertainty_frames, 2)}`;
+  return `entre el cuadro ${sf.frame_before} y el ${sf.frame_after} (${fmt(sf.fraction, 2)}${banda})`;
+}
+
 export function etiqueta(col: string): Etiqueta {
   const fija = FIJAS[col];
   if (fija) return fija;

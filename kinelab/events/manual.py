@@ -77,7 +77,7 @@ def apply_edits(events: list[dict], edits: list[Edit], *, fps: float, order: tup
             raise EventCollisionError(f"evento desconocido: {ed.event}.")
         ev = rep.get(ed.event)
         if ev is None:
-            ev = {"id": ed.event, "frame": ed.frame, "t_s": 0.0, "tol_frames": 1, "uncertainty_s": round(1 / fps, 5), "method": "manual", "manual": True, "frame_detected": None}
+            ev = {"id": ed.event, "frame": ed.frame, "t_s": 0.0, "tol_frames": 1, "uncertainty_s": round(1 / fps, 5), "method": "manual", "manual": True, "frame_detected": None, "subframe": None}
             rep[ed.event] = ev
         if ev.get("frame_detected") is None:
             ev["frame_detected"] = ev["frame"] if not ev.get("manual") else None

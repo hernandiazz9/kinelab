@@ -10,7 +10,8 @@ Deja en DIR (por defecto <video>.kinelab/):
     overlay.mp4          el video con los palitos, ángulos y eventos dibujados
     evento-<id>.png      una foto por evento con el esqueleto y los números
     datos-por-cuadro.csv una fila por cuadro: 26 puntos (px, score), ángulos, alturas, desplazamientos, velocidades
-    datos-eventos.json   todo eso en cada evento, más diferencias respecto del address y duraciones
+    datos-eventos.json   todo eso en cada evento, más diferencias respecto del address, duraciones
+                         y el instante sub-cuadro del impacto (`eventos_subcuadro`)
     analysis.json, pose.npz, capture.json   lo mismo que produce el motor
 """
 
@@ -219,9 +220,13 @@ def explore(video: Path, out_dir: Path, sport: SportConfig, *, height_m: float |
     write_analysis(take, analysis)
     fps = float(capture.fps_real)
     events: dict[str, int] = {}
+    subframes: dict[str, dict] = {}
     rep = analysis["events"][0] if analysis["events"] else None
     if rep:
         events = {k: rep[k]["frame"] for k in EVENT_ORDER if rep.get(k)}
+        # El instante entre dos cuadros, donde el deporte lo defina (hoy: sólo el
+        # impacto). El cuadro entero de arriba no cambia: esto lo acompaña.
+        subframes = {k: rep[k]["subframe"] for k in EVENT_ORDER if rep.get(k) and rep[k].get("subframe")}
     names, rows = per_frame_table(pose, fps, height_m, events.get("address"))
     with (take / "datos-por-cuadro.csv").open("w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=names)
@@ -241,7 +246,7 @@ def explore(video: Path, out_dir: Path, sport: SportConfig, *, height_m: float |
     if "address" in events and "top" in events and "impact" in events and events["impact"] > events["top"]:
         durations["tempo_ratio"] = round((events["top"] - events["address"]) / (events["impact"] - events["top"]), 2)
     peaks = {k: (None if not np.isfinite(v := np.nanmax([r[k] for r in rows if r[k] is not None] or [np.nan])) else round(float(v), 2)) for k in ("hands_speed_bh_s", "hands_speed_cm_s", "shoulder_line_rate_deg_s", "hip_line_rate_deg_s", "arm_left_rate_deg_s") if k in names}
-    summary = {"aviso": AVISO, "video": video.name, "fps_archivo": fps, "cuadros": len(rows), "altura_m": height_m, "gate_diria": gate_notes, "eventos_frame": events, "eventos_t_s": {k: round(f / fps, 3) for k, f in events.items()}, "duraciones": durations, "picos": peaks, "en_cada_evento": finite_or_none(at), "diferencias_vs_address": deltas, "calidad": analysis["quality"], "columnas": names}
+    summary = {"aviso": AVISO, "video": video.name, "fps_archivo": fps, "cuadros": len(rows), "altura_m": height_m, "gate_diria": gate_notes, "eventos_frame": events, "eventos_t_s": {k: round(f / fps, 3) for k, f in events.items()}, "eventos_subcuadro": subframes, "duraciones": durations, "picos": peaks, "en_cada_evento": finite_or_none(at), "diferencias_vs_address": deltas, "calidad": analysis["quality"], "columnas": names}
     (take / "datos-eventos.json").write_text(json.dumps(finite_or_none(summary), ensure_ascii=False, indent=2), encoding="utf-8")
     _stage("dibujando", total=len(rows))
     overlay, snaps = render(take, pose, rows, events, fps, capture, progress_cb=progress)

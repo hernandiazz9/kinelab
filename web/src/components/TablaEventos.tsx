@@ -3,7 +3,7 @@
 // las columnas en cada evento. Nada se resume en un puntaje (ADR-012).
 
 import type { EventoId, Resumen } from "@/lib/api";
-import { DURACIONES, EVENTOS, etiqueta, fmt, fmtCol } from "@/lib/etiquetas";
+import { DURACIONES, EVENTOS, etiqueta, fmt, fmtCol, textoSubcuadro } from "@/lib/etiquetas";
 import { COLOR_EVENTO } from "./Reproductor";
 
 interface FilaResumen {
@@ -59,6 +59,7 @@ function Cabecera({ evs, resumen, onIr }: { evs: EventoId[]; resumen: Resumen; o
         <th className={th}></th>
         {evs.map((ev) => {
           const f = resumen.eventos_frame[ev];
+          const sub = textoSubcuadro(resumen.eventos_subcuadro?.[ev]);
           return (
             <th key={ev} className={th}>
               <button type="button" className="hover:underline" style={{ color: COLOR_EVENTO[ev] }} onClick={() => f !== undefined && onIr(f)} title="ir a ese cuadro">
@@ -69,6 +70,7 @@ function Cabecera({ evs, resumen, onIr }: { evs: EventoId[]; resumen: Resumen; o
                   cuadro {f} · {fmt(resumen.eventos_t_s[ev], 3)} s
                 </span>
               )}
+              {sub && <span className="block text-xs font-normal text-zinc-400">{sub}</span>}
             </th>
           );
         })}

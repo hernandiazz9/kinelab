@@ -13,7 +13,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from kinelab.events.onset import onset_backtrack, settle_forward
-from kinelab.events.primitives import Event, direction_change, make_event, peak_window, stable_window_end, stable_window_start, stillness_signal
+from kinelab.events.primitives import Event, direction_change, make_event, peak_window, stable_window_end, stable_window_start, still_run_start, stillness_signal, subframe_crossing
 from kinelab.events.segmentation import RepCandidate, SegmentationParams
 from kinelab.events.signal import principal_axis
 from kinelab.sport import SportEvents
@@ -53,15 +53,88 @@ class GolfEventParams:
     refine_s: float = 0.15  # cuánto se camina refinando bordes de quietud
     still_smooth_s: float = 0.1  # mediana móvil sobre la velocidad para la prueba de quietud
     noise_factor: float = 2.5  # umbral efectivo de quietud = max(still_speed_max, noise_factor × piso de ruido del clip [p10])
+    subframe_window_s: float = 0.1  # ventana alrededor del impacto donde se busca el cruce sub-cuadro (≥ 2 cuadros)
+    subframe_axis_s: float = 0.1  # tramo alrededor del impacto del que sale la dirección de viaje de las manos (≥ 1 cuadro)
     provenance: str = "estimacion"
     note: str = "Elegidos sin material real; recalibrar con GolfDB (2.5) y con los clips de la Fase 0."
 
 
 GOLF_PARAMS = GolfEventParams()
+
+# El instante sub-cuadro del impacto se estima proyectando la trayectoria de las manos
+# sobre su dirección de viaje: desde `down_the_line` esa dirección apunta al objetivo,
+# casi sobre el eje óptico, y en la imagen queda escorzada (invariante 6).
+IMPACT_SUBFRAME_VIEWS = ("face_on",)
 # Ventana de agudeza de 3 s: un swing es un movimiento continuo de ~2 s (backswing +
 # downswing + follow); con ±1 s la ventana queda llena de movimiento y el pico
 # parece "sostenido". Con ±3 s entra la quietud del address y del finish.
 GOLF_SEGMENTATION = SegmentationParams(min_gap_s=2.0, prominence_floor=0.5, max_speed=15.0, sharpness_min=2.2, sharpness_window_s=3.0, lookback_s=2.0, lookahead_s=1.5)
+
+
+def _impact_subframe(sig, address: int, impact: int, still: np.ndarray, thr: float, params: GolfEventParams) -> dict:
+    """El instante en que las manos pasan por su posición de address, entre dos cuadros.
+
+    El cuadro entero del impacto NO cambia: sigue siendo el de mínima distancia a la
+    posición de address (`peak_window`). Esto lo refina hacia adentro del cuadro.
+
+    La señal es la trayectoria CRUDA del centro de las dos muñecas (huecos ≤ 5 cuadros
+    rellenados, sin filtrar) proyectada sobre su dirección de viaje alrededor del
+    impacto; el nivel es la misma proyección en el cuadro de address. El cero de esa
+    señal es el instante de máximo acercamiento a la posición de address: la versión
+    continua del criterio del cuadro entero. La proyección usa las dos coordenadas de
+    imagen, así que el signo de `y` cambia el resultado (invariante 15).
+
+    Sin MDC medido: es descriptivo, no juicio (ADR-007). Procedencia `estimacion`.
+    """
+    fps = sig.fps
+    out: dict = {
+        "frame_before": None, "frame_after": None, "fraction": None, "t_sub_s": None,
+        "uncertainty_frames": None, "uncertainty_s": None,
+        "components": {"curvature_frames": None, "noise_frames": None, "noise_px": None, "slope_px_per_frame": None},
+        "method": "hands_cross_address_linear_interp",
+        "signal": "centro de las dos muñecas (crudo, huecos rellenados) proyectado sobre su dirección de viaje en el impacto",
+        "views": list(IMPACT_SUBFRAME_VIEWS),
+        "provenance": "estimacion",
+        "null_reason": None,
+    }
+    view = getattr(sig, "view", None)
+    if view is not None and view not in IMPACT_SUBFRAME_VIEWS:
+        out["null_reason"] = f"vista {view} no válida para el instante sub-cuadro (válidas: {', '.join(IMPACT_SUBFRAME_VIEWS)})"
+        return out
+    P = np.asarray(sig.hands_raw, dtype=float)
+    k = max(1, int(round(params.subframe_axis_s * fps)))
+    lo, hi = max(0, impact - k), min(P.shape[0] - 1, impact + k)
+    axis = principal_axis(P, lo, hi)
+    net = P[hi] - P[lo]
+    if np.isfinite(net).all() and float(net @ axis) < 0:
+        axis = -axis
+    x = np.where(np.isfinite(P).all(axis=1), P @ axis, np.nan)
+    level = float(P[address] @ axis) if np.isfinite(P[address]).all() else np.nan
+    # Ruido por cuadro de la señal: σ de los residuos de la recta ajustada a la racha de
+    # quietud del address (una deriva lenta del jugador es movimiento, no ruido).
+    noise_px = None
+    start = still_run_start(still, max_speed=thr, end=address)
+    seg = x[start : address + 1]
+    seg = seg[np.isfinite(seg)]
+    if seg.size >= 3:
+        t = np.arange(seg.size, dtype=float)
+        noise_px = float(np.std(seg - np.polyval(np.polyfit(t, seg, 1), t), ddof=1))
+    r = max(2, int(round(params.subframe_window_s * fps)))
+    c = subframe_crossing(x, level, near=impact, lo=impact - r, hi=impact + r, noise_sigma=noise_px)
+    out["components"]["noise_px"] = None if noise_px is None else round(noise_px, 3)
+    out["components"]["slope_px_per_frame"] = c.slope
+    out["components"]["curvature_frames"] = c.curvature_frames
+    out["components"]["noise_frames"] = c.noise_frames
+    if c.null_reason is not None or c.fraction is None:
+        out["null_reason"] = c.null_reason
+        return out
+    out["frame_before"], out["frame_after"], out["fraction"] = c.frame_before, c.frame_after, c.fraction
+    # Seis decimales (microsegundos): a 240 fps una banda de 0,001 cuadros son 4 µs, y
+    # con cinco decimales el JSON la mostraría como 0,0.
+    out["t_sub_s"] = round((c.frame_before + c.fraction) / fps, 6)
+    out["uncertainty_frames"] = c.uncertainty_frames
+    out["uncertainty_s"] = None if c.uncertainty_frames is None else round(c.uncertainty_frames / fps, 6)
+    return out
 
 
 def detect_golf_events(sig, cand: RepCandidate, params: GolfEventParams = GOLF_PARAMS) -> tuple[dict[str, Event | None], str | None]:
@@ -85,10 +158,12 @@ def detect_golf_events(sig, cand: RepCandidate, params: GolfEventParams = GOLF_P
     if top is None:
         return {}, "sin_top"
     follow = stable_window_start(still, fps, max_speed=thr, min_duration_s=params.follow_still_s, after=impact)
+    impact_ev = make_event("impact", impact, fps, tol_frames=1, method="peak_window")
+    impact_ev.subframe = _impact_subframe(sig, address, impact, still, thr, params)
     events: dict[str, Event | None] = {
         "address": make_event("address", address, fps, tol_frames=1, method="stable_window"),
         "top": make_event("top", top, fps, tol_frames=1, method="direction_change"),
-        "impact": make_event("impact", impact, fps, tol_frames=1, method="peak_window"),
+        "impact": impact_ev,
         "follow_end": None if follow is None else make_event("follow_end", settle_forward(spd, follow, refine), fps, tol_frames=2, method="stable_window"),
     }
     return events, None

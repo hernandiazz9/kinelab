@@ -5,6 +5,13 @@ Una persona de pie; las dos muñecas juntas siguen un arco suave: quietud →
 backswing (las manos se alejan y suben) → top → downswing continuo hasta el
 follow-through (pasa por la posición de address con velocidad máxima) →
 quietud → vuelta lenta al address. Marco image_px, y hacia abajo.
+
+Con `hands_tilt` y `hands_miss_px` el arco de bajada deja de pasar EXACTAMENTE por
+la posición de address (como en un swing real: en `cortado.mp4` las manos pasan a
+66 px de donde estaban). Hacen falta los dos para que el instante sub-cuadro del
+impacto dependa del eje y del signo de `y`: si el arco pasa justo por el punto de
+address, cualquier proyección cruza en el mismo instante y el test no distingue
+nada (invariante 15). Ambos valen 0 por defecto: sin ellos el swing es el de antes.
 """
 
 from __future__ import annotations
@@ -22,7 +29,7 @@ class SynthSwing:
     scores: np.ndarray  # (T,J) float32
     timestamps_s: np.ndarray
     fps: float
-    truth: list[dict]  # por repetición: address, top, impact, follow_end (cuadros)
+    truth: list[dict]  # por repetición: address, top, impact, follow_end (cuadros) e impact_cross (cuadro fraccionario)
     body_height_px: float
     frame: tuple[int, int]  # (alto, ancho)
 
@@ -32,12 +39,34 @@ def smoothstep(u: np.ndarray) -> np.ndarray:
     return u * u * (3.0 - 2.0 * u)
 
 
-def synth_swing(fps: float, n_reps: int = 3, *, still_s: float = 1.0, backswing_s: float = 0.9, downswing_s: float = 0.27, follow_s: float = 0.6, recover_s: float = 2.0, amplitude_px: float = 400.0, body_height_px: float = 900.0, frame: tuple[int, int] = (1080, 1920), noise_px: float = 0.0, seed: int = 0) -> SynthSwing:
+def _cross_frame(fps: float, top_s: float, D: float, amplitude_px: float, tilt: float, miss: float) -> float:
+    """Cuadro (fraccionario) en que las manos pasan **más cerca** de su posición de
+    address, sobre el modelo continuo y no sobre los cuadros muestreados.
+
+    Es la verdad del instante que estima `sports.golf.events`, escrita sin suponer
+    nada de cómo se estima: se muestrea el arco de bajada 200.000 veces y se toma el
+    mínimo de la distancia al punto de address (`p = 0`, `off = 0`). Así el test mide
+    junto el eje elegido, la interpolación lineal y el cuadro elegido.
+    """
+    u = np.linspace(0.0, 1.0, 200_001)
+    p = 1.0 - 1.8 * smoothstep(u)
+    off = miss * smoothstep(u * D / (0.4 * D))
+    dx = -amplitude_px * p
+    dy = -0.3 * amplitude_px * p * p + tilt * amplitude_px * p + off
+    i = int(np.argmin(dx * dx + dy * dy))
+    return (top_s + u[i] * D) * fps
+
+
+def synth_swing(fps: float, n_reps: int = 3, *, still_s: float = 1.0, backswing_s: float = 0.9, downswing_s: float = 0.27, follow_s: float = 0.6, recover_s: float = 2.0, amplitude_px: float = 400.0, body_height_px: float = 900.0, frame: tuple[int, int] = (1080, 1920), noise_px: float = 0.0, seed: int = 0, hands_tilt: float = 0.0, hands_miss_px: float = 0.0) -> SynthSwing:
+    """`hands_tilt`: cuánto baja el arco por unidad de `p` (las manos suben y bajan, no
+    sólo van y vienen). `hands_miss_px`: cuánto se corre el arco de bajada respecto del
+    de subida, en px, alcanzado antes del impacto. Ver el docstring del módulo."""
     D = downswing_s + follow_s
     cycle = still_s + backswing_s + D + still_s + recover_s
     T = int(round(cycle * fps * n_reps)) + int(round(still_s * fps))
     t = np.arange(T) / fps
     p = np.zeros(T)
+    off = np.zeros(T)  # desplazamiento del arco de bajada respecto del de subida, en px
     truth: list[dict] = []
     for k in range(n_reps):
         t0 = k * cycle
@@ -46,15 +75,18 @@ def synth_swing(fps: float, n_reps: int = 3, *, still_s: float = 1.0, backswing_
         p[back] = smoothstep((t[back] - a) / backswing_s)
         down = (t >= b) & (t < c)
         p[down] = 1.0 - 1.8 * smoothstep((t[down] - b) / D)
+        off[down] = hands_miss_px * smoothstep((t[down] - b) / (0.4 * D))
         hold = (t >= c) & (t < d)
         p[hold] = -0.8
+        off[hold] = hands_miss_px
         rec = (t >= d) & (t < d + recover_s)
         p[rec] = -0.8 * (1.0 - smoothstep((t[rec] - d) / recover_s))
+        off[rec] = hands_miss_px * (1.0 - smoothstep((t[rec] - d) / recover_s))
         i_down = np.flatnonzero(down)
         impact = int(i_down[np.argmax(p[i_down] <= 0.0)]) if (p[i_down] <= 0.0).any() else int(i_down[-1])
-        truth.append({"address": int(np.flatnonzero(t < a)[-1]), "top": int(np.flatnonzero(down)[0]), "impact": impact, "follow_end": int(np.flatnonzero(hold)[0])})
+        truth.append({"address": int(np.flatnonzero(t < a)[-1]), "top": int(np.flatnonzero(down)[0]), "impact": impact, "follow_end": int(np.flatnonzero(hold)[0]), "impact_cross": _cross_frame(fps, b, D, amplitude_px, hands_tilt, hands_miss_px)})
     x0, y0 = frame[1] / 2, frame[0] - 0.9 * body_height_px * 0.55  # manos a la altura de la cadera
-    hands = np.stack([x0 - amplitude_px * p, y0 - 0.3 * amplitude_px * p * p], axis=1)
+    hands = np.stack([x0 - amplitude_px * p, y0 - 0.3 * amplitude_px * p * p + hands_tilt * amplitude_px * p + off], axis=1)
     h = body_height_px
     kp = np.full((T, J, 2), np.nan)
     ankle_y = frame[0] - 80.0

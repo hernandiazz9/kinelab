@@ -15,7 +15,9 @@ from kinelab.analysis import analyze_take, swing_signals
 from kinelab.contract.validate import validate_analysis
 from kinelab.events.manual import Edit, EventCollisionError, apply_edits
 from kinelab.events.order import sequence_order
+from kinelab.events.primitives import subframe_crossing
 from kinelab.events.segmentation import SegmentationParams, segment_reps
+from kinelab.events.signal import principal_axis
 from kinelab.ingest.__main__ import ingest_clip
 from kinelab.ingest.capture_paths import load_capture_paths
 from kinelab.metrics.registry import Metric, Reference, Registry, judgment_allowed
@@ -167,3 +169,190 @@ def test_metrics_in_analysis(clips, capture_paths_yaml, tmp_path):
     assert "pelvis_to_torso" in a["summary"]["gain"]
     b = analyze_take(take, GOLF, write=False)
     assert b["reps"][0]["metrics"]["pelvis_sway_top_cm"]["value"] is None and "altura" in b["reps"][0]["metrics"]["pelvis_sway_top_cm"]["null_reason"]
+
+
+# --- instante sub-cuadro del impacto (encargo 02) -----------------------------------
+#
+# El cuadro entero del impacto NO cambia: sigue siendo el de `peak_window`. Lo que se
+# prueba acá es el instante estimado ENTRE dos cuadros, contra una verdad que no sabe
+# nada de cómo se estima (`synth_swing` la calcula por mínima distancia sobre el modelo
+# continuo). El swing lleva `hands_tilt` y `hands_miss_px`: sin ellos el arco de bajada
+# pasa exactamente por el punto de address y cualquier eje da el mismo cruce, así que el
+# test no distinguiría ningún bug (invariante 15).
+
+SUBFRAME_TOL_FRAMES = 0.1  # cuadros: el error del estimador sin ruido, con margen
+
+
+def _impact_subframe(sw, view: str = "face_on"):
+    """(señal, eventos) de la primera repetición de un swing sintético."""
+    sig = swing_signals(_pose(sw), sw.fps, view=view)
+    cands, rejected = segment_reps(sig.speed, sw.fps, GOLF_SEGMENTATION)
+    assert cands, rejected
+    events, reason = detect_golf_events(sig, cands[0])
+    assert reason is None, reason
+    return sig, events
+
+
+def test_impact_subframe_lands_on_the_known_crossing():
+    """Cruce conocido en 71,56 (fracción 0,6 entre el 71 y el 72) a 30 fps."""
+    sw = synth_swing(30.0, n_reps=2, hands_tilt=0.2, hands_miss_px=100.0)
+    _, events = _impact_subframe(sw)
+    impact = events["impact"]
+    sf = impact.subframe
+    truth = sw.truth[0]["impact_cross"]
+    assert sf["null_reason"] is None and sf["fraction"] is not None
+    assert 0.5 < sf["fraction"] < 0.7, "la verdad cae en una fracción no trivial: ni 0 ni 0,5"
+    assert sf["frame_after"] == sf["frame_before"] + 1
+    assert sf["frame_before"] in (impact.frame - 1, impact.frame), "el cruce es contiguo al cuadro del evento"
+    cruce = sf["frame_before"] + sf["fraction"]
+    assert abs(cruce - truth) <= SUBFRAME_TOL_FRAMES, f"{cruce} vs verdad {truth}"
+    # El par de cuadros equivocado no pasaría: el test mira el instante absoluto.
+    assert abs(cruce + 1 - truth) > SUBFRAME_TOL_FRAMES and abs(cruce - 1 - truth) > SUBFRAME_TOL_FRAMES
+    assert abs(sf["t_sub_s"] - cruce / sw.fps) < 1e-4, "t_sub_s es el cruce en segundos"
+    assert abs(cruce - impact.frame) <= 0.6, "el cuadro entero es el cuadro más cercano al cruce"
+    assert sf["t_sub_s"] != impact.t_s and sf["uncertainty_s"] < impact.uncertainty_s, "más fino que ±1 cuadro"
+    assert sf["provenance"] == "estimacion" and sf["views"] == ["face_on"] and sf["method"]
+    assert sf["components"]["slope_px_per_frame"] > 0 and sf["components"]["noise_px"] is not None
+
+
+@pytest.mark.parametrize("fps", [30.0, 60.0, 120.0, 240.0])
+def test_impact_subframe_tracks_the_crossing_at_every_fps(fps):
+    sw = synth_swing(fps, n_reps=2, hands_tilt=0.15, hands_miss_px=60.0)
+    _, events = _impact_subframe(sw)
+    sf = events["impact"].subframe
+    cruce = sf["frame_before"] + sf["fraction"]
+    assert abs(cruce - sw.truth[0]["impact_cross"]) <= SUBFRAME_TOL_FRAMES, f"{fps} fps: {cruce}"
+    assert 0.0 < sf["uncertainty_frames"] < 1.0 and sf["uncertainty_s"] > 0
+
+
+@pytest.mark.parametrize("fps", [30.0, 60.0, 120.0])
+def test_impact_subframe_uncertainty_covers_the_error_with_noise(fps):
+    """Con 2 px de ruido por keypoint el error crece, y la banda reportada crece con él."""
+    sw = synth_swing(fps, n_reps=2, hands_tilt=0.15, hands_miss_px=60.0, noise_px=2.0)
+    _, events = _impact_subframe(sw)
+    sf = events["impact"].subframe
+    err = abs(sf["frame_before"] + sf["fraction"] - sw.truth[0]["impact_cross"])
+    assert sf["components"]["noise_frames"] > 0, "el ruido del clip entra en la banda"
+    assert err <= SUBFRAME_TOL_FRAMES + 2 * sf["uncertainty_frames"], f"{fps} fps: error {err:.3f}, banda {sf['uncertainty_frames']}"
+
+
+def test_impact_subframe_changes_with_the_wrong_axis_and_with_y_flipped():
+    """Los tres bugs inyectados de la invariante 15 que esta señal puede tener."""
+    sw = synth_swing(30.0, n_reps=2, hands_tilt=0.2, hands_miss_px=100.0)
+    sig, events = _impact_subframe(sw)
+    sf = events["impact"].subframe
+    bueno = sf["frame_before"] + sf["fraction"]
+    P = np.asarray(sig.hands_raw, dtype=float)
+    address, frame = events["address"].frame, events["impact"].frame
+    r = k = max(2, int(round(0.1 * sw.fps)))  # los mismos de GolfEventParams a 30 fps
+
+    def cruce(Q, axis=None):
+        if axis is None:
+            axis = principal_axis(Q, frame - k, frame + k)
+            if float((Q[frame + k] - Q[frame - k]) @ axis) < 0:
+                axis = -axis
+        c = subframe_crossing(Q @ axis, float(Q[address] @ axis), near=frame, lo=frame - r, hi=frame + r)
+        return None if c.fraction is None else c.frame_before + c.fraction, axis
+
+    _, eje = cruce(P)
+    lejos = lambda t: t is None or abs(t - bueno) > SUBFRAME_TOL_FRAMES
+
+    # 1. El eje equivocado: sólo `y`. El arco es tangente a la altura del address.
+    c_y = subframe_crossing(P[:, 1], float(P[address, 1]), near=frame, lo=frame - r, hi=frame + r)
+    assert lejos(None if c_y.fraction is None else c_y.frame_before + c_y.fraction)
+    # 2. El eje equivocado: sólo `x`, sin la componente vertical del viaje.
+    c_x = subframe_crossing(P[:, 0], float(P[address, 0]), near=frame, lo=frame - r, hi=frame + r)
+    assert lejos(None if c_x.fraction is None else c_x.frame_before + c_x.fraction)
+    # 3. El signo de `y` invertido en el eje y no en las posiciones: el bug clásico de
+    #    mezclar "y hacia abajo" (image_px) con "y hacia arriba" en el mismo cálculo.
+    assert lejos(cruce(P, axis=eje * np.array([1.0, -1.0]))[0])
+    # Y al revés: espejar el clip ENTERO es una simetría, no un bug. El instante no
+    #    puede moverse (test metamórfico, ADR-011).
+    espejo, _ = cruce(P * np.array([1.0, -1.0]))
+    assert espejo is not None and abs(espejo - bueno) < 1e-9
+
+
+def test_subframe_crossing_says_why_when_there_is_no_clear_crossing():
+    """Sin cruce, con más de uno, lejos del evento o sin nivel: `fraction` es None y hay razón."""
+    sube = np.arange(20.0)
+    c = subframe_crossing(sube, 100.0, near=10, lo=6, hi=14)
+    assert c.fraction is None and "no cruza" in c.null_reason
+    tiembla = np.array([-1.0, 1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0])
+    c = subframe_crossing(tiembla, 0.0, near=6, lo=3, hi=9)
+    assert c.fraction is None and "ambiguo" in c.null_reason and "veces" in c.null_reason
+    c = subframe_crossing(sube, 3.5, near=10, lo=1, hi=14)
+    assert c.fraction is None and "no es contiguo" in c.null_reason
+    c = subframe_crossing(sube, float("nan"), near=10, lo=6, hi=14)
+    assert c.fraction is None and "sin nivel" in c.null_reason
+    # Y el caso claro, con la cuenta a mano: cruza 0 entre el 10 (−1) y el 11 (+3).
+    recta = np.concatenate([np.full(10, -5.0), [-1.0, 3.0], np.full(8, 7.0)])
+    c = subframe_crossing(recta, 0.0, near=10, lo=8, hi=13)
+    assert c.frame_before == 10 and abs(c.fraction - 0.25) < 1e-9 and c.slope == 4.0
+
+
+def test_impact_subframe_is_null_from_down_the_line():
+    """La dirección de viaje de las manos en el impacto apunta al objetivo: desde
+    down_the_line queda sobre el eje óptico y no se puede medir (invariante 6)."""
+    sw = synth_swing(30.0, n_reps=2, hands_tilt=0.2, hands_miss_px=100.0)
+    _, events = _impact_subframe(sw, view="down_the_line")
+    sf = events["impact"].subframe
+    assert sf["fraction"] is None and sf["t_sub_s"] is None
+    assert "down_the_line" in sf["null_reason"] and "face_on" in sf["null_reason"]
+
+
+def test_analysis_carries_the_impact_subframe(clips, capture_paths_yaml, tmp_path):
+    take, sw = _synthetic_take(clips, capture_paths_yaml, tmp_path)
+    a = analyze_take(take, GOLF)
+    assert validate_analysis(json.loads((take / "analysis.json").read_text())) == []
+    assert a["header"]["schema_version"] == "1.1.0", "campo nuevo opcional: minor"
+    for rep in a["events"]:
+        assert rep["impact"]["subframe"]["fraction"] is not None
+        assert rep["impact"]["frame"] == json.loads((take / "analysis.json").read_text())["events"][rep["rep"] - 1]["impact"]["frame"]
+        for otro in ("address", "top"):
+            assert rep[otro]["subframe"] is None, "hoy sólo el impacto lo tiene, y el campo está igual"
+
+
+class SwingEstimator:
+    """Estimador falso que devuelve un swing sintético, un cuadro por llamada.
+
+    El `FakeEstimator` de `test_perception` devuelve una persona quieta y por eso no
+    produce eventos. Éste hace que el modo exploración recorra el camino completo
+    —video → pose → eventos → `datos-eventos.json`— sin tocar el modelo real.
+    """
+
+    def __init__(self, sw) -> None:
+        self.sw, self.calls = sw, 0
+
+    def reset(self) -> None:
+        self.calls = 0
+
+    def __call__(self, frame):
+        from kinelab.perception.estimator import FrameEstimate
+
+        i = min(self.calls, self.sw.keypoints.shape[0] - 1)
+        self.calls += 1
+        kp = self.sw.keypoints[i]
+        x0, y0 = np.nanmin(kp, axis=0)
+        x1, y1 = np.nanmax(kp, axis=0)
+        return FrameEstimate(kp[None].astype(np.float32), np.full((1, kp.shape[0]), 0.9, np.float32), np.array([[x0, y0, x1, y1]], np.float32), True)
+
+    def provenance(self) -> dict:
+        return {"model": "swing sintético", "provider": "falso"}
+
+
+def test_explore_writes_the_impact_subframe(clips, tmp_path):
+    """De un video a `datos-eventos.json`: el instante entre cuadros llega a la pantalla."""
+    from kinelab.explore import explore
+
+    if "hevc120" not in clips:
+        pytest.skip("sin fixture hevc120")
+    sw = synth_swing(120.0, n_reps=1, still_s=0.5, backswing_s=0.8, downswing_s=0.25, follow_s=0.55, recover_s=0.8, amplitude_px=20.0, body_height_px=70.0, frame=(96, 96), hands_tilt=0.2, hands_miss_px=5.0)
+    r = explore(clips["hevc120"], tmp_path / "out", GOLF, height_m=1.8, estimator=SwingEstimator(sw))
+    escrito = json.loads((tmp_path / "out" / "datos-eventos.json").read_text(encoding="utf-8"))
+    assert escrito["eventos_subcuadro"] == r["eventos_subcuadro"], "lo que se muestra es lo que se escribió"
+    sf = r["eventos_subcuadro"]["impact"]
+    impacto = r["eventos_frame"]["impact"]
+    assert sf["frame_before"] in (impacto - 1, impacto) and sf["frame_after"] == sf["frame_before"] + 1
+    assert 0.0 <= sf["fraction"] <= 1.0 and sf["null_reason"] is None
+    assert abs(sf["frame_before"] + sf["fraction"] - sw.truth[0]["impact_cross"]) <= SUBFRAME_TOL_FRAMES
+    assert abs(sf["t_sub_s"] - (sf["frame_before"] + sf["fraction"]) / r["fps_archivo"]) < 1e-3

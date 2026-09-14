@@ -33,6 +33,9 @@ dibujando) y al terminar:
 - arriba, el video con los palitos en un reproductor con pausa, arrastre con
   un paso por cuadro, velocidad 0,1×–1×, cuadro a cuadro en las dos direcciones
   (flechas), zoom hasta 4× con la rueda o los botones y paneo arrastrando;
+- debajo del reproductor, el instante estimado del impacto **entre dos
+  cuadros** («entre el cuadro 44 y el 45 (0,44 ± 0,11)»), con un botón para ver
+  esos dos cuadros lado a lado: entre uno y el otro no hay nada filmado;
 - las fotos de address, top e impacto (clic: ese cuadro en el reproductor);
 - toda la data por evento en tablas, duraciones, picos, diferencias contra el
   address, y la tabla completa por cuadro con filtro de columnas y descarga

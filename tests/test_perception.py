@@ -298,3 +298,4 @@ def test_explore_mode_writes_everything_even_without_a_person(clips, tmp_path):
     assert (out / "overlay.mp4").is_file() and (out / "datos-por-cuadro.csv").is_file() and (out / "datos-eventos.json").is_file()
     assert r["cuadros"] == 480 and "elbow_left_deg" in r["columnas"] and "pelvis_dx_vs_address_cm" in r["columnas"]
     assert r["aviso"].startswith("EXPLORACIÓN")
+    assert r["eventos_frame"] == {} and r["eventos_subcuadro"] == {}, "sin eventos no hay instante entre cuadros, y la clave está igual"

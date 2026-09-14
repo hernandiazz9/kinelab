@@ -1,6 +1,6 @@
 """Validador mínimo de `schema.json`, sin dependencias: type, enum, required,
-properties, additionalProperties, items, y las dos referencias internas
-(`$event`, `$metric`) que apuntan a `$defs`. Suficiente para que un campo
+properties, additionalProperties, items, y las tres referencias internas
+(`$event`, `$metric`, `$subframe`) que apuntan a `$defs`. Suficiente para que un campo
 renombrado o una unidad cambiada no pasen (CONTRATO.md §Versionado)."""
 
 from __future__ import annotations
@@ -38,6 +38,8 @@ def _check(value: Any, schema: dict, path: str, errors: list[str], defs: dict) -
         schema = defs["event"]
     elif schema.get("$metric"):
         schema = defs["metric"]
+    elif schema.get("$subframe"):
+        schema = defs["subframe"]
     t = schema.get("type")
     if t is not None:
         types = t if isinstance(t, list) else [t]

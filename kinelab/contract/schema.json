@@ -89,7 +89,22 @@
       "required": ["id", "frame", "t_s", "tol_frames", "uncertainty_s", "method", "manual", "frame_detected"],
       "properties": {
         "id": {"type": "string"}, "frame": {"type": "integer"}, "t_s": {"type": "number"}, "tol_frames": {"type": "integer"},
-        "uncertainty_s": {"type": "number"}, "method": {"type": "string"}, "manual": {"type": "boolean"}, "frame_detected": {"type": ["integer", "null"]}
+        "uncertainty_s": {"type": "number"}, "method": {"type": "string"}, "manual": {"type": "boolean"}, "frame_detected": {"type": ["integer", "null"]},
+        "subframe": {"$subframe": true}
+      }
+    },
+    "subframe": {
+      "type": ["object", "null"], "additionalProperties": false,
+      "required": ["frame_before", "frame_after", "fraction", "t_sub_s", "uncertainty_frames", "uncertainty_s", "components", "method", "signal", "views", "provenance", "null_reason"],
+      "properties": {
+        "frame_before": {"type": ["integer", "null"]}, "frame_after": {"type": ["integer", "null"]}, "fraction": {"type": ["number", "null"]},
+        "t_sub_s": {"type": ["number", "null"]}, "uncertainty_frames": {"type": ["number", "null"]}, "uncertainty_s": {"type": ["number", "null"]},
+        "components": {
+          "type": "object", "additionalProperties": false, "required": ["curvature_frames", "noise_frames", "noise_px", "slope_px_per_frame"],
+          "properties": {"curvature_frames": {"type": ["number", "null"]}, "noise_frames": {"type": ["number", "null"]}, "noise_px": {"type": ["number", "null"]}, "slope_px_per_frame": {"type": ["number", "null"]}}
+        },
+        "method": {"type": "string"}, "signal": {"type": "string"}, "views": {"type": "array", "items": {"type": "string"}},
+        "provenance": {"type": "string"}, "null_reason": {"type": ["string", "null"]}
       }
     },
     "metric": {

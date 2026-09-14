@@ -188,16 +188,51 @@ deviations[]  desviaciones del contrato, fechadas
 ```json
 {
   "rep": 3,
-  "address":    {"frame": 412, "t_s": 3.437, "tol_frames": 1, "method": "stable_window", "manual": false},
-  "top":        {"frame": 517, "t_s": 4.313, "tol_frames": 1, "method": "d2_inflection", "manual": false},
-  "impact":     {"frame": 548, "t_s": 4.571, "tol_frames": 1, "method": "peak_window", "manual": true},
-  "follow_end": {"frame": 604, "t_s": 5.038, "tol_frames": 2, "method": "d2_inflection", "manual": false},
+  "address":    {"frame": 412, "t_s": 3.437, "tol_frames": 1, "method": "stable_window", "manual": false, "subframe": null},
+  "top":        {"frame": 517, "t_s": 4.313, "tol_frames": 1, "method": "d2_inflection", "manual": false, "subframe": null},
+  "impact":     {"frame": 548, "t_s": 4.571, "tol_frames": 1, "method": "peak_window", "manual": true, "subframe": {...}},
+  "follow_end": {"frame": 604, "t_s": 5.038, "tol_frames": 2, "method": "d2_inflection", "manual": false, "subframe": null},
   "sequence_order": "indeterminado"
 }
 ```
 
 `sequence_order` toma `indeterminado` cuando dos picos caen dentro de ±2
 cuadros. Nunca se fuerza un orden.
+
+### `subframe`: el instante entre dos cuadros
+
+`frame` es el ancla de todo y no cambia nunca por esto. `subframe` es un campo
+**opcional** (`null` donde el deporte no lo define) con el instante estimado
+entre `frame_before` y `frame_after`, para los eventos cuya definición
+geométrica es un cruce y no un cuadro. Hoy lo tiene sólo el impacto de golf.
+
+```json
+"subframe": {
+  "frame_before": 44, "frame_after": 45, "fraction": 0.4404,
+  "t_sub_s": 1.481396,
+  "uncertainty_frames": 0.1112, "uncertainty_s": 0.003707,
+  "components": {"curvature_frames": 0.1104, "noise_frames": 0.0128, "noise_px": 1.204, "slope_px_per_frame": 115.363},
+  "method": "hands_cross_address_linear_interp",
+  "signal": "centro de las dos muñecas (crudo, huecos rellenados) proyectado sobre su dirección de viaje en el impacto",
+  "views": ["face_on"], "provenance": "estimacion", "null_reason": null
+}
+```
+
+- `fraction` va de 0 a 1 entre los dos cuadros, y `t_sub_s` es el mismo
+  instante en segundos, con la convención de `t_s` (cuadro `n` = `n / fps`).
+- **Si el cruce no es claro, `fraction` es `null` y `null_reason` lo dice** en
+  una frase: la señal no cruza en la ventana, cruza más de una vez, el cruce no
+  es contiguo al cuadro del evento, o la vista no es válida. Nunca un número
+  forzado.
+- `uncertainty_frames` es la invariante 8 aplicada acá: en vez de ±1 cuadro
+  entero, el cruce se recalcula extrapolando cada segmento vecino con la
+  velocidad local (`curvature_frames`), y se le suma en cuadratura el ruido de
+  la señal propagado por la pendiente (`noise_frames`). Los sumandos quedan a
+  la vista en `components`.
+- `provenance` es `estimacion` mientras el arnés no le mida MDC: es
+  descriptivo, no juicio (ADR-007).
+- Una corrección manual de `frame` **no** toca `subframe`: describe la señal,
+  con sus dos cuadros escritos al lado.
 
 ### El sextuplo de toda métrica
 
@@ -313,7 +348,9 @@ homografía.
 
 - `schema_version` semver. **Renombrar un campo o cambiar una unidad es
   major**, aunque parezca inocente: la IA que lee el JSON ya aprendió el
-  nombre viejo. Métrica nueva y opcional es minor.
+  nombre viejo. Métrica nueva y opcional es minor. Va en **1.1.0** desde el
+  `subframe` de los eventos (campo nuevo y opcional): un `analysis.json` de
+  1.0.0 sigue validando.
 - `registry_version` aparte, y `metric_version` por métrica. Con un solo
   número, mejorar una métrica invalida el historial del atleta.
 - `engine_version` en `provenance` y en `header`.

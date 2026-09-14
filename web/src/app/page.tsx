@@ -6,12 +6,13 @@
 // gate, sin puntaje.
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import DosCuadros from "@/components/DosCuadros";
 import Reproductor, { COLOR_EVENTO, type ReproductorHandle } from "@/components/Reproductor";
 import Subida from "@/components/Subida";
 import TablaCuadros from "@/components/TablaCuadros";
 import TablaEventos from "@/components/TablaEventos";
 import { ETAPA, archivoUrl, getTrabajo, olvidarUltimoTrabajo, subirVideo, ultimoTrabajoId, type EventoId, type Trabajo } from "@/lib/api";
-import { EVENTOS, fmt } from "@/lib/etiquetas";
+import { EVENTOS, fmt, textoSubcuadro } from "@/lib/etiquetas";
 
 type Fase =
   | { tipo: "inicio" }
@@ -144,7 +145,11 @@ function Resultado({
   reproductor: React.RefObject<ReproductorHandle | null>;
 }) {
   const r = trabajo.resumen!;
+  const [verDosCuadros, setVerDosCuadros] = useState(false);
   const overlay = archivoUrl(trabajo, "overlay.mp4");
+  const subImpacto = r.eventos_subcuadro?.impact;
+  // Los dos cuadros entre los que cayó el instante estimado, si los hay.
+  const parImpacto = subImpacto && subImpacto.frame_before !== null && subImpacto.frame_after !== null ? { antes: subImpacto.frame_before, despues: subImpacto.frame_after } : null;
   const csv = archivoUrl(trabajo, "datos-por-cuadro.csv");
   const fotos = (Object.keys(EVENTOS) as EventoId[]).filter((ev) => archivoUrl(trabajo, `evento-${ev}.png`));
   const descargas: [string, string][] = [
@@ -170,8 +175,31 @@ function Resultado({
       </section>
 
       {overlay ? (
-        <section>
+        <section className="flex flex-col gap-2">
           <Reproductor ref={reproductor} src={overlay} fps={r.fps_archivo} cuadros={r.cuadros} eventos={r.eventos_frame} onCuadro={onCuadro} />
+          {subImpacto && (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+              <span style={{ color: COLOR_EVENTO.impact }}>impacto</span>
+              <span className="text-zinc-300">
+                {textoSubcuadro(subImpacto) ?? `cuadro ${r.eventos_frame.impact}`}
+                {subImpacto.t_sub_s !== null && (
+                  <span className="text-zinc-500">
+                    {" · "}
+                    {fmt(subImpacto.t_sub_s, 4)} s{subImpacto.uncertainty_s !== null && ` ± ${fmt(subImpacto.uncertainty_s * 1000, 1)} ms`}
+                  </span>
+                )}
+              </span>
+              {parImpacto && (
+                <button type="button" className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm hover:bg-zinc-800" onClick={() => setVerDosCuadros((v) => !v)}>
+                  {verDosCuadros ? "ocultar los dos cuadros" : `ver los cuadros ${parImpacto.antes} y ${parImpacto.despues}`}
+                </button>
+              )}
+              <span className="text-xs text-zinc-500">estimado de la señal de las manos, no filmado</span>
+            </div>
+          )}
+          {verDosCuadros && parImpacto && (
+            <DosCuadros src={overlay} fps={r.fps_archivo} antes={parImpacto.antes} despues={parImpacto.despues} fraccion={subImpacto?.fraction ?? null} />
+          )}
         </section>
       ) : (
         <p className="text-sm text-red-300">No hay overlay.mp4 en este trabajo.</p>
@@ -188,6 +216,7 @@ function Resultado({
                 <figcaption className="mt-1 text-center text-sm" style={{ color: COLOR_EVENTO[ev] }}>
                   {EVENTOS[ev]}
                   {f !== undefined && <span className="text-zinc-400"> · cuadro {f} · {fmt(r.eventos_t_s[ev], 3)} s</span>}
+                  {textoSubcuadro(r.eventos_subcuadro?.[ev]) && <span className="block text-xs text-zinc-400">{textoSubcuadro(r.eventos_subcuadro?.[ev])}</span>}
                 </figcaption>
               </figure>
             );

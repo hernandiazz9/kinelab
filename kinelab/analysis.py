@@ -28,7 +28,7 @@ from kinelab.perception.gaps import interpolate_gaps
 from kinelab.perception.posestore import POSE_FILE, PoseData, load_pose
 from kinelab.sport import SportConfig
 
-SCHEMA_VERSION = "1.0.0"
+SCHEMA_VERSION = "1.1.0"  # 1.1.0: `subframe` opcional en los eventos (encargo 02)
 SERIES_MAX_HZ = 10.0
 QUALITY_MIN_DETECTION = 0.90
 QUALITY_MAX_PLAUSIBILITY_REJECT = 0.05
@@ -49,9 +49,10 @@ class SwingSignals:
     valid: np.ndarray  # (T,) bool
     params: dict
     noise_floor_bh_s: float = 0.0  # p10 de la velocidad quieta de las manos: el piso de ruido del propio clip
+    view: str | None = None  # vista declarada de la toma; None = desconocida (exploración por cuadro)
 
 
-def swing_signals(pose: PoseData, fps: float, *, cutoff_hz_max: float = 12.0, max_gap: int = 5) -> SwingSignals:
+def swing_signals(pose: PoseData, fps: float, *, cutoff_hz_max: float = 12.0, max_gap: int = 5, view: str | None = None) -> SwingSignals:
     kp = interpolate_gaps(pose.keypoints, max_gap)
     hands_raw = hands_center(kp)
     bh = body_height_px(kp, fps)
@@ -71,7 +72,7 @@ def swing_signals(pose: PoseData, fps: float, *, cutoff_hz_max: float = 12.0, ma
 
     still = stillness_signal(spd, fps, 0.1)
     floor = float(np.nanpercentile(still, 10)) if np.isfinite(still).any() else 0.0
-    return SwingSignals(fps=fps, hands_raw=hands_raw, hands=hands, speed=spd, body_height=bh, valid=np.isfinite(hands).all(axis=1), params={"filter": "butterworth", "order": 4, "cutoff_hz": cutoff, "cutoff_hz_max": cutoff_hz_max, "gap_fill_max_frames": max_gap, "speed_unit": unit, "signal": "hands_center", "noise_floor_bh_s": round(floor, 4)}, noise_floor_bh_s=floor)
+    return SwingSignals(fps=fps, hands_raw=hands_raw, hands=hands, speed=spd, body_height=bh, valid=np.isfinite(hands).all(axis=1), params={"filter": "butterworth", "order": 4, "cutoff_hz": cutoff, "cutoff_hz_max": cutoff_hz_max, "gap_fill_max_frames": max_gap, "speed_unit": unit, "signal": "hands_center", "noise_floor_bh_s": round(floor, 4)}, noise_floor_bh_s=floor, view=view)
 
 
 def _quality(pose: PoseData, rep_count: int) -> dict:
@@ -122,7 +123,7 @@ def build_analysis(take_dir: Path, capture: CaptureJson, pose: PoseData, sport: 
     if ev is None:
         raise AnalysisError(f"{sport.id}: el deporte no define eventos todavía.")
     fps = float(capture.fps_real)
-    sig = swing_signals(pose, fps, cutoff_hz_max=ev.cutoff_hz_max)
+    sig = swing_signals(pose, fps, cutoff_hz_max=ev.cutoff_hz_max, view=capture.view)
     cands, rejected = segment_reps(sig.speed, fps, ev.segmentation)
     events_out: list[dict] = []
     reps: list[dict] = []

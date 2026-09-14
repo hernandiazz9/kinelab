@@ -5,6 +5,24 @@ export type EventoId = "address" | "top" | "impact" | "follow_end";
 export type Eventos = Partial<Record<EventoId, number>>;
 export type Fila = Record<string, number | null>;
 
+/** El instante estimado ENTRE dos cuadros, como lo escribe `sports.golf.events`.
+ *  El cuadro entero (`eventos_frame`) no cambia: esto lo acompaña. Con `fraction`
+ *  en null, `null_reason` dice por qué: nunca un número forzado. */
+export interface Subcuadro {
+  frame_before: number | null;
+  frame_after: number | null;
+  fraction: number | null;
+  t_sub_s: number | null;
+  uncertainty_frames: number | null;
+  uncertainty_s: number | null;
+  components: { curvature_frames: number | null; noise_frames: number | null; noise_px: number | null; slope_px_per_frame: number | null };
+  method: string;
+  signal: string;
+  views: string[];
+  provenance: string;
+  null_reason: string | null;
+}
+
 /** El contenido de `datos-eventos.json` tal como lo escribe `kinelab.explore`. */
 export interface Resumen {
   aviso: string;
@@ -15,6 +33,7 @@ export interface Resumen {
   gate_diria: string[];
   eventos_frame: Eventos;
   eventos_t_s: Eventos;
+  eventos_subcuadro?: Partial<Record<EventoId, Subcuadro>>;
   duraciones: Record<string, number>;
   picos: Record<string, number | null>;
   en_cada_evento: Partial<Record<EventoId, Fila>>;
