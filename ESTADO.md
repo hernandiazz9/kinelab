@@ -3,6 +3,109 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 14 de septiembre de 2026 — encargo 04: el gate y `explore` con el fps efectivo
+
+Prompt: `docs/prompts/04-gate-fps-efectivo.md`. Informe:
+`docs/informes/2026-09-14-04-gate-fps-efectivo.md`. Cierra lo que el 03 dejó
+abierto: quién consume los números corregidos.
+
+### Qué existe ahora
+
+- **`capture.json` en 1.1.0.** `fps_playback` y `vfr_ratio` son ahora los
+  **efectivos** (sin el primer delta de PTS cuando el arranque de la cámara es
+  la única anomalía). Los brutos viajan al lado en `fps_playback_raw` y
+  `vfr_ratio_raw`, el delta de arranque en `first_delta_s`, y `fps_note` dice
+  en una frase por qué difieren (`null` cuando coinciden). Los cuatro campos
+  son opcionales: un `capture.json` 1.0.0 sigue validando, con `null`, y hay
+  test.
+- **El gate evalúa los efectivos** en `vfr_ratio_le_1_10` y `fps_matches_path`.
+  Cuando el efectivo difiere del bruto, el chequeo lo dice en su propio
+  `reason` **aunque pase** — *"ratio 1.000 sin el primer delta de 0.201 s
+  (arranque de la cámara); bruto 6.044."* Ese `reason` no entra en
+  `gate.reasons`, que sigue llevando sólo lo que falló.
+- **`explore.py`**: `prepare_take` usa `fps_playback_effective` para `fps_real`,
+  `fps_playback` y `duration_s`, y el ratio efectivo para `vfr_ratio`; también
+  escribe los cuatro campos nuevos.
+- `fps_truth.first_delta_note()` extraída (misma frase, misma lógica) para que
+  la redacción viva en un solo lugar: la usan `analyze()` y el `fps_note` del
+  gate.
+- Documentado: `CONTRATO.md` §capture.json (con §El fps efectivo y el bruto),
+  §Versionado y §Desviaciones; `CAPTURA.md` §Por qué el archivo no puede decir
+  su propio fps y la tabla del gate.
+
+### Medido
+
+| | `cortado.mp4` | original `20260907_170638.mp4` |
+|---|---|---|
+| `fps_archivo` | 29,999 → **29,999** (sin cambio) | 29,436 → **29,998** |
+| `impact.t_s` | 1,467 → 1,467 | 4,994 → **4,900** |
+| `t_sub_s` | 1,481396 → 1,481396 | 5,008089 → **4,914264** |
+| `fraction` del impacto | 0,4404 → 0,4404 | 0,4181 → 0,4181 (va en cuadros) |
+| `address_to_top_ms` | 1066,7 → 1066,7 | 1019,2 → **1000,1** |
+| `top_to_impact_ms` | 166,7 → 166,7 | 203,8 → **200,0** |
+
+Sobre `cortado.mp4`, `datos-eventos.json` es **idéntico byte a byte** al de
+antes del cambio (diff vacío). En el original, 30 cuadros de backswing dan
+1000,1 ms y 6 de downswing 200,0 ms: los números redondos que se esperan a
+30 fps, y que con el bruto no salían.
+
+Ingesta del original del S22 contra un camino de prueba (h264, 30 fps,
+**sin cronómetro**, en un `data/` aparte del scratchpad; no se commiteó):
+
+```
+vfr_ratio_le_1_10 | passed True | value 1.0004 | expected <= 1.1
+   → ratio 1.000 sin el primer delta de 0.201 s (arranque de la cámara); bruto 6.044.
+fps_matches_path  | passed True | value 29.998 | expected 30.0
+   → reproducción 29.998 fps sin el primer delta de 0.201 s (arranque de la cámara); bruto 29.436 fps.
+```
+
+Veredicto `reject`, con una sola razón: `fps_min_for_gesture` (30 fps de
+captura contra los 100 que pide golf). Es lo correcto. `capture.json`:
+`fps_playback` 29,9983 · `fps_playback_raw` 29,4359 · `vfr_ratio` 1,0004 ·
+`vfr_ratio_raw` 6,0444 · `first_delta_s` 0,201478 · `duration_s` 8,8333 ·
+`duration_playback_s` 8,9686.
+
+Suites: **197 tests en verde** en el motor (193 + 4), ~18 s; 4 en el arnés.
+
+### Qué falta o no se probó
+
+- **`duration_playback_s` sigue siendo el span de PTS medido**, con el hueco
+  del arranque adentro: en el original, 8,969 s contra los 8,834 de
+  `frames_decoded / fps_playback`. Es a propósito (el archivo de verdad dura
+  eso) y está escrito en `CONTRATO.md`, pero significa que ese campo y
+  `fps_playback` ya no son consistentes entre sí en un clip con arranque
+  largo.
+- **La exploración no avisa en pantalla que corrigió el fps.** El `fps_note`
+  queda en `capture.json` (descargable) pero no entra en `warnings` ni en
+  `datos-eventos.json`: el prompt acotaba `explore.py` a `prepare_take`. La
+  ficha del archivo del encargo 07 es el lugar natural para mostrarlo.
+- El criterio sigue siendo "el primero y sólo el primero". Medido en **un**
+  teléfono y **un** modo. Cuando Hernán filme el cronómetro hay que anotar
+  cuánto mide el primer delta en cada modo: si a 240 fps el arranque dura
+  varios cuadros, el criterio queda corto (ya anotado por el 03).
+- `data/capture-paths.yaml` sigue **vacío**: el camino del S22 que se usó para
+  probar la ingesta es de prueba, sin cronómetro, y vivió sólo en el
+  scratchpad. Queda para el encargo 06 (ADR-016, caminos declarados).
+- El front no se abrió (regla de trabajo). No cambió nada suyo: `web/` sólo
+  ofrece `capture.json` como descarga.
+
+### Desviaciones
+
+- **Una, anotada en `CONTRATO.md` §Desviaciones:** el bump de `capture.json` a
+  **1.1.0** es minor aunque `fps_playback` y `vfr_ratio` cambien de qué número
+  hablan (bruto → efectivo). §Versionado dice que renombrar un campo o cambiar
+  una unidad es major, y esto está en el mismo espíritu. Se hizo minor por
+  decisión del orquestador, con el valor viejo preservado en los `*_raw` y la
+  diferencia explicada en `fps_note`.
+- Del prompt, dos cosas menores: se agregó una función
+  (`fps_truth.first_delta_note`) en un archivo que el prompt marcaba como
+  intocable — pero sólo se extrajo texto ya existente, sin cambiar la lógica ni
+  una letra de la frase, para no tener dos redacciones; y en `explore.py` se
+  escriben además los cuatro campos nuevos en el mismo constructor, no sólo las
+  dos líneas del fps.
+
+---
+
 ## 14 de septiembre de 2026 — encargo 02: el impacto entre dos cuadros
 
 Prompt: `docs/prompts/02-impacto-subcuadro.md`. Informe:
