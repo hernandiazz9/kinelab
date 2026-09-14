@@ -67,20 +67,26 @@ class Metric:
             raise ValueError(f"{self.id}: el MDC tiene que ser positivo")
 
 
-def judgment_allowed(metric: Metric, *, view: str, fps_real: float) -> bool:
-    """La regla del MDC, tal cual CONTRATO.md; nunca se escribe a mano."""
+def judgment_allowed(metric: Metric, *, view: str, fps_real: float, fps_provenance: str) -> bool:
+    """La regla del MDC, tal cual CONTRATO.md; nunca se escribe a mano.
+
+    `fps_provenance` es de dónde sale el `fps_real` de la toma: sólo
+    `medido_aqui` —cronómetro filmado en un camino calibrado— habilita juicio.
+    Con un camino declarado (`sin_verificar`, ADR-016) el número se muestra,
+    pero no se compara contra nada: el eje del tiempo es un supuesto."""
     fps_min_met = fps_real >= metric.fps_min
     ref = metric.reference
     return (
         metric.level == 1
         and metric.mdc is not None
         and fps_min_met
+        and fps_provenance == "medido_aqui"
         and view in metric.views
         and (ref is None or ref.range_width is None or metric.mdc <= ref.range_width)
     )
 
 
-def null_metric(metric: Metric, reason: str, *, view: str, fps_real: float) -> dict:
+def null_metric(metric: Metric, reason: str, *, view: str, fps_real: float, fps_provenance: str = "sin_verificar") -> dict:
     """El sextuplo con `value: null` y su razón (CONTRATO.md: un null nunca se omite)."""
     return {
         "value": None,
@@ -92,6 +98,7 @@ def null_metric(metric: Metric, reason: str, *, view: str, fps_real: float) -> d
         "level": metric.level,
         "fps_min": metric.fps_min,
         "fps_min_met": fps_real >= metric.fps_min,
+        "fps_provenance": fps_provenance,
         "judgment_allowed": False,
         "null_reason": reason,
     }

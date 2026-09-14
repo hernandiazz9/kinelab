@@ -318,3 +318,52 @@ Tailwind 4 · Drizzle + better-sqlite3. `truth/` tiene su propio `pyproject`
 y puede agregar lo que necesite sin tocar el del motor.
 
 Nada más sin un ADR nuevo.
+
+---
+
+## ADR-016 · Caminos de captura declarados sin calibrar
+
+**Decisión.** `capture-paths.yaml` admite caminos con `calibrated: false`:
+dispositivo y modo declarados por el usuario, sin cronómetro. Sólo
+`mode: video`. Para ellos `fps_real` se asume igual al `fps_playback` efectivo
+(`stretch_factor` 1,0) con procedencia `sin_verificar`, y esa procedencia viaja
+a `capture.json`, al `header` de `analysis.json` y a cada métrica: ninguna
+métrica de un camino sin calibrar puede ser juicio (`judgment_allowed` lo
+exige), y el informe lo dice antes de cualquier número. Un camino `slomo` sin
+calibrar se rechaza con razón: sin cronómetro el factor de estiramiento es
+desconocido y cualquier tiempo es ficción. Existe un camino genérico
+`desconocido-video` para "no sé con qué se filmó". Filmar el cronómetro del
+mismo dispositivo y modo convierte el camino en calibrado, y los clips se
+re-analizan (invariante 18) sin volver a correr el modelo (invariante 1).
+
+**Por qué.** El entrenador no tiene el iPhone de `CAPTURA.md`; tiene un Galaxy
+S22 Ultra. ADR-003 dejó Android fuera por la ralentización horneada del modo
+slow motion; el modo Video no la tiene (medido en el original de 9 s: 265
+cuadros CFR a 29,998 fps tras el delta de arranque, informe del 03). Lo que el
+archivo dice de sí mismo se usa; lo que no puede decir se declara como supuesto
+visible, nunca se infiere. Sustituye en parte a ADR-003: Android entra como
+camino declarado; como camino calibrado, sólo con cronómetro.
+
+**Tres cosas que el código obligó a precisar** (informe
+`docs/informes/2026-09-14-06-camino-declarado.md`):
+
+- Un camino declarado puede no saber ni el fps nominal ni el codec:
+  `nominal_fps` y `codec_expected` pasan a ser opcionales, y el genérico
+  `desconocido-video` los tiene en `null`. `codec_matches_path` queda sin
+  evaluar cuando el camino no declara codec; los seis campos del cronómetro
+  (`fps_real`, `fps_playback`, `stretch_factor`, `fps_method`,
+  `calibrated_on`, `calibrated_by`) tienen que estar en `null` o el archivo no
+  carga: declarar no es medir.
+- **El modo exploración no corre el gate: ahí la procedencia es siempre
+  `sin_verificar`, incluso con un camino calibrado**, porque nadie verificó que
+  el archivo vino por ese camino (eso lo hace `fps_matches_path`). Los números
+  del cronómetro sí se usan si el camino los tiene — descartarlos daría tiempos
+  ×8 mal en un Slo-Mo —, pero no habilitan juicio.
+- El gate rechaza igual lo que tiene que rechazar. Medido en el original del
+  S22 con `s22ultra-video-fhd30-cable`: 8 de 9 chequeos pasan (por primera vez
+  `capture_path_known` entre ellos) y el único fallo es `fps_min_for_gesture`,
+  30 fps contra los 100 que pide golf. Declarar el camino no ablanda ningún
+  umbral: sólo deja escrito bajo qué supuesto se midió.
+
+**Consecuencia.** Invariante 2 queda: "calibrada con cronómetro, o declarada
+sin calibrar con procedencia `sin_verificar` y sin juicio (ADR-016)".

@@ -33,7 +33,10 @@ fallaron por tratarlo como una app.
   cuadro de una ventana pre-movimiento estable.
 - **camino de captura** — combinación de dispositivo, modo de grabación y
   transferencia, con su fps real calibrado. Es configuración
-  (`data/capture-paths.yaml`), no metadato del archivo.
+  (`data/capture-paths.yaml`), no metadato del archivo. **Calibrado** = las dos
+  tasas salen de un cronómetro filmado; **declarado** (`calibrated: false`,
+  ADR-016) = dispositivo y modo los dice el usuario, la tasa de captura se
+  asume igual a la de reproducción y la procedencia es `sin_verificar`.
 - **gate** — validación bloqueante de entrada. Rechaza la sesión con una razón
   legible por el entrenador. Nunca degrada en silencio.
 - **piso de ruido** — el error del instrumento para una métrica dada. Si la
@@ -67,8 +70,13 @@ fallaron por tratarlo como una app.
 1. **La pose cruda es la única fuente de verdad.** Todo lo derivado se recalcula
    desde `pose.npz`. Nunca se vuelve a correr el modelo para cambiar una
    métrica.
-2. **El fps real es configuración calibrada con cronómetro.** El motor rechaza
-   un clip cuyo camino de captura no está en `capture-paths.yaml`.
+2. **El fps real es configuración calibrada con cronómetro, o declarada sin
+   calibrar con procedencia `sin_verificar` y sin juicio (ADR-016).** El motor
+   rechaza un clip cuyo camino de captura no está en `capture-paths.yaml`. Un
+   camino declarado —dispositivo y modo dichos por el usuario, sin cronómetro—
+   pasa, asume que el archivo reproduce a la velocidad a la que capturó, lo dice
+   antes de cualquier número, y no habilita ninguna métrica como juicio. Nunca
+   se infiere el factor de estiramiento del contenedor.
 3. **Nunca un float solo.** Toda métrica viaja como
    `{value, unit, confidence, view, mdc, level}`.
 4. **Sin MDC medido no hay juicio.** Y si el MDC es mayor que el ancho del rango

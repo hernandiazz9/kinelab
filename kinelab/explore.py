@@ -4,7 +4,12 @@ Sin gate y sin juicio: sirve para MIRAR lo que el modelo ve y todo lo que se
 puede derivar de eso, a cualquier fps. Cada archivo lleva la advertencia. El
 producto sigue siendo el visor sobre datos (ADR-014); esto es la lupa.
 
-    python -m kinelab datos VIDEO.mp4 --altura-m 1.75 [--vista face_on] [--out DIR] [--cpu]
+    python -m kinelab datos VIDEO.mp4 --altura-m 1.75 [--vista face_on] [--camino ID] [--out DIR] [--cpu]
+
+El camino de captura (`--camino`, por defecto `desconocido-video`) no habilita
+nada acá: deja escrito con qué se dice que se filmó y que la tasa de cuadros es
+un supuesto, no una medición (ADR-016). Va al `capture.json`, al `header` del
+`analysis.json`, a cada métrica, a `datos-eventos.json` y quemado en el overlay.
 
 Deja en DIR (por defecto <video>.kinelab/):
     overlay.mp4          el video con los palitos, ángulos y eventos dibujados
@@ -28,7 +33,8 @@ import numpy as np
 
 from kinelab.analysis import build_analysis, swing_signals
 from kinelab.events.signal import butterworth_lowpass, cutoff_for_fps, fill_nan_linear
-from kinelab.ingest.gate import CaptureJson, Check, Gate
+from kinelab.ingest.capture_paths import GENERIC_VIDEO_ID, CapturePaths, resolve_path_id
+from kinelab.ingest.gate import CaptureJson, Check, Gate, declared_reason, slomo_declared_reason
 from kinelab.ingest.session import sha256_file
 from kinelab.metrics.generic import line_angle_rate
 from kinelab.perception.estimator import EstimatorConfig
@@ -47,8 +53,19 @@ LEFT = {H.LEFT_EYE, H.LEFT_EAR, H.LEFT_SHOULDER, H.LEFT_ELBOW, H.LEFT_WRIST, H.L
 RIGHT = {r for _, r in LEFT_RIGHT_PAIRS}
 
 
-def prepare_take(video: Path, out_dir: Path, *, view: str, athlete: str = "exploracion") -> Path:
-    """Arma una toma sin pasar por el gate: capture.json con la tasa del archivo y aviso."""
+def prepare_take(video: Path, out_dir: Path, *, view: str, camino: str = GENERIC_VIDEO_ID, capture_paths: CapturePaths | None = None, athlete: str = "exploracion") -> Path:
+    """Arma una toma sin pasar por el gate: `capture.json` con el camino declarado,
+    la tasa que corresponda y el aviso.
+
+    El camino sale de `data/capture-paths.yaml` igual que en la ingesta (ADR-016):
+    acá no habilita nada, pero deja escrito bajo qué supuesto se midió el tiempo.
+    En exploración la procedencia es SIEMPRE `sin_verificar`, aunque el camino
+    esté calibrado: el gate no corrió, así que nadie verificó que este archivo
+    vino por ese camino. Un `slomo` sin calibrar no se puede explorar: sin
+    cronómetro el factor de estiramiento es desconocido."""
+    path = resolve_path_id(camino, capture_paths)
+    if not path.calibrated and path.mode == "slomo":
+        raise ValueError(slomo_declared_reason(path))
     out_dir.mkdir(parents=True, exist_ok=True)
     original = out_dir / f"original{video.suffix.lower()}"
     if not original.exists() or sha256_file(original) != sha256_file(video):
@@ -58,15 +75,24 @@ def prepare_take(video: Path, out_dir: Path, *, view: str, athlete: str = "explo
     # La tasa EFECTIVA, no la bruta: un solo delta de arranque no es tasa
     # variable y contamina `(n-1)/span` (medido en el S22: 29,436 en vez de
     # 29,998, todos los tiempos 1,9 % largos). Los brutos quedan al lado.
-    fps = c.fps_playback_effective
+    fps_playback = c.fps_playback_effective
+    if path.calibrated:
+        # Los números del cronómetro son lo mejor que hay para ese camino:
+        # descartarlos daría tiempos ×8 mal en un Slo-Mo. La procedencia, no.
+        fps, stretch = float(path.fps_real), float(path.stretch_factor)
+        fuente = f"capture-paths.yaml:{path.id}"
+    else:
+        fps, stretch = fps_playback, 1.0
+        fuente = f"declarado:{path.id}"
     cj = CaptureJson(
-        athlete=athlete, gesture="driver", view=view, capture_path_id="exploracion",
-        fps_real=round(fps, 3), fps_playback=round(fps, 3), fps_playback_raw=round(c.fps_playback, 3), stretch_factor=1.0,
-        fps_source=AVISO, codec=d.codec, width=d.display_size[0], height=d.display_size[1], rotation_deg=d.rotation_deg,
+        athlete=athlete, gesture="driver", view=view, capture_path_id=path.id,
+        capture_path_calibrated=path.calibrated, fps_provenance="sin_verificar",
+        fps_real=round(fps, 3), fps_playback=round(fps_playback, 3), fps_playback_raw=round(c.fps_playback, 3), stretch_factor=stretch,
+        fps_source=f"{fuente} · {AVISO}", codec=d.codec, width=d.display_size[0], height=d.display_size[1], rotation_deg=d.rotation_deg,
         frames_decoded=c.frames_decoded, duration_s=round(c.frames_decoded / fps, 3), duration_playback_s=round(c.playback_span_s, 3),
         vfr_ratio=round(c.vfr_ratio_effective, 3), vfr_ratio_raw=round(c.vfr_ratio, 3), first_delta_s=round(c.delta_first_s, 6),
         fps_note=first_delta_note(c), recorded_at=d.creation_time, sha256_original=sha256_file(original), original_name=video.name,
-        gate=Gate(verdict="ok", checks=[Check(id="exploracion", passed=None, reason=AVISO)], reasons=[]),
+        gate=Gate(verdict="ok", checks=[Check(id="exploracion", passed=None, value=path.id, reason=f"{AVISO} Camino: {declared_reason(path) if not path.calibrated else fuente}")], reasons=[]),
     )
     (out_dir / "capture.json").write_text(cj.model_dump_json(indent=2), encoding="utf-8")
     return out_dir
@@ -146,7 +172,7 @@ def _font_scale(w: int, h: int, th: int, margin_px: int | None = None) -> float:
     return float(min(by_height, by_width))
 
 
-def _draw(frame: np.ndarray, kp: np.ndarray, sc: np.ndarray, row: dict, label: str | None, t_s: float) -> np.ndarray:
+def _draw(frame: np.ndarray, kp: np.ndarray, sc: np.ndarray, row: dict, label: str | None, t_s: float, banner: str | None = None) -> np.ndarray:
     img = frame.copy()
     h = img.shape[0]
     th = max(2, h // 400)
@@ -169,13 +195,29 @@ def _draw(frame: np.ndarray, kp: np.ndarray, sc: np.ndarray, row: dict, label: s
     lines = [f"{row['frame']}  t={t_s:.3f}s" + (f"   {label.upper()}" if label else ""), f"manos {row['hands_speed_bh_s'] or 0:.2f} bh/s  altura manos {row['hands_height_pct'] or 0:.0f}%", f"tronco {row['trunk_lean_deg'] or 0:+.0f}  hombros {row['shoulder_line_deg'] or 0:+.0f}  caderas {row['hip_line_deg'] or 0:+.0f}"]
     for i, text in enumerate(lines):
         put(text, 10 * th, y0 * (i + 1), (0, 255, 255) if (label and i == 0) else (255, 255, 255))
+    if banner:
+        # El camino y la procedencia del fps, quemados en el cuadro (ADR-016): el
+        # overlay se comparte suelto y tiene que decir bajo qué supuesto se midió
+        # el tiempo. Escala propia, más chica y acotada al ancho, para no encoger
+        # las tres líneas de arriba; es constante en todo el clip (texto fijo).
+        w_banner = cv2.getTextSize(banner, cv2.FONT_HERSHEY_SIMPLEX, 1.0, th)[0][0]
+        fsb = min(fs * 0.7, (img.shape[1] - 20 * th) / w_banner) if w_banner > 0 else fs * 0.7
+        cv2.putText(img, banner, (10 * th, int(y0 * 3 + 30 * fsb * 1.6)), cv2.FONT_HERSHEY_SIMPLEX, fsb, (0, 0, 0), th + 2, cv2.LINE_AA)
+        cv2.putText(img, banner, (10 * th, int(y0 * 3 + 30 * fsb * 1.6)), cv2.FONT_HERSHEY_SIMPLEX, fsb, (0, 200, 255), th, cv2.LINE_AA)
     return img
+
+
+def capture_banner(capture: CaptureJson) -> str:
+    """La línea que se quema en el overlay. ASCII a propósito: `cv2.putText` no
+    dibuja acentos (lección del encargo 05), y estos tres datos no los necesitan."""
+    return f"camino {capture.capture_path_id} | fps {capture.fps_real:g} | {capture.fps_provenance}"
 
 
 def render(take_dir: Path, pose, rows: list[dict], events: dict[str, int], fps: float, capture: CaptureJson, progress_cb=None) -> tuple[Path, list[Path]]:
     original = next(take_dir.glob("original.*"))
     frame_events = {f: name for name, f in events.items()}
     out = take_dir / "overlay.mp4"
+    banner = capture_banner(capture)
     proc = None
     snaps: list[Path] = []
     try:
@@ -183,7 +225,7 @@ def render(take_dir: Path, pose, rows: list[dict], events: dict[str, int], fps: 
             if i >= len(rows):
                 break
             label = frame_events.get(i)
-            img = _draw(frame, pose.keypoints[i], pose.scores[i], rows[i], label, float(pose.timestamps_s[i]))
+            img = _draw(frame, pose.keypoints[i], pose.scores[i], rows[i], label, float(pose.timestamps_s[i]), banner)
             if proc is None:
                 hh, ww = img.shape[:2]
                 # `-g 12`: GOP corto, como el master.mp4 de la Fase 4. Con el GOP por defecto (250),
@@ -201,7 +243,7 @@ def render(take_dir: Path, pose, rows: list[dict], events: dict[str, int], fps: 
     return out, snaps
 
 
-def explore(video: Path, out_dir: Path, sport: SportConfig, *, height_m: float | None, view: str = "face_on", cpu: bool = False, progress=None, estimator=None, stage=None) -> dict:
+def explore(video: Path, out_dir: Path, sport: SportConfig, *, height_m: float | None, view: str = "face_on", camino: str = GENERIC_VIDEO_ID, capture_paths: CapturePaths | None = None, cpu: bool = False, progress=None, estimator=None, stage=None) -> dict:
     """`progress(i)` recibe el índice del cuadro que se está procesando (en la pose y
     después en el dibujo); `stage(nombre, info)` avisa el cambio de etapa:
     `detectando_pose` (info: total de cuadros), `calculando`, `dibujando` (total)."""
@@ -210,7 +252,7 @@ def explore(video: Path, out_dir: Path, sport: SportConfig, *, height_m: float |
         if stage is not None:
             stage(name, info)
 
-    take = prepare_take(video, out_dir, view=view)
+    take = prepare_take(video, out_dir, view=view, camino=camino, capture_paths=capture_paths)
     _stage("detectando_pose", total=CaptureJson.model_validate_json((take / "capture.json").read_text(encoding="utf-8")).frames_decoded)
     cfg = EstimatorConfig(providers=("CPUExecutionProvider",)) if cpu else EstimatorConfig()
     run_perception(take, sport, cfg, overwrite=True, progress_cb=progress, estimator=estimator)
@@ -251,7 +293,9 @@ def explore(video: Path, out_dir: Path, sport: SportConfig, *, height_m: float |
     if "address" in events and "top" in events and "impact" in events and events["impact"] > events["top"]:
         durations["tempo_ratio"] = round((events["top"] - events["address"]) / (events["impact"] - events["top"]), 2)
     peaks = {k: (None if not np.isfinite(v := np.nanmax([r[k] for r in rows if r[k] is not None] or [np.nan])) else round(float(v), 2)) for k in ("hands_speed_bh_s", "hands_speed_cm_s", "shoulder_line_rate_deg_s", "hip_line_rate_deg_s", "arm_left_rate_deg_s") if k in names}
-    summary = {"aviso": AVISO, "video": video.name, "fps_archivo": fps, "cuadros": len(rows), "altura_m": height_m, "gate_diria": gate_notes, "eventos_frame": events, "eventos_t_s": {k: round(f / fps, 3) for k, f in events.items()}, "eventos_subcuadro": subframes, "duraciones": durations, "picos": peaks, "en_cada_evento": finite_or_none(at), "diferencias_vs_address": deltas, "calidad": analysis["quality"], "columnas": names}
+    summary = {"aviso": AVISO, "video": video.name, "camino": capture.capture_path_id, "camino_calibrado": capture.capture_path_calibrated,
+               "fps_provenance": capture.fps_provenance, "fps_aviso": next((w for w in analysis["warnings"] if w.startswith("Tasa de cuadros sin verificar")), None),
+               "fps_archivo": fps, "cuadros": len(rows), "altura_m": height_m, "gate_diria": gate_notes, "eventos_frame": events, "eventos_t_s": {k: round(f / fps, 3) for k, f in events.items()}, "eventos_subcuadro": subframes, "duraciones": durations, "picos": peaks, "en_cada_evento": finite_or_none(at), "diferencias_vs_address": deltas, "calidad": analysis["quality"], "columnas": names}
     (take / "datos-eventos.json").write_text(json.dumps(finite_or_none(summary), ensure_ascii=False, indent=2), encoding="utf-8")
     _stage("dibujando", total=len(rows))
     overlay, snaps = render(take, pose, rows, events, fps, capture, progress_cb=progress)

@@ -11,6 +11,13 @@ en el `capture.json` (`vfr_ratio_raw`, `fps_playback_raw`, `first_delta_s`) y,
 cuando difieren, el chequeo lo dice en su propio registro: nunca en silencio.
 Ver CAPTURA.md §El gate de ingesta y el informe 2026-09-14-03.
 
+Un camino DECLARADO sin cronómetro (ADR-016) pasa `capture_path_known` y lo
+dice: la tasa de captura se asume igual a la de reproducción efectiva
+(`stretch_factor` 1,0), la procedencia del fps es `sin_verificar` y viaja al
+`capture.json`, al `analysis.json` y a cada métrica, donde impide todo juicio.
+Un `slomo` sin calibrar se rechaza: sin cronómetro el factor de estiramiento es
+desconocido.
+
 Los chequeos de la Fase 1 (encuadre, tasa de detección, una sola persona)
 todavía no existen: necesitan pose, y la pose necesita clips reales que hayan
 pasado por acá primero.
@@ -26,15 +33,27 @@ from kinelab.ingest.capture_paths import CapturePath, CapturePaths
 from kinelab.sport import SportConfig
 from kinelab.tools.fps_truth import Counted, Truth, first_delta_note
 
-# 1.1.0: `fps_playback` y `vfr_ratio` pasan a ser los EFECTIVOS y aparecen
-# `fps_playback_raw`, `vfr_ratio_raw`, `first_delta_s` y `fps_note`, los
-# cuatro opcionales (un capture.json 1.0.0 sigue validando, con `null`).
-CAPTURE_SCHEMA_VERSION = "1.1.0"
+# 1.2.0: aparecen `capture_path_calibrated` y `fps_provenance` (ADR-016), los
+# dos opcionales. 1.1.0: `fps_playback` y `vfr_ratio` pasan a ser los EFECTIVOS
+# y aparecen `fps_playback_raw`, `vfr_ratio_raw`, `first_delta_s` y `fps_note`.
+# Un capture.json 1.0.0 sigue validando, con los nuevos en su default.
+CAPTURE_SCHEMA_VERSION = "1.2.0"
 
 DURATION_MIN_S = 3.0
 DURATION_MAX_S = 180.0
 FPS_TOLERANCE = 0.02
 VFR_RATIO_MAX = 1.10
+
+# Procedencia del fps real (CONTEXTO.md §procedencia). `medido_aqui` = cronómetro
+# filmado en un camino calibrado; `sin_verificar` = camino declarado, o ninguno.
+FpsProvenance = Literal["medido_aqui", "sin_verificar"]
+
+# Lo que el entrenador tiene que leer antes de cualquier número cuando el camino
+# es declarado. La misma frase viaja al `analysis.json` como warning.
+DECLARED_NOTE = (
+    "camino declarado sin cronómetro: los tiempos asumen que el archivo reproduce "
+    "a la velocidad de captura"
+)
 
 
 class Check(BaseModel):
@@ -68,7 +87,16 @@ class CaptureJson(BaseModel):
     gesture: str
     view: str
     capture_path_id: str
-    fps_real: float | None = Field(description="tasa de captura, del camino calibrado; None si el camino es desconocido")
+    capture_path_calibrated: bool | None = Field(
+        default=None,
+        description="True = camino calibrado con cronómetro; False = declarado (ADR-016); None = desconocido o capture.json 1.1.0",
+    )
+    fps_provenance: FpsProvenance = Field(
+        default="sin_verificar",
+        description="de dónde sale fps_real: `medido_aqui` (cronómetro) o `sin_verificar` (asumido de la reproducción). "
+        "El default es el conservador: sin el campo, nada puede ser juicio.",
+    )
+    fps_real: float | None = Field(description="tasa de captura: del camino calibrado, o asumida igual a la de reproducción en un camino declarado; None si no hay camino usable")
     fps_playback: float = Field(
         description="tasa de reproducción EFECTIVA, medida de los PTS: sin el primer delta cuando el arranque "
         "de la cámara es la única anomalía. Es la que evalúa el gate."
@@ -104,8 +132,9 @@ def _ok(check_id: str, **kw: Any) -> Check:
     return Check(id=check_id, passed=True, **kw)
 
 
-def _skip(check_id: str, reason: str) -> Check:
-    return Check(id=check_id, passed=None, reason=reason)
+def _skip(check_id: str, reason: str, **kw: Any) -> Check:
+    """`passed=None`: el chequeo no se pudo evaluar. No cuenta como fallo, pero se ve."""
+    return Check(id=check_id, passed=None, reason=reason, **kw)
 
 
 # Lo que cada chequeo agrega a su propio registro cuando el número que evaluó no
@@ -132,6 +161,40 @@ def _startup_fps_note(c: Counted) -> str | None:
     )
 
 
+# --- caminos declarados sin calibrar (ADR-016) -------------------------------
+
+
+def path_is_usable(path: CapturePath | None) -> bool:
+    """Si del camino se puede sacar una tasa de captura. Un `slomo` declarado no:
+    sin cronómetro el factor de estiramiento es desconocido."""
+    return path is not None and (path.calibrated or path.mode == "video")
+
+
+def fps_real_for(path: CapturePath | None, c: Counted) -> float | None:
+    """La tasa de CAPTURA que va a usar el motor. Calibrada, sale del cronómetro;
+    declarada, se ASUME igual a la de reproducción efectiva (ADR-016). Nunca se
+    infiere del contenedor un factor de estiramiento."""
+    if not path_is_usable(path):
+        return None
+    return path.fps_real if path.calibrated else round(c.fps_playback_effective, 4)
+
+
+def fps_provenance_for(path: CapturePath | None) -> FpsProvenance:
+    return "medido_aqui" if (path is not None and path.calibrated) else "sin_verificar"
+
+
+def declared_reason(path: CapturePath) -> str:
+    return f"'{path.id}' es un {DECLARED_NOTE} ({path.device}, modo {path.mode}). Filmá el cronómetro para convertirlo en calibrado."
+
+
+def slomo_declared_reason(path: CapturePath) -> str:
+    return (
+        f"El camino '{path.id}' es Slo-Mo y no está calibrado: sin cronómetro el factor de "
+        "estiramiento es desconocido y cualquier tiempo sería ficción. Filmá el cronómetro con "
+        "ese modo y esa transferencia primero."
+    )
+
+
 def run_gate(
     truth: Truth,
     *,
@@ -144,24 +207,36 @@ def run_gate(
     checks: list[Check] = []
     path: CapturePath | None = capture_paths.get(capture_path_id)
     d, c = truth.declared, truth.counted
+    # La tasa de captura con la que se juzga todo lo temporal, y de dónde sale.
+    fps_real = fps_real_for(path, c)
+    provenance = fps_provenance_for(path)
 
-    # 1. El camino tiene que estar calibrado. Sin él no hay contra qué comparar.
+    # 1. El camino tiene que estar en capture-paths.yaml. Calibrado pasa liso;
+    #    declarado pasa diciendo bajo qué supuesto (ADR-016); un slomo sin
+    #    calibrar no pasa, porque su factor de estiramiento es desconocido.
     if path is None:
         checks.append(
             _fail(
                 "capture_path_known",
-                f"El camino de captura '{capture_path_id}' no está calibrado en capture-paths.yaml. "
-                "Filmá el cronómetro con ese modo y esa transferencia primero.",
+                f"El camino de captura '{capture_path_id}' no está en capture-paths.yaml. "
+                "Declaralo (dispositivo y modo) o filmá el cronómetro con ese modo y esa transferencia.",
                 value=capture_path_id,
             )
         )
+    elif not path.calibrated and path.mode == "slomo":
+        checks.append(_fail("capture_path_known", slomo_declared_reason(path), value=capture_path_id))
+    elif not path.calibrated:
+        checks.append(_ok("capture_path_known", value=capture_path_id, reason=declared_reason(path)))
     else:
         checks.append(_ok("capture_path_known", value=capture_path_id))
 
     # 2. Codec: el esperado para ese camino. H.264 donde se esperaba HEVC es la
-    #    firma de "Más compatible" o de un transcodificador en el camino.
+    #    firma de "Más compatible" o de un transcodificador en el camino. Un
+    #    camino que no declara codec (declarado genérico) no tiene qué comparar.
     if path is None:
         checks.append(_skip("codec_matches_path", "no evaluado: camino desconocido"))
+    elif path.codec_expected is None:
+        checks.append(_skip("codec_matches_path", f"no evaluado: el camino '{path.id}' no declara codec", value=d.codec))
     elif d.codec == path.codec_expected:
         checks.append(_ok("codec_matches_path", value=d.codec, expected=path.codec_expected))
     else:
@@ -192,9 +267,18 @@ def run_gate(
         )
 
     # 4. La reproducción del clip tiene que coincidir con la del camino, con la
-    #    misma tasa efectiva que usa el motor.
+    #    misma tasa efectiva que usa el motor. Un camino declarado no tiene
+    #    reproducción medida: no hay contra qué comparar, y no se inventa.
     if path is None:
         checks.append(_skip("fps_matches_path", "no evaluado: camino desconocido"))
+    elif not path.calibrated:
+        checks.append(
+            _skip(
+                "fps_matches_path",
+                f"no evaluado: el camino '{path.id}' no está calibrado y no declara fps de reproducción; no hay contra qué comparar",
+                value=round(c.fps_playback_effective, 3),
+            )
+        )
     else:
         fps = c.fps_playback_effective
         nota_fps = _startup_fps_note(c)
@@ -219,23 +303,29 @@ def run_gate(
     # 5. La tasa de captura tiene que alcanzar para el deporte.
     if path is None:
         checks.append(_skip("fps_min_for_gesture", "no evaluado: camino desconocido"))
-    elif path.fps_real >= sport.fps_min:
-        checks.append(_ok("fps_min_for_gesture", value=path.fps_real, expected=f">= {sport.fps_min}"))
+    elif fps_real is None:
+        checks.append(_skip("fps_min_for_gesture", f"no evaluado: sin factor de estiramiento, el camino '{path.id}' no da tasa de captura"))
     else:
-        checks.append(
-            _fail(
-                "fps_min_for_gesture",
-                f"A {path.fps_real:g} fps de captura no se pueden medir los tiempos del gesto "
-                f"({sport.id} pide al menos {sport.fps_min}).",
-                value=path.fps_real,
-                expected=f">= {sport.fps_min}",
+        # En un camino declarado el número es ASUMIDO, no medido: el chequeo lo
+        # dice en su propio registro, pase o falle (ADR-016).
+        nota_real = None if provenance == "medido_aqui" else f"Tasa de captura asumida igual a la de reproducción: {DECLARED_NOTE}."
+        if fps_real >= sport.fps_min:
+            checks.append(_ok("fps_min_for_gesture", value=fps_real, expected=f">= {sport.fps_min}", reason=nota_real))
+        else:
+            checks.append(
+                _fail(
+                    "fps_min_for_gesture",
+                    f"A {fps_real:g} fps de captura no se pueden medir los tiempos del gesto "
+                    f"({sport.id} pide al menos {sport.fps_min})." + (f" {nota_real}" if nota_real else ""),
+                    value=fps_real,
+                    expected=f">= {sport.fps_min}",
+                )
             )
-        )
 
-    # 6. Duración REAL plausible. Con el camino conocido, la duración real es
-    #    frames / fps_real, que para un Slo-Mo estirado es mucho menor que la
-    #    de reproducción.
-    real_duration = c.frames_decoded / path.fps_real if path is not None else c.playback_span_s
+    # 6. Duración REAL plausible. Con la tasa de captura conocida, la duración
+    #    real es frames / fps_real, que para un Slo-Mo estirado es mucho menor
+    #    que la de reproducción. Sin tasa de captura, el span de PTS.
+    real_duration = c.frames_decoded / fps_real if fps_real is not None else c.playback_span_s
     if DURATION_MIN_S <= real_duration <= DURATION_MAX_S:
         checks.append(_ok("duration_plausible", value=round(real_duration, 3), expected=f"{DURATION_MIN_S:g}–{DURATION_MAX_S:g} s"))
     else:
@@ -288,21 +378,26 @@ def build_capture_json(
     d, c = truth.declared, truth.counted
     path = capture_paths.get(capture_path_id)
     width, height = d.display_size
-    if path is not None:
-        fps_real: float | None = path.fps_real
-        stretch: float | None = path.stretch_factor
-        fps_source = f"capture-paths.yaml:{path.id}"
-        duration = c.frames_decoded / path.fps_real
-    else:
-        fps_real = None
-        stretch = None
+    fps_real = fps_real_for(path, c)
+    if path is None:
+        stretch: float | None = None
         fps_source = "desconocido: camino no calibrado"
-        duration = c.playback_span_s
+    elif path.calibrated:
+        stretch = path.stretch_factor
+        fps_source = f"capture-paths.yaml:{path.id}"
+    else:
+        # Declarado (ADR-016): el estiramiento se asume 1,0 — el archivo
+        # reproduce a la velocidad a la que capturó — y se dice de dónde sale.
+        stretch = 1.0 if fps_real is not None else None
+        fps_source = f"declarado:{path.id}" + ("" if fps_real is not None else " (slomo sin calibrar: factor de estiramiento desconocido)")
+    duration = c.frames_decoded / fps_real if fps_real is not None else c.playback_span_s
     return CaptureJson(
         athlete=athlete,
         gesture=gesture,
         view=view,
         capture_path_id=capture_path_id,
+        capture_path_calibrated=None if path is None else path.calibrated,
+        fps_provenance=fps_provenance_for(path),
         fps_real=fps_real,
         fps_playback=round(c.fps_playback_effective, 4),
         fps_playback_raw=round(c.fps_playback, 4),

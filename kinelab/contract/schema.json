@@ -13,8 +13,9 @@
         "generated_at": {"type": "string"}, "sport": {"type": "string"}, "gesture": {"type": "string"}, "view": {"type": "string"},
         "source": {
           "type": "object", "additionalProperties": false,
-          "required": ["pose_sha256", "master_sha256", "capture_path_id", "fps_real"],
-          "properties": {"pose_sha256": {"type": "string"}, "master_sha256": {"type": ["string", "null"]}, "capture_path_id": {"type": "string"}, "fps_real": {"type": "number"}}
+          "required": ["pose_sha256", "master_sha256", "capture_path_id", "fps_real", "fps_provenance"],
+          "properties": {"pose_sha256": {"type": "string"}, "master_sha256": {"type": ["string", "null"]}, "capture_path_id": {"type": "string"}, "fps_real": {"type": "number"},
+                         "fps_provenance": {"type": "string", "enum": ["medido_aqui", "sin_verificar"]}}
         }
       }
     },
@@ -109,11 +110,12 @@
     },
     "metric": {
       "type": "object", "additionalProperties": false,
-      "required": ["value", "unit", "confidence", "uncertainty", "view", "mdc", "level", "fps_min", "fps_min_met", "judgment_allowed", "null_reason"],
+      "required": ["value", "unit", "confidence", "uncertainty", "view", "mdc", "level", "fps_min", "fps_min_met", "fps_provenance", "judgment_allowed", "null_reason"],
       "properties": {
         "value": {"type": ["number", "null"]}, "unit": {"type": "string"}, "confidence": {"type": ["object", "null"]}, "uncertainty": {"type": ["object", "null"]},
         "view": {"type": "string"}, "mdc": {"type": ["number", "null"]}, "level": {"type": "integer", "enum": [1, 2]}, "fps_min": {"type": "number"},
-        "fps_min_met": {"type": "boolean"}, "judgment_allowed": {"type": "boolean"}, "null_reason": {"type": ["string", "null"]}
+        "fps_min_met": {"type": "boolean"}, "fps_provenance": {"type": "string", "enum": ["medido_aqui", "sin_verificar"]},
+        "judgment_allowed": {"type": "boolean"}, "null_reason": {"type": ["string", "null"]}
       }
     }
   }

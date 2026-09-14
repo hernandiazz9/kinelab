@@ -83,11 +83,15 @@ def test_registry_rules_and_judgment():
     with pytest.raises(ValueError, match="nivel 3"):
         Metric(id="x_factor", unit="deg", level=3, views=("face_on",), fps_min=60, anchored_to=(), reference_frame="image_px")
     m = r.register(Metric(id="sway_cm", unit="cm", level=1, views=("face_on",), fps_min=60, anchored_to=("address", "top"), reference_frame="image_px", mdc=1.5, reference=Reference("range", "pares", "x", "y", range=(0.0, 4.0))))
-    assert judgment_allowed(m, view="face_on", fps_real=120) is True
-    assert judgment_allowed(m, view="down_the_line", fps_real=120) is False
-    assert judgment_allowed(m, view="face_on", fps_real=30) is False
+    ok = dict(view="face_on", fps_real=120, fps_provenance="medido_aqui")
+    assert judgment_allowed(m, **ok) is True
+    assert judgment_allowed(m, view="down_the_line", fps_real=120, fps_provenance="medido_aqui") is False
+    assert judgment_allowed(m, view="face_on", fps_real=30, fps_provenance="medido_aqui") is False
+    # ADR-016: con la tasa de cuadros sin verificar no hay juicio, aunque estén
+    # el MDC, el fps y la vista. El eje del tiempo es un supuesto.
+    assert judgment_allowed(m, view="face_on", fps_real=120, fps_provenance="sin_verificar") is False
     wide = Metric(id="wide", unit="cm", level=1, views=("face_on",), fps_min=60, anchored_to=(), reference_frame="image_px", mdc=5.0, reference=Reference("range", "pares", "x", "y", range=(0.0, 4.0)))
-    assert judgment_allowed(wide, view="face_on", fps_real=120) is False, "MDC mayor que el rango: no es juicio"
+    assert judgment_allowed(wide, **ok) is False, "MDC mayor que el rango: no es juicio"
     with pytest.raises(ValueError, match="repetida"):
         r.register(m)
 
@@ -146,6 +150,52 @@ def test_schema_rejects_renamed_field(clips, capture_paths_yaml, tmp_path):
     assert any("rep_cnt" in e for e in errs) and any("rep_count" in e for e in errs)
 
 
+def test_a_declared_path_keeps_the_numbers_and_kills_every_judgment(clips, capture_paths_yaml, tmp_path):
+    """ADR-016 de punta a punta: con la MISMA pose y el MISMO fps, cambiar la
+    procedencia de `medido_aqui` a `sin_verificar` no mueve un valor y apaga
+    todos los juicios. Y el aviso queda primero en `warnings`."""
+    take, _ = _synthetic_take(clips, capture_paths_yaml, tmp_path)
+    calibrado = analyze_take(take, GOLF, write=False, height_m=1.80)
+    con_mdc = [mid for mid, v in calibrado["reps"][0]["metrics"].items() if v["judgment_allowed"]]
+    assert con_mdc, "el fixture tiene que llegar con al menos una métrica de juicio"
+
+    cj = json.loads((take / "capture.json").read_text(encoding="utf-8"))
+    cj["capture_path_calibrated"], cj["fps_provenance"] = False, "sin_verificar"
+    (take / "capture.json").write_text(json.dumps(cj), encoding="utf-8")
+    declarado = analyze_take(take, GOLF, write=False, height_m=1.80)
+
+    a, b = calibrado["reps"][0]["metrics"], declarado["reps"][0]["metrics"]
+    assert [a[mid]["value"] for mid in a] == [b[mid]["value"] for mid in a], "la medición no cambia"
+    assert all(not v["judgment_allowed"] for v in b.values())
+    assert all(v["fps_provenance"] == "sin_verificar" for v in b.values())
+    assert declarado["header"]["source"]["fps_provenance"] == "sin_verificar"
+    assert declarado["warnings"][0].startswith("Tasa de cuadros sin verificar")
+    assert "reproduce a la velocidad de captura" in declarado["warnings"][0]
+    assert not any(w.startswith("Tasa de cuadros sin verificar") for w in calibrado["warnings"])
+
+
+def test_schema_requires_fps_provenance_in_header_and_in_every_metric(clips, capture_paths_yaml, tmp_path):
+    """ADR-016: la procedencia del fps no es opcional. Un `analysis.json` sin
+    ella no valida — ni en el header ni en una métrica —, así que no puede
+    escribirse un análisis que esconda bajo qué supuesto se midió el tiempo."""
+    take, _ = _synthetic_take(clips, capture_paths_yaml, tmp_path)
+    a = json.loads(json.dumps(analyze_take(take, GOLF, write=False, height_m=1.80), default=lambda o: o.tolist()))
+    assert validate_analysis(a) == []
+
+    sin_header = json.loads(json.dumps(a))
+    del sin_header["header"]["source"]["fps_provenance"]
+    assert any("fps_provenance" in e for e in validate_analysis(sin_header))
+
+    sin_metrica = json.loads(json.dumps(a))
+    mid = next(iter(sin_metrica["reps"][0]["metrics"]))
+    del sin_metrica["reps"][0]["metrics"][mid]["fps_provenance"]
+    assert any("fps_provenance" in e for e in validate_analysis(sin_metrica))
+
+    mal = json.loads(json.dumps(a))
+    mal["header"]["source"]["fps_provenance"] = "a_ojo"
+    assert any("a_ojo" in e for e in validate_analysis(mal)), "procedencia fuera del enum"
+
+
 def test_repo_example_is_valid():
     p = REPO / "data" / "examples" / "analysis.example.json"
     if not p.is_file():
@@ -161,6 +211,10 @@ def test_metrics_in_analysis(clips, capture_paths_yaml, tmp_path):
     bs = m["backswing_duration_ms"]
     assert abs(bs["value"] - 900.0) <= 25 and bs["unit"] == "ms" and bs["null_reason"] is None
     assert bs["judgment_allowed"] is (bs["mdc"] is not None), "juicio sólo con MDC de la tabla del arnés"
+    # La procedencia del fps viaja en cada métrica y en el header (ADR-016).
+    assert bs["fps_provenance"] == "medido_aqui" and "medido_aqui" in bs["uncertainty"]["method"]
+    assert a["header"]["source"]["fps_provenance"] == "medido_aqui"
+    assert all(m[mid]["fps_provenance"] == "medido_aqui" for mid in m)
     assert bs["uncertainty"]["low"] < bs["value"] < bs["uncertainty"]["high"]
     assert m["pelvis_thrust_top_cm"]["value"] is None and "down_the_line" in m["pelvis_thrust_top_cm"]["null_reason"]
     assert abs(m["pelvis_sway_top_cm"]["value"]) < 1.0, "la pelvis sintética no se mueve"
@@ -304,7 +358,7 @@ def test_analysis_carries_the_impact_subframe(clips, capture_paths_yaml, tmp_pat
     take, sw = _synthetic_take(clips, capture_paths_yaml, tmp_path)
     a = analyze_take(take, GOLF)
     assert validate_analysis(json.loads((take / "analysis.json").read_text())) == []
-    assert a["header"]["schema_version"] == "1.1.0", "campo nuevo opcional: minor"
+    assert a["header"]["schema_version"] == "1.2.0", "`subframe` (1.1.0) y `fps_provenance` (1.2.0)"
     for rep in a["events"]:
         assert rep["impact"]["subframe"]["fraction"] is not None
         assert rep["impact"]["frame"] == json.loads((take / "analysis.json").read_text())["events"][rep["rep"] - 1]["impact"]["frame"]

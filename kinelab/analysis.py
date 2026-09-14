@@ -18,7 +18,7 @@ from kinelab.contract.write import write_analysis
 from kinelab.events.manual import apply_edits, load_edits
 from kinelab.events.segmentation import segment_reps
 from kinelab.events.signal import butterworth_lowpass, cutoff_for_fps, hands_center, speed
-from kinelab.ingest.gate import CaptureJson
+from kinelab.ingest.gate import DECLARED_NOTE, CaptureJson
 from kinelab.ingest.session import sha256_file
 from kinelab.metrics.core import MetricContext, evaluate
 from kinelab.metrics.generic import gain, repeatability_curves, repeatability_scalar
@@ -28,7 +28,7 @@ from kinelab.perception.gaps import interpolate_gaps
 from kinelab.perception.posestore import POSE_FILE, PoseData, load_pose
 from kinelab.sport import SportConfig
 
-SCHEMA_VERSION = "1.1.0"  # 1.1.0: `subframe` opcional en los eventos (encargo 02)
+SCHEMA_VERSION = "1.2.0"  # 1.2.0: `fps_provenance` en el header y en cada métrica (ADR-016); 1.1.0: `subframe` opcional en los eventos
 SERIES_MAX_HZ = 10.0
 QUALITY_MIN_DETECTION = 0.90
 QUALITY_MAX_PLAUSIBILITY_REJECT = 0.05
@@ -122,6 +122,11 @@ def build_analysis(take_dir: Path, capture: CaptureJson, pose: PoseData, sport: 
     ev = sport.events
     if ev is None:
         raise AnalysisError(f"{sport.id}: el deporte no define eventos todavía.")
+    if capture.fps_real is None:
+        raise AnalysisError(
+            f"{take_dir}: el capture.json no tiene tasa de captura (camino '{capture.capture_path_id}'). "
+            "Declará el camino en capture-paths.yaml o filmá el cronómetro; sin fps no hay eje de tiempo."
+        )
     fps = float(capture.fps_real)
     sig = swing_signals(pose, fps, cutoff_hz_max=ev.cutoff_hz_max, view=capture.view)
     cands, rejected = segment_reps(sig.speed, fps, ev.segmentation)
@@ -164,7 +169,7 @@ def build_analysis(take_dir: Path, capture: CaptureJson, pose: PoseData, sport: 
         gains: list[dict] = []
         for r, e in zip(reps, events_out):
             ev_frames = {k: e[k]["frame"] for k in ev.order if e.get(k)}
-            ctx = MetricContext(keypoints=kp, scores=pose.scores, fps=fps, view=capture.view, body_height_px=sig.body_height, events=ev_frames, frame_start=r["frame_start"], frame_end=r["frame_end"], athlete_height_m=height_m, hands_speed=sig.speed)
+            ctx = MetricContext(keypoints=kp, scores=pose.scores, fps=fps, view=capture.view, body_height_px=sig.body_height, events=ev_frames, frame_start=r["frame_start"], frame_end=r["frame_end"], fps_provenance=capture.fps_provenance, athlete_height_m=height_m, hands_speed=sig.speed)
             for m in registry:
                 out = evaluate(m, ctx, joints=sm.joints.get(m.id, ()))
                 r["metrics"][m.id] = out
@@ -183,6 +188,13 @@ def build_analysis(take_dir: Path, capture: CaptureJson, pose: PoseData, sport: 
             vals = [v for v in vals if v is not None]
             gain_out[key] = {"value": round(float(np.median(vals)), 3) if vals else None, "unit": "ratio", "n": len(vals), "confidence": None}
         gain_out["sequence_order"] = {"by_rep": [g["sequence_order"] for g in gains], "note": "indeterminado cuando dos picos caen a < 2 cuadros (ADR-008)"}
+    # El supuesto del camino declarado, antes de cualquier número (ADR-016).
+    if capture.fps_provenance != "medido_aqui":
+        warnings.insert(
+            0,
+            f"Tasa de cuadros sin verificar: {DECLARED_NOTE} ('{capture.capture_path_id}', {fps:g} fps asumidos). "
+            "Los tiempos y las duraciones son descriptivos; ninguna métrica puede ser juicio hasta filmar el cronómetro.",
+        )
     step = max(1, int(math.ceil(fps / SERIES_MAX_HZ)))
     if edits:
         warnings.append(f"{len(edits)} corrección(es) manual(es) aplicadas desde events-manual.json.")
@@ -192,7 +204,7 @@ def build_analysis(take_dir: Path, capture: CaptureJson, pose: PoseData, sport: 
             "engine_version": kinelab.__version__,
             "registry_version": registry.version,
             "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
-            "source": {"pose_sha256": sha256_file(take_dir / POSE_FILE), "master_sha256": None, "capture_path_id": capture.capture_path_id, "fps_real": fps},
+            "source": {"pose_sha256": sha256_file(take_dir / POSE_FILE), "master_sha256": None, "capture_path_id": capture.capture_path_id, "fps_real": fps, "fps_provenance": capture.fps_provenance},
             "sport": sport.id,
             "gesture": capture.gesture,
             "view": capture.view,

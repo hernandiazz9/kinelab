@@ -9,7 +9,13 @@ from pathlib import Path
 import pytest
 import yaml
 
-from kinelab.ingest.capture_paths import CapturePath, CapturePaths, load_capture_paths
+from kinelab.ingest.capture_paths import (
+    GENERIC_VIDEO_ID,
+    CapturePath,
+    CapturePaths,
+    load_capture_paths,
+    resolve_path_id,
+)
 
 REPO = Path(__file__).resolve().parents[1]
 
@@ -45,7 +51,7 @@ def _yaml_with(tmp_path: Path, *paths: dict) -> Path:
 def test_load_fixture(capture_paths_yaml):
     cp = load_capture_paths(capture_paths_yaml)
     assert cp.schema_version == "1.0.0"
-    assert len(cp.paths) == 4
+    assert len(cp.paths) == 7
     p = cp.get("test-h264-slomo-240-to-30")
     assert p is not None
     assert p.mode == "slomo"
@@ -121,13 +127,6 @@ def test_extra_field_is_rejected(tmp_path):
         load_capture_paths(_yaml_with(tmp_path, bad))
 
 
-def test_missing_field_is_rejected(tmp_path):
-    bad = copy.deepcopy(VALID)
-    del bad["fps_method"]
-    with pytest.raises(ValueError, match="fps_method"):
-        load_capture_paths(_yaml_with(tmp_path, bad))
-
-
 @pytest.mark.parametrize("bad_id", ["iPhone17", "con espacio", "-empieza-con-guion", "con_guion_bajo", ""])
 def test_id_must_be_a_slug(tmp_path, bad_id):
     with pytest.raises(ValueError):
@@ -155,16 +154,93 @@ def test_model_direct_construction():
 
 
 def test_repo_capture_paths_yaml_is_valid():
-    """El archivo real del repo: vacío hasta que se filme el cronómetro, y
-    válido siempre. No se exige vacío: llenarlo es el trabajo del humano."""
+    """El archivo real del repo: válido siempre. Los calibrados los llena el
+    humano con el cronómetro; los declarados ya están (ADR-016)."""
     cp = load_capture_paths(REPO / "data" / "capture-paths.yaml")
-    assert cp.schema_version == "1.0.0"
+    assert cp.schema_version == "1.1.0", "el campo `calibrated` es nuevo y opcional: minor"
     for p in cp.paths:
-        assert p.stretch_factor == pytest.approx(p.fps_real / p.fps_playback, rel=0.01)
+        if p.calibrated:
+            assert p.stretch_factor == pytest.approx(p.fps_real / p.fps_playback, rel=0.01)
+        else:
+            assert all(getattr(p, f) is None for f in ("fps_real", "fps_playback", "stretch_factor", "fps_method", "calibrated_on", "calibrated_by"))
+            assert p.mode == "video", f"{p.id}: un slomo sin calibrar no entra al repo (ADR-016)"
+
+
+def test_repo_has_the_declared_paths_of_adr_016():
+    """Los tres que pide ADR-016: el genérico y los dos del teléfono que hay."""
+    cp = load_capture_paths(REPO / "data" / "capture-paths.yaml")
+    assert GENERIC_VIDEO_ID in cp.ids()
+    for pid in (GENERIC_VIDEO_ID, "s22ultra-video-fhd60-cable", "s22ultra-video-fhd30-cable"):
+        p = cp.get(pid)
+        assert p is not None and p.calibrated is False and p.mode == "video"
+    generic = cp.get(GENERIC_VIDEO_ID)
+    assert generic.nominal_fps is None and generic.codec_expected is None, "el genérico no sabe nada del archivo"
+    assert cp.get("s22ultra-video-fhd30-cable").codec_expected == "h264", "medido en el original del S22"
+
+
+# --- caminos declarados sin calibrar (ADR-016) ----------------------------
+
+DECLARED = {"id": "declarado-video", "device": "teléfono cualquiera", "mode": "video", "transfer": "cable", "calibrated": False}
+
+
+def test_declared_path_loads_with_everything_in_null(tmp_path):
+    cp = load_capture_paths(_yaml_with(tmp_path, DECLARED))
+    p = cp.get("declarado-video")
+    assert p is not None and p.calibrated is False
+    assert (p.fps_real, p.fps_playback, p.stretch_factor, p.fps_method, p.calibrated_on, p.calibrated_by) == (None,) * 6
+    assert p.nominal_fps is None and p.codec_expected is None
+
+
+def test_declared_path_may_declare_nominal_fps_and_codec(tmp_path):
+    cp = load_capture_paths(_yaml_with(tmp_path, dict(DECLARED, nominal_fps=60, codec_expected="h264")))
+    p = cp.get("declarado-video")
+    assert p.nominal_fps == 60 and p.codec_expected == "h264"
+
+
+def test_a_slomo_declared_path_loads_so_the_gate_can_reject_it(tmp_path):
+    """El YAML lo acepta a propósito: la frase para el entrenador la dice el
+    gate, no un error de carga."""
+    cp = load_capture_paths(_yaml_with(tmp_path, dict(DECLARED, mode="slomo")))
+    assert cp.get("declarado-video").mode == "slomo"
+
+
+@pytest.mark.parametrize("field,value", [("fps_real", 30.0), ("fps_playback", 30.0), ("stretch_factor", 1.0), ("fps_method", "a ojo"), ("calibrated_on", "2026-09-14"), ("calibrated_by", "hernan")])
+def test_declared_path_cannot_carry_calibration_numbers(tmp_path, field, value):
+    """Declarar no es medir: los seis campos del cronómetro tienen que ir en null."""
+    with pytest.raises(ValueError, match="sin calibrar"):
+        load_capture_paths(_yaml_with(tmp_path, dict(DECLARED, **{field: value})))
+
+
+@pytest.mark.parametrize("field", ["fps_real", "fps_playback", "stretch_factor", "fps_method", "calibrated_on", "calibrated_by", "nominal_fps", "codec_expected"])
+def test_calibrated_path_needs_every_field(tmp_path, field):
+    bad = copy.deepcopy(VALID)
+    del bad[field]
+    with pytest.raises(ValueError, match=field):
+        load_capture_paths(_yaml_with(tmp_path, bad))
+
+
+def test_calibrated_is_true_by_default(tmp_path):
+    """Un camino escrito antes de ADR-016 (sin el campo) sigue siendo calibrado."""
+    cp = load_capture_paths(_yaml_with(tmp_path, VALID))
+    assert cp.get(VALID["id"]).calibrated is True
+
+
+def test_resolve_path_id_names_the_alternatives(tmp_path):
+    cp = load_capture_paths(_yaml_with(tmp_path, DECLARED))
+    assert resolve_path_id("declarado-video", cp).device == "teléfono cualquiera"
+    with pytest.raises(ValueError, match="declarado-video"):
+        resolve_path_id("no-existe", cp)
+
+
+def test_resolve_path_id_without_argument_uses_the_repo_file():
+    assert resolve_path_id(GENERIC_VIDEO_ID).calibrated is False
 
 
 def test_repo_example_is_valid():
+    """El ejemplo comentado: tiene los dos tipos de camino y los dos válidos."""
     cp = load_capture_paths(REPO / "data" / "examples" / "capture-paths.example.yaml")
     assert len(cp.paths) >= 1
+    assert {p.calibrated for p in cp.paths} == {True, False}, "el ejemplo muestra calibrado y declarado"
     for p in cp.paths:
-        assert p.stretch_factor == pytest.approx(p.fps_real / p.fps_playback, rel=0.01)
+        if p.calibrated:
+            assert p.stretch_factor == pytest.approx(p.fps_real / p.fps_playback, rel=0.01)

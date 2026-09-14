@@ -1,6 +1,6 @@
 {
   "header": {
-    "schema_version": "1.0.0",
+    "schema_version": "1.2.0",
     "engine_version": "0.0.1",
     "registry_version": "0.1.0",
     "generated_at": "2026-09-12T12:00:00+00:00",
@@ -8,7 +8,8 @@
       "pose_sha256": "ae3a0c96891da288c198a9fa2a0e3e73bf2f390423d56f48328409e7fb1334fe",
       "master_sha256": null,
       "capture_path_id": "iphone17pro-video-1080p120-airdrop",
-      "fps_real": 120.0
+      "fps_real": 120.0,
+      "fps_provenance": "medido_aqui"
     },
     "sport": "golf",
     "gesture": "driver",

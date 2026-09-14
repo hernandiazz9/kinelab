@@ -10,7 +10,7 @@
 #   4. Copiar acá lo que imprime: fps de captura, fps de reproducción, factor
 #      de estiramiento, codec, ratio delta_max/delta_min.
 
-schema_version: "1.0.0"
+schema_version: "1.1.0"
 paths:
   # El camino por defecto del protocolo: modo Video normal, sin retiming.
   - id: iphone17pro-video-1080p120-airdrop      # minúsculas, dígitos y guiones; es lo que se pasa en --camino
@@ -26,6 +26,26 @@ paths:
     calibrated_on: 2026-09-14                    # fecha ISO
     calibrated_by: hernan
     notes: "delta_max/delta_min = 1.004"         # opcional
+
+  # Un camino DECLARADO (ADR-016): sin cronómetro. Dispositivo y modo los dice
+  # el usuario; la tasa de captura se asume igual a la de reproducción del
+  # archivo, con procedencia `sin_verificar`, y ninguna métrica puede ser
+  # juicio. Los seis campos del cronómetro van en null — declarar no es medir —
+  # y `nominal_fps` / `codec_expected` son opcionales. Sólo mode: video.
+  - id: telefono-cualquiera-video-cable
+    device: "el teléfono que haya"
+    mode: video
+    transfer: cable-dcim
+    calibrated: false                            # ESTO es lo que lo hace declarado
+    nominal_fps: 60                              # lo que dice el ajuste; null si no se sabe
+    codec_expected: null                         # null = el chequeo de codec queda sin evaluar
+    fps_real: null
+    fps_playback: null
+    stretch_factor: null
+    fps_method: null
+    calibrated_on: null
+    calibrated_by: null
+    notes: "filmar el cronómetro lo convierte en calibrado y los clips se re-analizan"
 
   # Un Slo-Mo: el iPhone captura a 240 y el archivo reproduce a 30. Los cuadros
   # están todos; los timestamps los estiran ×8. El motor convierte a tiempo real

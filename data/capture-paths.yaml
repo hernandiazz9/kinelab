@@ -1,11 +1,71 @@
-# Caminos de captura calibrados (CONTRATO.md §capture-paths.yaml, CAPTURA.md
-# §Calibración con cronómetro). Un camino = dispositivo + modo + transferencia,
-# con las dos tasas medidas: la de captura (fps_real, del cronómetro filmado) y
-# la de reproducción (fps_playback, de los PTS). Es configuración, no
-# inferencia: un clip cuyo camino no está acá se rechaza en la ingesta.
+# Caminos de captura (CONTRATO.md §capture-paths.yaml, CAPTURA.md §Calibración
+# con cronómetro y §Caminos declarados sin calibrar). Un camino = dispositivo +
+# modo + transferencia. Es configuración, no inferencia: un clip cuyo camino no
+# está acá se rechaza en la ingesta.
 #
-# Se llena con `python -m kinelab.tools.fps_truth clip.mov --duracion-real S`,
-# nunca desde el fps nominal del modo. Ejemplo comentado, campo por campo:
-# data/examples/capture-paths.example.yaml
-schema_version: "1.0.0"
-paths: []
+# Dos clases de camino:
+#
+#   calibrated: true   las dos tasas salen de un cronómetro filmado
+#                      (`python -m kinelab.tools.fps_truth clip.mov --duracion-real S`),
+#                      nunca del fps nominal del modo. Es el único que habilita
+#                      juicio: la procedencia del fps es `medido_aqui`.
+#   calibrated: false  dispositivo y modo DECLARADOS por el usuario, sin
+#                      cronómetro (ADR-016). Los seis campos de la calibración
+#                      van en null; el fps de captura se asume igual al de
+#                      reproducción del archivo, con procedencia
+#                      `sin_verificar`, y ninguna métrica puede ser juicio.
+#                      Sólo mode: video — un slomo sin calibrar se rechaza.
+#
+# Ejemplo comentado campo por campo: data/examples/capture-paths.example.yaml
+schema_version: "1.1.0"
+paths:
+  # "No sé con qué se filmó." Es el default del modo exploración
+  # (`python -m kinelab datos VIDEO`): analiza igual y deja el supuesto escrito.
+  - id: desconocido-video
+    device: "desconocido"
+    mode: video
+    transfer: "desconocido"
+    calibrated: false
+    nominal_fps: null # no se sabe: el fps de captura se asume igual al de reproducción
+    codec_expected: null # no se sabe: el chequeo de codec queda sin evaluar
+    fps_real: null
+    fps_playback: null
+    stretch_factor: null
+    fps_method: null
+    calibrated_on: null
+    calibrated_by: null
+    notes: "camino genérico de ADR-016; los tiempos asumen que el archivo reproduce a la velocidad de captura"
+
+  # El teléfono que hay: Galaxy S22 Ultra, modo Video, archivo crudo de
+  # DCIM/Camera por cable (sin Galería, que recomprime). Declarados, no
+  # calibrados: filmar el cronómetro los convierte en calibrados y los clips
+  # se re-analizan sin volver a correr el modelo (invariantes 1 y 18).
+  - id: s22ultra-video-fhd60-cable
+    device: "Samsung Galaxy S22 Ultra"
+    mode: video
+    transfer: cable-dcim
+    calibrated: false
+    nominal_fps: 60 # lo que dice el ajuste de la cámara (Auto FPS apagado)
+    codec_expected: null # sin medir todavía en este modo
+    fps_real: null
+    fps_playback: null
+    stretch_factor: null
+    fps_method: null
+    calibrated_on: null
+    calibrated_by: null
+    notes: "sin cronómetro; 60 fps de captura siguen por debajo del fps_min de golf (100)"
+
+  - id: s22ultra-video-fhd30-cable
+    device: "Samsung Galaxy S22 Ultra"
+    mode: video
+    transfer: cable-dcim
+    calibrated: false
+    nominal_fps: 30
+    codec_expected: h264 # medido en 20260907_170638.mp4 (informe 2026-09-14-03)
+    fps_real: null
+    fps_playback: null
+    stretch_factor: null
+    fps_method: null
+    calibrated_on: null
+    calibrated_by: null
+    notes: "sin cronómetro; el primer delta de PTS es el del arranque de la cámara (0,201 s medidos)"

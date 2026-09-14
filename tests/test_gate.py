@@ -97,7 +97,9 @@ def test_hevc120_on_calibrated_path_is_ok_end_to_end(clips, paths, tmp_path):
     assert [c.id for c in capture.gate.checks] == CHECK_ORDER
 
     # Lo que dice el capture.json es lo que dice el contrato.
-    assert capture.schema_version == "1.1.0"
+    assert capture.schema_version == "1.2.0"
+    assert capture.capture_path_calibrated is True
+    assert capture.fps_provenance == "medido_aqui"
     assert capture.codec == "hevc"
     assert (capture.width, capture.height) == (96, 96)
     assert capture.rotation_deg == 0
@@ -180,7 +182,7 @@ def test_unknown_capture_path_is_rejected_and_dependent_checks_are_not_evaluated
     g = _gate(clips["real240_h264"], paths, "no-calibrado")
     assert g.verdict == "reject"
     assert _failed(g) == ["capture_path_known"]
-    assert "calibrado" in g.reasons[0] and "cronómetro" in g.reasons[0]
+    assert "no está en capture-paths.yaml" in g.reasons[0] and "cronómetro" in g.reasons[0]
     for cid in ("codec_matches_path", "fps_matches_path", "fps_min_for_gesture"):
         assert _check(g, cid).passed is None, cid
     for cid in ("vfr_ratio_le_1_10", "duration_plausible", "rotation_normalized", "view_declared", "gesture_known"):
@@ -191,6 +193,8 @@ def test_unknown_capture_path_still_writes_capture_json_without_fps_real(clips, 
     take_dir, capture = _ingest(clips["real240_h264"], paths, tmp_path, "no-calibrado")
     assert capture.gate.verdict == "reject"
     assert capture.fps_real is None
+    assert capture.capture_path_calibrated is None
+    assert capture.fps_provenance == "sin_verificar"
     assert capture.stretch_factor is None
     assert capture.fps_source.startswith("desconocido")
     assert capture.duration_s == pytest.approx(capture.duration_playback_s)
@@ -253,6 +257,84 @@ def test_every_check_is_reported_even_after_the_first_failure(clips, paths):
     assert len(g.reasons) == 5
 
 
+# --- caminos declarados sin calibrar (ADR-016) -------------------------------
+
+
+def test_declared_video_path_passes_and_says_under_which_assumption(clips, paths):
+    """El camino está en el YAML pero no tiene cronómetro: `capture_path_known`
+    pasa y lo dice; nadie compara la reproducción contra nada; la tasa de
+    captura se ASUME igual a la de reproducción."""
+    g = _gate(clips["real240_h264"], paths, "test-declarado-video")
+    known = _check(g, "capture_path_known")
+    assert known.passed is True
+    assert "declarado sin cronómetro" in known.reason and "reproduce a la velocidad de captura" in known.reason
+    assert known.reason not in g.reasons, "un chequeo que pasa no entra en reasons"
+
+    assert _check(g, "fps_matches_path").passed is None
+    assert "no hay contra qué comparar" in _check(g, "fps_matches_path").reason
+    assert _check(g, "codec_matches_path").passed is None, "el camino no declara codec"
+
+    fps_min = _check(g, "fps_min_for_gesture")
+    assert fps_min.passed is True and fps_min.value == pytest.approx(240, abs=0.5)
+    assert "asumida igual a la de reproducción" in fps_min.reason
+    assert _check(g, "duration_plausible").value == pytest.approx(4.0, abs=0.05)
+    assert g.verdict == "ok", g.reasons
+
+
+def test_declared_path_with_codec_still_compares_it(clips, paths):
+    g = _gate(clips["hevc120"], paths, "test-declarado-video-h264") if "hevc120" in clips else None
+    if g is None:
+        pytest.skip("sin fixture hevc120")
+    assert _check(g, "codec_matches_path").passed is False
+    assert g.verdict == "reject"
+    g_ok = _gate(clips["real240_h264"], paths, "test-declarado-video-h264")
+    assert _check(g_ok, "codec_matches_path").passed is True and g_ok.verdict == "ok"
+
+
+def test_declared_path_below_fps_min_is_still_rejected(clips, paths):
+    """Declarar no ablanda el gate: a 30 fps los tiempos del swing no existen."""
+    g = _gate(clips["real30_h264"], paths, "test-declarado-video")
+    assert g.verdict == "reject"
+    assert _failed(g) == ["fps_min_for_gesture"]
+    assert "100" in g.reasons[0] and "asumida" in g.reasons[0]
+
+
+def test_declared_slomo_path_is_rejected_with_the_phrase_for_the_coach(clips, paths):
+    g = _gate(clips["slowed30_h264"], paths, "test-declarado-slomo")
+    assert g.verdict == "reject"
+    assert _failed(g) == ["capture_path_known"]
+    r = g.reasons[0]
+    assert "Slo-Mo" in r and "estiramiento es desconocido" in r and "cronómetro" in r
+    # Sin factor de estiramiento no hay tasa de captura: los chequeos que la
+    # necesitan quedan sin evaluar, no en un número inventado.
+    assert _check(g, "fps_min_for_gesture").passed is None
+    assert _check(g, "fps_matches_path").passed is None
+
+
+def test_declared_path_capture_json_carries_the_provenance(clips, paths, tmp_path):
+    take_dir, capture = _ingest(clips["real240_h264"], paths, tmp_path, "test-declarado-video")
+    assert capture.gate.verdict == "ok"
+    assert capture.capture_path_calibrated is False
+    assert capture.fps_provenance == "sin_verificar"
+    assert capture.fps_source == "declarado:test-declarado-video"
+    assert capture.fps_real == pytest.approx(capture.fps_playback), "la de captura se asume igual a la de reproducción"
+    assert capture.stretch_factor == 1.0
+    assert capture.duration_s == pytest.approx(4.0, abs=0.05)
+    escrito = CaptureJson.model_validate_json((take_dir / "capture.json").read_text(encoding="utf-8"))
+    assert escrito == capture
+
+
+def test_declared_slomo_capture_json_has_no_capture_rate(clips, paths, tmp_path):
+    _, capture = _ingest(clips["slowed30_h264"], paths, tmp_path, "test-declarado-slomo")
+    assert capture.gate.verdict == "reject"
+    assert capture.fps_real is None and capture.stretch_factor is None
+    assert capture.capture_path_calibrated is False
+    assert capture.fps_provenance == "sin_verificar"
+    assert capture.fps_source.startswith("declarado:test-declarado-slomo")
+    assert "estiramiento desconocido" in capture.fps_source
+    assert capture.duration_s == pytest.approx(capture.duration_playback_s), "sin tasa de captura, el span de PTS"
+
+
 # --- el primer delta de PTS no es tasa variable ------------------------------
 
 
@@ -295,7 +377,8 @@ def test_first_delta_clip_capture_json_keeps_both_numbers(clips, paths, tmp_path
 
 def test_a_capture_json_1_0_0_still_validates(tmp_path):
     """Campo nuevo y opcional = minor: un `capture.json` escrito antes de esto
-    sigue parseando, con los brutos en `null` (CONTRATO.md §Versionado)."""
+    sigue parseando, con los brutos en `null` y la procedencia en su default
+    conservador (CONTRATO.md §Versionado)."""
     viejo = {
         "schema_version": "1.0.0", "athlete": "hernan", "gesture": "driver", "view": "face_on",
         "capture_path_id": "x", "fps_real": 120.0, "fps_playback": 119.85, "stretch_factor": 1.0,
@@ -311,6 +394,8 @@ def test_a_capture_json_1_0_0_still_validates(tmp_path):
     assert c.fps_playback == 119.85
     assert c.fps_playback_raw is None and c.vfr_ratio_raw is None
     assert c.first_delta_s is None and c.fps_note is None
+    assert c.capture_path_calibrated is None
+    assert c.fps_provenance == "sin_verificar", "sin el campo, nada puede ser juicio"
 
 
 # --- la sesión en disco -----------------------------------------------------

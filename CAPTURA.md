@@ -155,6 +155,49 @@ retimeado.
 
 ---
 
+## Caminos declarados sin calibrar (ADR-016)
+
+El cronómetro es la única forma de saber la tasa de captura, y hasta que se
+filme no hay ninguna. Lo que sí se puede hacer es **declarar** el camino:
+`calibrated: false` en `capture-paths.yaml`, dispositivo y modo dichos por el
+usuario, los seis campos del cronómetro (`fps_real`, `fps_playback`,
+`stretch_factor`, `fps_method`, `calibrated_on`, `calibrated_by`) en `null`.
+
+| | camino calibrado | camino declarado |
+|---|---|---|
+| `fps_real` | del cronómetro filmado | **se asume** igual al `fps_playback` efectivo |
+| `stretch_factor` | medido (1,0 en video, 8,0 en un Slo-Mo de 240 a 30) | 1,0 por supuesto |
+| `fps_provenance` | `medido_aqui` | `sin_verificar` |
+| juicio | posible, si hay MDC | **nunca** |
+| modos | `video` y `slomo` | sólo `video` |
+| `nominal_fps`, `codec_expected` | obligatorios | opcionales (`null` = no se sabe) |
+
+El supuesto es exactamente uno: **que el archivo reproduce a la velocidad a la
+que capturó.** Es cierto en un modo Video normal y falso en cualquier cosa
+retimeada, y el archivo no puede decir cuál de las dos es (§Por qué el archivo
+no puede decir su propio fps). Por eso se declara y se muestra, no se infiere:
+la frase viaja al registro del chequeo `capture_path_known`, al `capture.json`
+(`fps_provenance`, `capture_path_calibrated`), al `header` del `analysis.json`,
+a cada métrica, y a `warnings[]` antes de cualquier número.
+
+Un camino `slomo` sin calibrar **se rechaza**: ahí el supuesto es falso por
+construcción y el factor de estiramiento es desconocido, así que cualquier
+tiempo sería ficción. No hay número que poner.
+
+Hay un camino genérico, `desconocido-video`, para "no sé con qué se filmó". Es
+el default del modo exploración (`python -m kinelab datos VIDEO`).
+
+Declarar **no ablanda ningún umbral**. Medido en el original del Galaxy S22
+Ultra con `s22ultra-video-fhd30-cable`: ocho de nueve chequeos pasan —por
+primera vez `capture_path_known` entre ellos— y el clip se rechaza igual por
+`fps_min_for_gesture`, 30 fps de captura contra los 100 que pide golf.
+
+Filmar el cronómetro de ese dispositivo y ese modo convierte el camino en
+calibrado; los clips ya ingestados se re-analizan (invariante 18) sin volver a
+correr el modelo (invariante 1).
+
+---
+
 ## El gate de ingesta
 
 Bloqueante. Cada chequeo tiene id, resultado, valor y una frase para el
@@ -163,11 +206,11 @@ pero se reportan todos.
 
 | id | Regla | Frase al fallar |
 |---|---|---|
-| `capture_path_known` | `capture_path_id` existe en `capture-paths.yaml` | "Este camino de captura no está calibrado. Filmá el cronómetro primero." |
-| `codec_matches_path` | `codec == camino.codec_expected` | "El clip está en H.264 y el camino espera HEVC: pasó por 'Más compatible' o por un transcodificador." |
+| `capture_path_known` | `capture_path_id` existe en `capture-paths.yaml`. Calibrado pasa liso; **declarado pasa y lo dice** en su propio registro; un `slomo` declarado no pasa | "Este camino de captura no está en capture-paths.yaml. Declaralo (dispositivo y modo) o filmá el cronómetro." · "El camino es Slo-Mo y no está calibrado: sin cronómetro el factor de estiramiento es desconocido y cualquier tiempo sería ficción." |
+| `codec_matches_path` | `codec == camino.codec_expected`; **`null` si el camino no declara codec** | "El clip está en H.264 y el camino espera HEVC: pasó por 'Más compatible' o por un transcodificador." |
 | `vfr_ratio_le_1_10` | `delta_max / delta_min ≤ 1,10`, **efectivo** | "El video tiene tasa variable. Volvé a exportarlo desde el original." |
-| `fps_matches_path` | `abs(fps_playback − camino.fps_playback) / camino.fps_playback ≤ 0,02`, con el `fps_playback` **efectivo** | "El clip reproduce a N fps y el camino declara M. Algo lo recomprimió, o vino por otro camino." |
-| `fps_min_for_gesture` | `fps_real ≥ sports.<g>.fps_min` (golf: 100) | "A esta tasa no se pueden medir los tiempos del swing." |
+| `fps_matches_path` | `abs(fps_playback − camino.fps_playback) / camino.fps_playback ≤ 0,02`, con el `fps_playback` **efectivo**; **`null` en un camino declarado**: no hay reproducción medida contra la que comparar | "El clip reproduce a N fps y el camino declara M. Algo lo recomprimió, o vino por otro camino." |
+| `fps_min_for_gesture` | `fps_real ≥ sports.<g>.fps_min` (golf: 100). En un camino declarado el `fps_real` es el **asumido**, y el chequeo lo dice pase o falle | "A esta tasa no se pueden medir los tiempos del swing." |
 | `duration_plausible` | 3 s ≤ duración ≤ 180 s | |
 | `rotation_normalized` | rotación aplicada en `master.mp4`; ancho/alto reales | |
 | `body_height_frac` (Fase 1) | `body_height_px / height ≥ umbral medido` | "El jugador ocupa X% del cuadro. Acercá la cámara." |

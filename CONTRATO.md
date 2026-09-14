@@ -20,7 +20,7 @@ Tres reglas por encima de todo:
 
 ```
 data/
-  capture-paths.yaml                 caminos de captura calibrados (ver CAPTURA.md)
+  capture-paths.yaml                 caminos de captura, calibrados o declarados (ver CAPTURA.md)
   athletes/<slug>.yaml               altura_m, lateralidad, fecha de alta
   sessions/<atleta>/<fecha>/<gesto>/<vista>/take-NN/
     original.<ext>                   intocable, tal como llegó
@@ -33,7 +33,7 @@ data/
 ```
 
 `data/` está en `.gitignore` salvo `capture-paths.yaml`, `schemas/` y
-`examples/`: los caminos calibrados son configuración y viajan con el repo;
+`examples/`: los caminos de captura son configuración y viajan con el repo;
 las sesiones y los atletas son del entrenador y no.
 
 ---
@@ -43,18 +43,19 @@ las sesiones y los atletas son del entrenador y no.
 Un camino = dispositivo + modo + transferencia. Es **configuración**, no
 inferencia. Un clip cuyo `capture_path_id` no está acá se rechaza.
 
-Cada camino registra **dos tasas**: `fps_real`, la de captura, que sale del
-cronómetro filmado; y `fps_playback`, la que el archivo reproduce, que sale de
-los PTS. Su cociente es `stretch_factor`: 1,0 en video normal, 8,0 en un
+Un camino **calibrado** registra **dos tasas**: `fps_real`, la de captura, que
+sale del cronómetro filmado; y `fps_playback`, la que el archivo reproduce, que
+sale de los PTS. Su cociente es `stretch_factor`: 1,0 en video normal, 8,0 en un
 Slo-Mo de 240 estirado a 30. El motor convierte los PTS a tiempo real con ese
 factor, y el gate compara la reproducción del clip contra la del camino.
 
 ```yaml
-schema_version: "1.0.0"
+schema_version: "1.1.0"
 paths:
   - id: iphone17pro-video-1080p120-airdrop
     device: "iPhone 17 Pro"
     mode: video            # video | slomo
+    calibrated: true       # default; false = declarado sin cronómetro (ADR-016)
     nominal_fps: 120
     codec_expected: hevc
     transfer: airdrop-keep-originals
@@ -67,6 +68,31 @@ paths:
     notes: "delta_max/delta_min = 1.004"
 ```
 
+Un camino **declarado** (`calibrated: false`, ADR-016) no tiene ninguno de esos
+números: dispositivo y modo los dice el usuario, y la tasa de captura se asume
+igual a la de reproducción del archivo. Los seis campos del cronómetro tienen
+que estar en `null` — declarar no es medir — y `nominal_fps` y `codec_expected`
+son opcionales: `null` es "no se sabe". Sólo `mode: video`; un `slomo` sin
+calibrar lo rechaza el gate. La tabla completa está en `CAPTURA.md`
+§Caminos declarados sin calibrar.
+
+```yaml
+  - id: desconocido-video     # el genérico: "no sé con qué se filmó"
+    device: "desconocido"
+    mode: video
+    transfer: "desconocido"
+    calibrated: false
+    nominal_fps: null
+    codec_expected: null      # el chequeo de codec queda sin evaluar
+    fps_real: null
+    fps_playback: null
+    stretch_factor: null
+    fps_method: null
+    calibrated_on: null
+    calibrated_by: null
+    notes: "los tiempos asumen que el archivo reproduce a la velocidad de captura"
+```
+
 ---
 
 ## `capture.json`
@@ -75,11 +101,13 @@ Escrito por `kinelab.ingest`. Nunca a mano después de la Fase 0.
 
 ```json
 {
-  "schema_version": "1.1.0",
+  "schema_version": "1.2.0",
   "athlete": "hernan",
   "gesture": "driver",
   "view": "face_on",
   "capture_path_id": "iphone17pro-video-1080p120-airdrop",
+  "capture_path_calibrated": true,
+  "fps_provenance": "medido_aqui",
   "fps_real": 119.88,
   "fps_source": "capture-paths.yaml:iphone17pro-video-1080p120-airdrop",
   "fps_playback": 119.85,
@@ -116,6 +144,23 @@ Escrito por `kinelab.ingest`. Nunca a mano después de la Fase 0.
   }
 }
 ```
+
+### La procedencia del fps
+
+`fps_provenance` dice de dónde sale `fps_real`: `medido_aqui` cuando el camino
+está calibrado con cronómetro, `sin_verificar` cuando es un camino declarado
+(ADR-016) o no hay camino usable. `capture_path_calibrated` lo acompaña
+(`true` / `false` / `null` si el camino es desconocido) y `fps_source` empieza
+con `capture-paths.yaml:<id>` o con `declarado:<id>` según el caso.
+
+Los dos son opcionales para que un `capture.json` 1.1.0 siga validando, y sus
+defaults son los conservadores: `null` y `sin_verificar`. Sin el campo, nada
+puede ser juicio.
+
+En un camino declarado `fps_real` es el `fps_playback` efectivo y
+`stretch_factor` es 1,0 **por supuesto, no por medición**. En un `slomo`
+declarado no hay ninguno de los dos: `fps_real` y `stretch_factor` quedan en
+`null` y la toma se rechaza.
 
 ### El fps efectivo y el bruto
 
@@ -203,7 +248,8 @@ submuestreadas a ≤ 10 Hz para gráficos; el detalle se recalcula desde `pose.n
 
 ```
 header        schema_version, engine_version, registry_version, generated_at,
-              source {pose_sha256, master_sha256, capture_path_id, fps_real}
+              source {pose_sha256, master_sha256, capture_path_id, fps_real,
+                      fps_provenance}
 quality       detection_rate, body_height_px {median, min, max, frac_of_frame},
               blur_estimate, plausibility {rejected_frames, by_reason},
               verdict: confiable | con_reservas | no_usar, reasons[]
@@ -279,10 +325,20 @@ geométrica es un cruce y no un cuadro. Hoy lo tiene sólo el impacto de golf.
   "level": 1,
   "fps_min": 100,
   "fps_min_met": true,
+  "fps_provenance": "medido_aqui",
   "judgment_allowed": true,
   "null_reason": null
 }
 ```
+
+`fps_provenance` es de dónde sale el `fps_real` con el que se calculó el tiempo:
+`medido_aqui` (cronómetro filmado, camino calibrado) o `sin_verificar` (camino
+declarado, ADR-016). Va en **cada** métrica, no sólo en las ancladas a tiempo:
+la incertidumbre de todas se propaga desde ±1 cuadro, y un cuadro dura lo que
+diga ese número. Está en el campo y no sólo en `uncertainty.method` porque una
+métrica en `null` tiene `uncertainty: null` y la procedencia no se puede perder;
+la frase de `uncertainty.method` la repite para quien lee el JSON a ojo
+(*"±1 cuadro en cada evento ancla a 29.998 fps (sin_verificar)"*).
 
 Cuando la métrica no se puede calcular, `value` es `null` y `null_reason` dice
 por qué en una frase: `"fps_real 59.94 por debajo de fps_min 100"`,
@@ -294,9 +350,14 @@ por qué en una frase: `"fps_real 59.94 por debajo de fps_min 100"`,
 judgment_allowed = level == 1
                    and mdc is not None
                    and fps_min_met
+                   and fps_provenance == "medido_aqui"
                    and view in metric.views
                    and (reference is None or mdc <= reference.range_width)
 ```
+
+La condición de la procedencia es ADR-016: con la tasa de cuadros sin verificar
+el número se muestra —es descriptivo— pero no se compara contra nada, porque el
+eje del tiempo es un supuesto y no una medición.
 
 ### `summary`
 
@@ -380,14 +441,21 @@ homografía.
 
 - `schema_version` semver. **Renombrar un campo o cambiar una unidad es
   major**, aunque parezca inocente: la IA que lee el JSON ya aprendió el
-  nombre viejo. Métrica nueva y opcional es minor. Va en **1.1.0** desde el
-  `subframe` de los eventos (campo nuevo y opcional): un `analysis.json` de
-  1.0.0 sigue validando.
-- `capture.json` lleva su propio `schema_version`, hoy **1.1.0**: agregó
-  `fps_playback_raw`, `vfr_ratio_raw`, `first_delta_s` y `fps_note`, los cuatro
-  opcionales. Un `capture.json` de 1.0.0 sigue validando, con esos cuatro en
-  `null`. El mismo bump cambió de qué número hablan `fps_playback` y
-  `vfr_ratio` (bruto → efectivo): está anotado en §Desviaciones.
+  nombre viejo. Métrica nueva y opcional es minor. Va en **1.2.0**: 1.1.0 por el
+  `subframe` de los eventos (campo nuevo y opcional) y 1.2.0 por
+  `fps_provenance` en `header.source` y en cada métrica (ADR-016). El de 1.2.0
+  es un campo **obligatorio** en un bump minor: está anotado en §Desviaciones.
+- `capture.json` lleva su propio `schema_version`, hoy **1.2.0**: 1.1.0 agregó
+  `fps_playback_raw`, `vfr_ratio_raw`, `first_delta_s` y `fps_note`; 1.2.0
+  agrega `capture_path_calibrated` y `fps_provenance` (ADR-016). Los seis son
+  opcionales: un `capture.json` de 1.0.0 sigue validando, con los cuatro
+  primeros en `null`, `capture_path_calibrated` en `null` y `fps_provenance` en
+  `sin_verificar`. El bump a 1.1.0 cambió de qué número hablan `fps_playback` y
+  `vfr_ratio` (bruto → efectivo): también está en §Desviaciones.
+- `capture-paths.yaml` lleva el suyo, hoy **1.1.0**: agregó `calibrated` (con
+  default `true`) y volvió opcionales `nominal_fps`, `codec_expected` y los
+  seis campos del cronómetro, que ahora sólo son obligatorios cuando
+  `calibrated: true`. Un archivo 1.0.0 sigue cargando sin cambios.
 - `registry_version` aparte, y `metric_version` por métrica. Con un solo
   número, mejorar una métrica invalida el historial del atleta.
 - `engine_version` en `provenance` y en `header`.
@@ -414,6 +482,17 @@ Toda desviación respecto de este contrato se anota acá con fecha, qué se
 cambió y por qué. Es la sección que hizo posible auditar el prototipo anterior
 sin haberlo escrito.
 
+- **2026-09-14 · `analysis.json` 1.1.0 → 1.2.0 con `fps_provenance`
+  OBLIGATORIO**, en un bump **minor**. §Versionado dice que lo nuevo y opcional
+  es minor, y un campo requerido nuevo es, en rigor, major: un `analysis.json`
+  1.1.0 ya escrito no valida contra el schema nuevo. Se hizo minor igual, por
+  tres razones: la procedencia del fps es justamente lo que ADR-016 no quiere
+  que se pueda omitir — opcional, un análisis sin ella pasaría como si el eje
+  del tiempo estuviera medido —; el validador sólo corre al **escribir**
+  (`contract/write.py`), así que ningún archivo viejo se rompe al leerlo; y no
+  hay `analysis.json` fuera de `data/exploracion/` y de los ejemplos, que se
+  regeneran. El ejemplo del repo (`data/examples/analysis.example.json`) se
+  actualizó a mano con `fps_provenance: medido_aqui`.
 - **2026-09-14 · `capture.json` 1.0.0 → 1.1.0 con `fps_playback` y `vfr_ratio`
   cambiando de significado** (bruto → efectivo), en un bump **minor**.
   §Versionado dice que renombrar un campo o cambiar una unidad es major, y

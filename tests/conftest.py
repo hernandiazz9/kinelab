@@ -189,6 +189,26 @@ paths:
     fps_method: generado con ffmpeg
     calibrated_on: 2026-09-12
     calibrated_by: tests
+  # Declarados, sin cronómetro (ADR-016): el video pasa el gate diciendo bajo
+  # qué supuesto; el slomo se rechaza porque su estiramiento es desconocido.
+  - id: test-declarado-video
+    device: teléfono sin calibrar
+    mode: video
+    transfer: test
+    calibrated: false
+    nominal_fps: 240
+  - id: test-declarado-video-h264
+    device: teléfono sin calibrar
+    mode: video
+    transfer: test
+    calibrated: false
+    codec_expected: h264
+  - id: test-declarado-slomo
+    device: teléfono sin calibrar
+    mode: slomo
+    transfer: test
+    calibrated: false
+    nominal_fps: 240
 """,
         encoding="utf-8",
     )

@@ -29,6 +29,10 @@ class MetricContext:
     events: dict[str, int]  # id → cuadro, para esta repetición
     frame_start: int
     frame_end: int
+    # De dónde sale `fps`: `medido_aqui` (cronómetro, camino calibrado) o
+    # `sin_verificar` (camino declarado, ADR-016). El default es el conservador:
+    # una toma de procedencia desconocida no habilita juicio.
+    fps_provenance: str = "sin_verificar"
     athlete_height_m: float | None = None
     hands_speed: np.ndarray | None = None  # (T,) alturas/s
     extra: dict = field(default_factory=dict)
@@ -72,7 +76,8 @@ def evaluate(metric: Metric, ctx: MetricContext, *, joints: tuple[int, ...] = ()
         "level": metric.level,
         "fps_min": metric.fps_min,
         "fps_min_met": fps_min_met,
-        "judgment_allowed": judgment_allowed(metric, view=ctx.view, fps_real=ctx.fps),
+        "fps_provenance": ctx.fps_provenance,
+        "judgment_allowed": judgment_allowed(metric, view=ctx.view, fps_real=ctx.fps, fps_provenance=ctx.fps_provenance),
         "confidence": None,
         "uncertainty": None,
     }
@@ -101,6 +106,9 @@ def evaluate(metric: Metric, ctx: MetricContext, *, joints: tuple[int, ...] = ()
         "value": round(value, nd),
         **base,
         "confidence": _confidence(ctx, metric, joints),
-        "uncertainty": {"low": round(min(alts), nd), "high": round(max(alts), nd), "method": f"±1 cuadro en cada evento ancla a {ctx.fps:g} fps"},
+        # La procedencia del fps va también en la frase que lee un humano: la
+        # incertidumbre de ±1 cuadro se calcula sobre un eje de tiempo que, en un
+        # camino declarado, es un supuesto (ADR-016).
+        "uncertainty": {"low": round(min(alts), nd), "high": round(max(alts), nd), "method": f"±1 cuadro en cada evento ancla a {ctx.fps:g} fps ({ctx.fps_provenance})"},
         "null_reason": None,
     }
