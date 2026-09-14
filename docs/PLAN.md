@@ -1,10 +1,11 @@
 # Plan
 
-Última ronda: 2026-09-14 — Hernán no tiene el iPhone 17 Pro y pide subir
-cualquier video, ver qué es y analizarlo con avisos. Decisión: caminos
-declarados sin calibrar (ADR-016), encargo 06 después del 04; la pantalla
-con ficha del archivo y selector es el 07. YouTube como material: no
-(cementerio 1); GolfDB sigue siendo la única fuente externa, sólo para medir.
+Última ronda: 2026-09-14 — Hernán quiere un swing de muestra que se vea
+andar en la pantalla (no para comparar). Sale de mocap real de CMU
+(ADR-009, nivel 1): encargo 07 después del 06, y 08 (lista de trabajos y
+ejemplos en la pantalla) ya, en paralelo. Regla de numeración desde hoy: un
+ítem recibe número cuando se escribe su prompt; los pendientes van sin
+número, en orden de ejecución.
 
 ## Decisiones del orquestador
 
@@ -46,28 +47,35 @@ con ficha del archivo y selector es el 07. YouTube como material: no
   `capture-paths.yaml` con `calibrated: false`, gate que avisa, procedencia
   `sin_verificar` en cada número, sin juicio; `datos --camino`. Después del
   04. Prompt escrito.
-- [pendiente] 07 pantalla-ficha-y-selector — antes de analizar, la ficha del
+- [pendiente] 08 lista-de-trabajos — `GET /api/datos` y la lista en la
+  pantalla para abrir trabajos anteriores y ejemplos sin subir; `?trabajo=`
+  en la URL. Puede correr ya. Prompt escrito.
+- [pendiente] 07 ejemplo-mocap — swing real de mocap CMU proyectado con la
+  cámara virtual del arnés, corrido por el mismo camino que un video, como
+  trabajo de ejemplo en la pantalla; y el primer número de nivel 1 (sway de
+  pelvis y duraciones 2D contra 3D). Después del 06. Prompt escrito.
+- [pendiente] pantalla-ficha-y-selector — antes de analizar, la ficha del
   archivo (`PUT /api/fps-truth`: codec, tamaño, cuadros, fps efectivo, VFR,
   primer delta) y el selector de dispositivo y modo desde `capture-paths.yaml`
   (más "no sé"); en el resultado, el aviso del camino declarado y la lista de
-  métricas que no se calculan a ese fps con su razón. Después del 06.
-- [pendiente] 08 arnes-ganancia-y-subcuadro — en `truth/`: ganancia de
+  métricas que no se calculan a ese fps con su razón. Después del 06 y del 08.
+- [pendiente] arnes-ganancia-y-subcuadro — en `truth/`: ganancia de
   velocidad angular pelvis→tórax→brazo con ratios conocidos desde las dos
   vistas (vive con MDC y vistas, o muere), y sesgo/MDC del instante
   sub-cuadro del impacto con el swing paramétrico (sería el primer evento con
   número medido). Fase 3.2/3.3 sin cerrar.
-- [pendiente] 09 visor-desde-datos — esqueleto desde `pose.npz` sobre el
+- [pendiente] visor-desde-datos — esqueleto desde `pose.npz` sobre el
   video en el reproductor de exploración (ADR-014, invariante 10) con
   `master.mp4` H.264 CFR (4.2) como referencia de cuadros. Cierra la
   desviación de la cuarta sesión.
-- [pendiente] 10 cola-con-cancelacion — trabajos cancelables, limpieza de
+- [pendiente] cola-con-cancelacion — trabajos cancelables, limpieza de
   `data/exploracion/` (~20 MB por clip), fotos por evento como JPEG (4.1).
 - [bloqueado por Hernán] cronómetro y sesión con el S22 — ver Preguntas.
   Con eso: calibrar los caminos del S22 en `capture-paths.yaml` (0.7), ADR
   que cierre lo de Android con números, umbral de encuadre medido (1.3),
   intrínsecos con tablero (3.1), re-correr el arnés, pasar los clips por
   percepción y análisis.
-- [pendiente] 11 golfdb-error-de-eventos — bajar el dataset (CC BY-NC, sólo
+- [pendiente] golfdb-error-de-eventos — bajar el dataset (CC BY-NC, sólo
   para medir) y correr `kinelab.tools.golfdb_eval` (2.5). Después de decidir
   con Hernán si vale bajar 1400 videos ahora.
 - [pendiente] Fase 5: repetibilidad primero; comparación de dos repeticiones
@@ -76,6 +84,9 @@ con ficha del archivo y selector es el 07. YouTube como material: no
   (`compare.py` de la herencia); bandas descriptivas con procedencia para las
   métricas de nivel 1 (duraciones, tempo, sway, lift, cabeza), nunca
   veredicto. No antes de clips reales por el gate y del visor desde datos.
+
+Decisión de hoy sobre el ejemplo: es un ejemplo y un dato de validación,
+nunca "referencia" ni "ideal" (ADR-012).
 
 ## Preguntas para Hernán
 
