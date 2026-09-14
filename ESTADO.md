@@ -3,6 +3,120 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 14 de septiembre de 2026 — encargo 09: ficha del archivo, selector de camino y los avisos primero
+
+Prompt: `docs/prompts/09-ficha-y-selector.md`. Informe:
+`docs/informes/2026-09-14-09-ficha-y-selector.md`. Commits `b0b46c9` (código,
+tests y front) y el de cierre con `ESTADO.md` y el informe. Corrió en paralelo
+con el 07 (`kinelab/explore.py`, `kinelab/tools/interpolar.py`,
+`tests/test_perception.py`, `truth/`, `data/examples/cmu-mocap/`, sin commitear
+al cerrar) y con el 10, que commiteó mientras esta sesión corría.
+
+### Qué existe ahora
+
+- **`PUT /api/datos?camino=ID`.** El id sale de `capture-paths.yaml`; el default
+  es `desconocido-video`. Va a `explore(camino=…)` y queda en `trabajo.json`.
+  Se valida **antes** de recibir el archivo: un id inexistente da 400 con la
+  lista de los que hay, y un `slomo` sin calibrar da 400 con la misma frase que
+  da el gate (`slomo_declared_reason`) — no se arranca un trabajo cuyo eje de
+  tiempo no se conoce (ADR-016).
+- **La cola resuelve los caminos del mismo `data/` que los trabajos.** Antes
+  `explore()` caía en `default_capture_paths_file()`, que en los tests leía el
+  YAML **del repo** y no el del `tmp_path`. De ahí el octavo camino del fixture
+  (`tests/conftest.py`) y el `7 → 8` de `test_load_fixture`.
+- **El bloque `archivo` en `GET /api/datos/{id}`**, del `capture.json` que
+  `prepare_take` escribe **antes** de correr el modelo: codec, tamaño, rotación,
+  cuadros, duración real y de reproducción, fps efectivo y bruto, tasa variable
+  sí/no con su ratio y el umbral, primer delta, `fps_note`, camino, si está
+  calibrado y la procedencia. `service/exploracion.py:ficha_de_captura`. No se
+  copia al `trabajo.json`: vive en `capture.json` y se relee.
+- **`GET /api/datos` (la lista) lleva `camino` y `fps_provenance`** en cada
+  fila, siempre, incluso mientras el trabajo corre: un fps sin procedencia al
+  lado no se puede leer. Los trabajos del 12/9 (anteriores a ADR-016) muestran
+  `camino: exploracion` y `sin_verificar`, que es lo que dice su `capture.json`.
+- **En la pantalla**, de arriba hacia abajo: el selector «¿con qué se filmó?»
+  al lado de la altura (recordado en `localStorage`, confirmado contra la lista
+  del backend, con los `slomo` sin calibrar listados y deshabilitados); los
+  **avisos** (`Avisos.tsx`: aviso de exploración, `fps_aviso` del camino
+  declarado y `fps_note` si el fps corregido difiere del bruto); la **ficha del
+  archivo** (`FichaArchivo.tsx`), que aparece con la pose todavía corriendo; y,
+  abajo del reproductor y las fotos, **«Con este archivo»** (`Metricas.tsx`):
+  las 12 métricas de `analysis.json`, cada una con valor + unidad + banda de
+  ±1 cuadro, o con su `null_reason` textual.
+- El orden de la página es la regla de ADR-016 hecha layout: el aviso antes de
+  cualquier número derivado.
+
+### Medido
+
+Backend de esta sesión en el 8765, con `curl` directo (no hay `next dev`
+corriendo; ver Desviaciones).
+
+**`~/Desktop/20260907_170638.mp4` con `s22ultra-video-fhd30-cable`** (265
+cuadros, 17,3 s de proceso): la ficha aparece a los ~4,8 s del final, junto con
+`detectando_pose` y con `resumen` todavía en `null`. Ficha: h264 · 1080×2320 ·
+rot 90° · 265 cuadros · 8,834 s (reproducción 8,969 s) · **29,998 fps efectivo,
+29,436 bruto** · tasa variable **no** (ratio 1,000; bruto 6,044) · **primer
+delta 0,201478 s** · `fps_note` con la frase del arranque de la cámara ·
+`sin_verificar`. Eventos 111 / 141 / 147 / 219, los de siempre.
+
+**`~/Desktop/cortado.mp4` con "No sé"** (`desconocido-video`, 4,2 s): ficha a
+los ~3 s del final; 76 cuadros, 2,533 s, 29,999 fps, primer delta 0,0333 s,
+`fps_note` en `null` (no hay nada que corregir). Eventos 7 / 39 / 44.
+
+**Las 12 métricas, con el `fps_min` tolerante del encargo 10 ya commiteado**
+(`e2204ee`): **7 con número y 5 con razón** en los dos clips. Con número, las
+de cm: en `cortado.mp4`, pelvis sway top 0,8 cm · sway impacto 7,6 · lift top
+−4,2 · tórax sway 1,7 · lift −5,3 · cabeza sway 4,7 · lift −5,1. Sin número:
+las cuatro de tiempo (`fps_min` 120 y 60 contra 29,999) y `pelvis_thrust_top_cm`
+por vista. **Ningún `judgment_allowed` verdadero.** Antes del 10 las 12 estaban
+en `null`.
+
+400 verificados contra el `capture-paths.yaml` real: camino inexistente →
+`"camino de captura desconocido: 'iphone-que-no-tengo'. Los que hay: …"`, sin
+dejar carpeta. `GET /api/datos`: 10 filas, 4182 bytes, 11 ms.
+
+Suites: **261 en verde** en el motor (`tests/test_service.py` pasa de 47 a 55),
+39 s, con el trabajo sin commitear del 07 adentro — que sigue creciendo: al
+empezar este informe eran 260. Arnés: **4**.
+`cd web && pnpm lint && pnpm build`, limpios.
+
+### Qué falta o no se probó
+
+- **La pantalla no se abrió** (regla de trabajo). Lo que más puede fallar sin
+  verlo: el ancho del selector con etiquetas largas, y que la ficha y los
+  avisos no empujen demasiado al reproductor hacia abajo.
+- **No se probó por el proxy de `next dev`**, que es lo que pedía el prompt: no
+  había ninguno corriendo y levantarlo es justo lo que la regla de trabajo
+  prohíbe. Todo se midió contra el backend en el 8765. Lo que el proxy agrega
+  y acá no se ejercitó es el límite de cuerpo de 2 GB (`web/next.config.ts`).
+- **El 400 del `slomo` declarado sólo está probado en tests**: los tres caminos
+  del `capture-paths.yaml` del repo son `video`. En la pantalla, hasta que haya
+  un `slomo` declarado, esa opción no aparece.
+- El bloque de métricas muestra la **primera** repetición; con más de una lo
+  dice en una línea y no muestra las otras. En exploración hoy siempre hay una.
+- `confidence` sigue en `null` en todo el registro de golf (lo llena la Fase 3);
+  la pantalla lo aguanta y no inventa nada, pero la columna no existe.
+- Sin paginado en la lista, igual que antes. Cada corrida deja ~20 MB.
+
+### Desviaciones
+
+- Ninguna del contrato: no se tocó `analysis.json`, `capture.json`, `pose.npz`
+  ni `capture-paths.yaml`. El bloque `archivo` es de `service/`, es una
+  proyección de sólo lectura del `capture.json` y no agrega ningún número nuevo.
+- **No se tocó `kinelab/` en absoluto**, ni siquiera la etapa de la ficha que el
+  prompt autorizaba: `prepare_take` ya escribía el `capture.json` antes de la
+  pose, así que alcanzó con que el servicio lo releyera. Evita además chocar con
+  el 07, que tiene `explore.py` abierto.
+- Del prompt, una cosa que no se hizo como estaba escrita: probar «por el proxy
+  con `curl`». Ver arriba.
+- **El octavo camino del fixture y el test en rojo que el informe del 10 le
+  atribuye al 07 son de este encargo**, no del 07. Quedaron arreglados en
+  `b0b46c9` (`tests/conftest.py` + `test_load_fixture` 7 → 8).
+- Se mató el backend del 8765 (PID 52416, arrancado 12:07, con código anterior
+  a este encargo) y quedó corriendo el de esta sesión. Nada más se tocó.
+
+---
+
 ## 14 de septiembre de 2026 — encargo 10: `fps_min` con tolerancia del 0,5 %
 
 Prompt: `docs/prompts/10-fps-min-tolerancia.md`. Informe:
