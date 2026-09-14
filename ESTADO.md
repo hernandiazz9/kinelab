@@ -3,6 +3,130 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 15 de septiembre de 2026 — encargo 11: los tres clips nuevos son swings, no cronómetro
+
+Prompt: `docs/prompts/11-diagnostico-vid123.md`. Informe:
+`docs/informes/2026-09-15-11-diagnostico-vid123.md`. Encargo de diagnóstico y
+medición: **no se tocó código**. El único archivo del repo que cambió es
+`data/capture-paths.yaml`.
+
+### Qué existe ahora
+
+- **Un camino declarado nuevo** en `data/capture-paths.yaml`:
+  `s22ultra-video-uhd60-whatsapp-doc` — Galaxy S22 Ultra, `mode: video`,
+  `transfer: whatsapp-documento`, `calibrated: false`, `nominal_fps` 60,
+  `codec_expected` hevc (medido), los seis campos del cronómetro en `null`.
+  El transporte lo confirmó Hernán: **WhatsApp en modo documento**, no por
+  cable. Es un transporte distinto, así que es un camino distinto.
+- **Los tres clips en `data/incoming/`** (ignorado por git), con sha256 idéntico
+  a los originales de `~/Downloads`, que no se tocaron:
+  `vid1` `f4d19a56db13…`, `vid2` `331d4c860689…`, `vid3` `22ffea6acb40…`.
+- **Exploraciones** en `data/incoming/vid1.kinelab/`, `vid2.kinelab/` y
+  `vid3.kinelab/` (ignorado; se rehacen con un comando de ~18–76 s).
+
+### Medido
+
+**Los tres son el mismo teléfono, modo y tanda**: Video UHD 3840×2160 a 60 fps,
+HEVC `hvc1` Main a 43–47 Mb/s, rot −90, `com.android.capture.fps` 60,
+grabados el 14/9 entre 16:50:41 y 16:52:59. Reproducción efectiva **60,025–60,026
+fps** en los tres; ratio VFR efectivo 1,0007 (bruto 4,36–6,58).
+
+**No hubo recompresión.** El `udta` de Samsung sigue adentro (1,02–1,10 MB,
+contra 557.940 B del original FHD del 7/9) y el orden de hijos del `moov` es
+idéntico al de ese original. WhatsApp **en modo documento** no toca el archivo.
+
+**El delta de arranque de este modo es 0,073–0,110 s** (4,4–6,6 cuadros a
+60 fps), contra 0,2015 s en FHD 30. En los tres el primer delta es el **único**
+fuera de lugar: el criterio "el primero y sólo el primero" aguanta también acá.
+
+**Ninguno es el cronómetro** — Hernán confirmó que no se filmó. **No se escribió
+ningún camino calibrado** y sigue sin haber un `fps_real` medido de este
+teléfono en ningún modo.
+
+**Gate**, con ese camino: los tres `reject`, **una sola razón**,
+`fps_min_for_gesture` (60,03 contra 100). Siete chequeos pasan,
+`fps_matches_path` queda en `null` (el camino declarado no tiene reproducción
+contra la que comparar), y `capture_path_known` pasa **diciendo** que es
+declarado. Declarar no ablandó ningún umbral. vid3 pasa `duration_plausible`
+por 0,149 s (3,149 s contra el mínimo de 3 s).
+
+| | vid1 | vid2 | vid3 | FHD 7/9 |
+|---|---|---|---|---|
+| cuadros · fps | 1066 · 60,026 | 292 · 60,026 | 189 · 60,025 | 265 · 29,998 |
+| calidad | `confiable` | `confiable` | **`no_usar`** | `confiable` |
+| multi-sujeto | 0,0000 | 0,0000 | 0,0000 | 0,3132 |
+| cuerpo / alto | 28,7 % | 28,2 % | 29,5 % | 41,9 % |
+| plausibilidad rechazada | 1,0 % | 1,7 % | **23,8 %** | 0,8 % |
+| address·top·impacto·follow_end | 672·726·**741**·842 | 58·115·134·— | — | 111·141·147·219 |
+| backswing / downswing | 899,6 / 249,9 ms | 949,6 / 316,5 ms | — | 1000,1 / 200,0 ms |
+| repeticiones | 1 | 1 | **0** | 1 |
+
+- **vid1 es el único con contacto real, y el sub-cuadro del impacto está
+  verificado contra la pelota**: el motor da impacto 741 y cruce 741→742 a
+  `fraction` 0,2144 (±0,0991 cuadros); mirando los cuadros a resolución nativa,
+  la pelota está quieta en el 741 y ya salió en el 742. **Primera vez que el
+  detector se compara contra un contacto real a 60 fps, y acierta.**
+- **vid2 es un swing de práctica**: la pelota no se mueve en ningún cuadro. Su
+  "impacto" (134) es el punto bajo del palo, no un contacto.
+- **vid3 arranca con el palo ya arriba**: no hay address ni backswing en el
+  archivo, 0 repeticiones, calidad `no_usar`.
+- **Los 60 fps compran exactamente una métrica** respecto de los 30 del clip del
+  7/9: `tempo_ratio` (3,6 en vid1, 3,0 en vid2). Las tres duraciones siguen en
+  `null` porque piden `fps_min` 120. Ninguna métrica con `judgment_allowed`
+  verdadero: procedencia `sin_verificar`.
+
+**Lo que cuesta 4K**, con cinco corridas de `datos` (`load average` 3,4–6,5):
+FHD **5,46 s fijos + 30,8 ms/cuadro**; UHD **5,82 s + 66,2 ms/cuadro** →
+**2,15× por cuadro**, y **4,29×** por segundo de movimiento real (UHD60 contra
+FHD30). vid1: 17,76 s de video en 76,38 s.
+
+**Y los píxeles de más se tiran.** El recorte entra a `rtmpose-m` a 192×256. El
+bbox mide 1340 px de alto en el FHD del 7/9 (**5,24×** de reducción) y
+1466–1550 px en los UHD (5,7–6,0×). **En FHD ya entraba 5,2× sobredimensionado:
+UHD no agrega precisión, sólo peso.**
+
+### Qué falta o no se probó
+
+- **Un test rojo que no es de esta sesión y que se rompió solo al pasar la
+  medianoche**: `tests/test_service.py::test_datos_lista_un_ejemplo_de_otro_proceso`
+  quema `"creado": "2026-09-14T12:00:00+00:00"` y afirma que ese ejemplo es más
+  nuevo que una subida recién creada. Hoy es 15/9 y el orden se da vuelta. Es
+  del encargo 09 (`service/`) y **no se tocó**; falla igual con el YAML de HEAD,
+  o sea que no lo causó el cambio de esta sesión (verificado). El resto del
+  motor: **260 en verde** con ese test deseleccionado; `tests/test_capture_paths.py`
+  solo: 47 en verde; arnés: 13 en verde.
+- **Ningún camino calibrado todavía.** La pregunta 3 del informe del 03 (cuánto
+  mide el primer delta en cada modo) queda contestada para UHD 60 y FHD 30;
+  falta Slow motion FHD 240.
+- **`hip_line_rate_deg_s` llega a 3662–3979 °/s** en los tres clips: la misma
+  geometría que ya anotó el encargo 07 (la línea de caderas se acorta en
+  proyección al girar). Alimenta `summary.gain`, que en vid1 da ganancias
+  menores a 1 (`pelvis_to_torso` 0,608, `torso_to_arm` 0,461) y
+  `sequence_order` `arm>pelvis>torso`. No es una medición todavía.
+- **vid3 tiene 23,8 % de cuadros rechazados por `ELBOW_RANGE`** (45 de 189)
+  contra 1,0–1,7 % en los otros dos. Es casi todo finish con los brazos detrás
+  de la cabeza. Sólo se contó; no se investigó.
+- **La decisión grande queda para el orquestador:** ningún modo *Video* del S22
+  Ultra llega a 100 fps, así que el gate va a rechazar todo lo que se filme en
+  Video, calibrado o no. El único camino a ≥100 es Slow motion FHD 240, que
+  llega horneado y que ADR-016 rechaza sin cronómetro. Las cuatro preguntas
+  están al pie del informe.
+- El front no se abrió ni se tocó `web/` ni `service/` (regla de trabajo).
+
+### Desviaciones
+
+- Ninguna del contrato. `capture-paths.yaml` sigue en `schema_version` 1.1.0 y
+  el camino nuevo usa sólo campos que ya existían.
+- Del prompt, una: el id quedó `s22ultra-video-uhd60-whatsapp-doc` y no
+  `…-cable`, porque el transporte que dijo Hernán fue WhatsApp en modo
+  documento. El prompt lo preveía ("o el transporte que Hernán diga").
+- Del prompt, otra: los puntos 4 (leer el cronómetro, escribir el camino
+  calibrado) y la parte del 6 sobre varios swings por clip **no se ejecutaron
+  porque el material no los tiene**: ninguno de los tres clips es un cronómetro
+  y ninguno tiene más de un swing. Está dicho con su evidencia en el informe.
+
+---
+
 ## 14 de septiembre de 2026 — encargo 07: un swing de mocap real (CMU) y el primer número de nivel 1
 
 Prompt: `docs/prompts/07-ejemplo-mocap.md`. Informe:
