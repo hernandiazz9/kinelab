@@ -69,3 +69,26 @@ paths:
     calibrated_on: null
     calibrated_by: null
     notes: "sin cronómetro; el primer delta de PTS es el del arranque de la cámara (0,201 s medidos)"
+
+  # El modo con el que llegaron los tres clips del 14/9: Video UHD (3840x2160)
+  # a 60 fps, lente 1x, mandados por WhatsApp EN MODO DOCUMENTO (no como video).
+  # Transferencia distinta = camino distinto, aunque el archivo llegue igual:
+  # medido en vid1/vid2/vid3, el `udta` de Samsung sigue adentro (1,02-1,10 MB),
+  # el codec es HEVC hvc1 a 43-47 Mbps y las etiquetas `com.android.*` y
+  # `com.samsung.*` están intactas — o sea que ese camino NO recomprimió. Un
+  # envío por WhatsApp como video sí lo habría hecho, y por eso
+  # docs/filmacion-s22.md dice que no se manden así.
+  - id: s22ultra-video-uhd60-whatsapp-doc
+    device: "Samsung Galaxy S22 Ultra"
+    mode: video
+    transfer: whatsapp-documento
+    calibrated: false
+    nominal_fps: 60 # lo que dice el ajuste de la cámara (captura de pantalla de Hernán)
+    codec_expected: hevc # medido en los tres clips del 14/9 (informe 2026-09-14-11)
+    fps_real: null
+    fps_playback: null
+    stretch_factor: null
+    fps_method: null
+    calibrated_on: null
+    calibrated_by: null
+    notes: "sin cronómetro; reproducción efectiva medida 60,025-60,026 fps en tres clips; 60 fps de captura siguen por debajo del fps_min de golf (100)"
