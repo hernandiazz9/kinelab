@@ -69,7 +69,10 @@ De las cuatro opciones que sugería el prompt, **`mc_mode` y `vsbmc` no hacen
 nada**: con `obmc`/`vsbmc=0` la salida es byte a byte idéntica en ffmpeg 9.0.1.
 La única que mueve la aguja es `me_mode`, y `bidir` (que no es el default del
 filtro) gana. `search_param` 64–128 aporta 0,1 dB; `me=umh` cuesta 46 s en vez
-de 3,4 s y sale peor.
+de 3,4 s y sale peor; y **`me=esa` (búsqueda exhaustiva) tardó 53 minutos para
+empatar con el default de 3,4 s**. El problema no es que la estimación de
+movimiento busque poco: es que un palo delgado que barre más de lo que mide,
+contra un fondo con textura, no es un bloque que se pueda seguir.
 
 **Lo que se ve:** el shaft sale fantasma. En los intermedios no hay un palo en
 posición intermedia: hay dos palos translúcidos a la vez, el de 44

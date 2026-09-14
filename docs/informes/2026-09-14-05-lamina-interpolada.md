@@ -75,7 +75,12 @@ cuadro del medio **sí existe** para comparar. Error medio sobre una caja de
 También medido y descartado: `search_param` 64/128 gana 0,1 dB sobre el 32 por
 defecto y 256 lo pierde — agrandar la ventana de búsqueda no arregla nada;
 `me=umh` cuesta **46 s en vez de 3,4 s** y sale peor; `mb_size=8` sale peor;
-`scd=none` da igual.
+`scd=none` da igual. Y el caso extremo: **`me=esa`, búsqueda exhaustiva con
+`search_param=128`, tardó 3.202 s (53 minutos) para dar 20,46 dB sobre el palo
+— peor que los 20,57 de la misma configuración con búsqueda rápida, y lo mismo
+que el default de 3,4 s.** No es que la estimación de movimiento no busque lo
+suficiente: es que no hay nada que encontrar. Un palo delgado que barre más de
+lo que mide, contra un fondo con textura, no es un bloque que se pueda seguir.
 
 **Lo que se ve en la lámina, sin decidir por Hernán.** El shaft sale
 **fantasma**. En los intermedios no hay un palo en una posición intermedia: hay
@@ -115,8 +120,9 @@ cuadro nuevo.
 ## Preguntas para el orquestador
 
 1. **¿El experimento se cierra acá o se vuelve a intentar con otra técnica?**
-   Con ffmpeg no hay nada más que probar: el barrido está hecho y el techo es
-   el de arriba. Lo que queda fuera (RIFE, FILM) está vetado por ADR-010. Si la
+   Con ffmpeg no hay nada más que probar: el barrido está hecho —incluida la
+   búsqueda exhaustiva, 53 minutos para empatar con el default de 3,4 s— y el
+   techo es el de arriba. Lo que queda fuera (RIFE, FILM) está vetado por ADR-010. Si la
    respuesta a "quiero ver el contacto" tiene que ser sí, el camino es material
    a 120/240 fps, no software.
 2. **¿La herramienta se queda en el repo?** Es 500 líneas que ninguna fase de
