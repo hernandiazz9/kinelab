@@ -6,7 +6,7 @@ arco de las manos en un plano inclinado.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 import numpy as np
 
@@ -51,6 +51,12 @@ class SwingParams:
     trail_knee_delta_top_deg: float = -3.0
     swing_plane_deg: float = 55.0  # inclinación del plano de las manos respecto de la horizontal
     arm_reach_frac: float = 0.55  # radio del arco de las manos / estatura
+    # Amplitud del arco de las manos, en grados de ángulo recorrido. Dos ramas porque el
+    # perfil `p` es positivo en el backswing y negativo en el acompañamiento. Eran dos
+    # constantes quemadas; son parámetros para poder fijar la velocidad angular del brazo
+    # (el barrido de ganancia las escala, ver `gain_params`).
+    arm_arc_top_deg: float = 120.0
+    arm_arc_end_deg: float = 125.0
 
 
 @dataclass
@@ -111,7 +117,7 @@ def truth_swing(params: SwingParams = SwingParams(), fps: float = 240.0) -> Trut
         yaw_p = params.pelvis_rot_top_deg * pi
         yaw_t = params.thorax_rot_top_deg * pi
         # manos: arco en un plano inclinado, ángulo α(p): 0 en address (colgando), 120° en top, −100° al final
-        alpha = np.radians(120.0 * pi if pi >= 0 else 125.0 * pi)
+        alpha = np.radians(params.arm_arc_top_deg * pi if pi >= 0 else params.arm_arc_end_deg * pi)
         beta = np.radians(params.swing_plane_deg)
         thorax_c = pelvis + body.L("trunk") * np.array([0.0, np.cos(np.radians(params.forward_bend_deg)), np.sin(np.radians(params.forward_bend_deg))])
         down_dir = np.array([0.0, -np.cos(beta), np.sin(beta)])
@@ -150,3 +156,77 @@ def truth_swing(params: SwingParams = SwingParams(), fps: float = 240.0) -> Trut
         "trail_knee_flexion_delta_top_deg": knee(H.RIGHT_HIP, H.RIGHT_KNEE, H.RIGHT_ANKLE, tp) - knee(H.RIGHT_HIP, H.RIGHT_KNEE, H.RIGHT_ANKLE, a),
     }
     return TruthSwing(points_m=pts, timestamps_s=t, fps=fps, events=events, truth=truth, params=params)
+
+
+def segment_rate_3d(points_m: np.ndarray, i: int, j: int, fps: float) -> np.ndarray:
+    """Velocidad angular 3-D de la línea `i→j`, en °/s, cuadro a cuadro.
+
+    Es `|dû/dt|` con `û` la dirección unitaria del segmento: la rapidez con que la
+    línea cambia de orientación en el espacio. Una línea no tiene giro sobre su
+    propio eje, así que esto es TODA su velocidad angular, y es la verdad contra la
+    que se compara `kinelab.metrics.generic.line_angle_rate`, que mide lo mismo
+    pero sobre la proyección en el plano de imagen.
+    """
+    d = points_m[:, j] - points_m[:, i]
+    n = np.linalg.norm(d, axis=1, keepdims=True)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        u = d / n
+    du = np.gradient(u, axis=0) * fps
+    w = np.degrees(np.linalg.norm(du, axis=1))
+    w[(n[:, 0] <= 0) | ~np.isfinite(n[:, 0])] = np.nan
+    return w
+
+
+def truth_gain(sw: TruthSwing, segments: dict[str, tuple[int, int]], *, start: int | None = None, end: int | None = None) -> dict:
+    """Picos de velocidad angular 3-D por segmento y sus cocientes consecutivos.
+
+    La ventana es la misma que usa el motor para la ganancia: de `address` a
+    `follow_end` (`kinelab/analysis.py`). Los nombres de `segments` van en orden
+    proximal→distal y los cocientes se arman entre consecutivos, igual que
+    `metrics.generic.gain`, para que verdad y medición sean comparables término a
+    término.
+    """
+    a = sw.events["address"] if start is None else int(start)
+    b = sw.events["follow_end"] if end is None else int(end)
+    peaks: dict[str, float] = {}
+    frames: dict[str, int] = {}
+    for name, (i, j) in segments.items():
+        w = segment_rate_3d(sw.points_m, i, j, sw.fps)[a : b + 1]
+        if not np.isfinite(w).any():
+            continue
+        k = int(np.nanargmax(w))
+        peaks[name] = float(w[k])
+        frames[name] = a + k
+    names = list(segments)
+    ratios = {f"{x}_to_{y}": peaks[y] / peaks[x] for x, y in zip(names, names[1:]) if peaks.get(x)}
+    return {"peaks_deg_s": {k: round(v, 1) for k, v in peaks.items()}, "peak_frames": frames, "ratios": {k: round(v, 4) for k, v in ratios.items()}}
+
+
+def gain_params(targets: dict[str, float], segments: dict[str, tuple[int, int]], *, base: SwingParams | None = None, fps: float = 240.0, iters: int = 8) -> tuple[SwingParams, dict]:
+    """Un swing con cocientes de velocidad angular 3-D **conocidos**.
+
+    `targets` lleva los mismos nombres que `truth_gain().ratios`
+    (`pelvis_to_torso`, `torso_to_arm`). El giro del tórax sale exacto —la pelvis y
+    el tórax comparten el perfil temporal, así que el cociente de picos es el de
+    amplitudes—; la amplitud del arco de las manos se resuelve iterando, porque el
+    hombro está desplazado del centro del arco y la línea hombro→muñeca no gira
+    exactamente como el arco. Devuelve los parámetros y lo que efectivamente se
+    consiguió, que es la verdad que se reporta (nunca el objetivo pedido).
+    """
+    p = base or SwingParams()
+    names = list(segments)
+    if len(names) >= 2 and f"{names[0]}_to_{names[1]}" in targets:
+        p = replace(p, thorax_rot_top_deg=p.pelvis_rot_top_deg * float(targets[f"{names[0]}_to_{names[1]}"]))
+    key = f"{names[1]}_to_{names[2]}" if len(names) >= 3 else None
+    achieved = truth_gain(truth_swing(p, fps=fps), segments)
+    if key is not None and key in targets:
+        for _ in range(iters):
+            got = achieved["ratios"].get(key)
+            if not got:
+                break
+            scale = float(targets[key]) / got
+            if abs(scale - 1.0) < 1e-4:
+                break
+            p = replace(p, arm_arc_top_deg=p.arm_arc_top_deg * scale, arm_arc_end_deg=p.arm_arc_end_deg * scale)
+            achieved = truth_gain(truth_swing(p, fps=fps), segments)
+    return p, achieved

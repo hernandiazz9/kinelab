@@ -36,7 +36,7 @@ def _m(id_: str, unit: str, anchored: tuple[str, ...], compute, *, views_default
     row = _load_table().get(id_, {})
     DECLARED_VIEWS[id_] = tuple(views_default)
     if row and not row.get("views"):
-        DEAD_METRICS[id_] = row.get("note") or "sin vista válida en la tabla del arnés"
+        DEAD_METRICS[id_] = {"unit": unit, "note": row.get("note") or "sin vista válida en la tabla del arnés"}
         return None, joints
     return (
         Metric(
@@ -53,8 +53,10 @@ def _m(id_: str, unit: str, anchored: tuple[str, ...], compute, *, views_default
 
 # Vistas DECLARADAS por métrica (las candidatas que el arnés puede confirmar o quitar).
 DECLARED_VIEWS: dict[str, tuple[str, ...]] = {}
-# Métricas que el arnés mató (sin vista válida): no se registran, quedan acá con su razón.
-DEAD_METRICS: dict[str, str] = {}
+# Métricas que el arnés mató (sin vista válida): no se registran, quedan acá con su
+# unidad y su razón. El arnés las relee para no borrarles la fila de `mdc.yaml`:
+# sin fila, la corrida siguiente las revive en el registro sin MDC (ver `_m`).
+DEAD_METRICS: dict[str, dict[str, str]] = {}
 
 
 def build_registry() -> tuple[Registry, dict[str, tuple[int, ...]]]:
