@@ -66,7 +66,20 @@ ADR-007, ADR-012.
    cuadro de la repetición. Es el entregable de medición de este encargo y el
    número que le faltaba al proyecto. Decilo como lo que es: **un sujeto,
    diez swings**, no una tabla de referencia.
-6. **Rótulo, siempre visible en la capa:** estos ángulos son del mocap medido
+6. **Dos arreglos del visor que se ven en la pantalla de Hernán**, ya que
+   estás en ese archivo:
+   - **El esqueleto se sale del canvas por abajo**: los pies quedan cortados.
+     El encuadre tiene que ajustarse solo para que la figura entre entera en
+     todos los cuadros de la repetición, no sólo en el primero: calculá la
+     caja que contiene al sujeto en **toda** la toma y encuadrá contra eso,
+     así no cambia de tamaño al reproducir. Dejá margen para los números de
+     ángulo, que ocupan lugar.
+   - **El texto explicativo ocupa más que el visor.** Dejá visible una línea,
+     la que dice que es mocap medido con marcadores y no un video, y poné el
+     resto detrás de un «por qué esto no se puede hacer con un celular» que
+     se despliega. El argumento tiene que seguir estando completo para quien
+     lo abra; lo que no puede es tapar la figura.
+7. **Rótulo, siempre visible en la capa:** estos ángulos son del mocap medido
    con marcadores; un video de celular no los puede dar, y la diferencia que
    se ve al girar es exactamente por qué.
 
@@ -90,7 +103,8 @@ abrir el navegador.
   los ángulos.
 - Para Hernán: qué mirar, con el paso de girar hasta `face_on` y ver la
   diferencia entre el ángulo real y el proyectado en el codo y en la línea de
-  caderas.
+  caderas. Y que el esqueleto entre entero, con los pies adentro, en el
+  address, en el top y en el impacto.
 
 ## En paralelo
 
