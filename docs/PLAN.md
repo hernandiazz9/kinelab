@@ -45,6 +45,17 @@ ejemplos, porque los trabajos viejos tienen el top y la escala anteriores.
   contrato y ADR-010. La pantalla lo dice con todas las letras. Encargo 19.
   Camino futuro si se quiere el swing de Hernán en 3D: dos cámaras
   sincronizadas y calibración estéreo, que hoy no está en ninguna fase.
+- 2026-09-15 · **Modelos de IA por API para una primera pasada: no.** Tres
+  razones, cualquiera alcanza. (1) El producto es "en su Mac, sin nube"
+  (`AGENTS.md`): mandar video de un alumno a un tercero rompe el principio y
+  abre un problema de datos personales que hoy no existe. (2) No aporta nada
+  que no tengamos local: el bbox lo da el detector, el conteo de personas ya
+  está en `quality`, la vista se puede derivar de la pose. Un modelo
+  multimodal no da posiciones articulares con precisión de píxel, que es lo
+  único caro. (3) Rompe el determinismo que el contrato exige: `pose.npz`
+  afirma reproducibilidad por checkpoint y proveedor, y una API remota no
+  tiene sha256 ni versión estable. Lo que **sí** vale del pedido es la
+  primera pasada barata **local**: ver más abajo, en el backlog.
 - 2026-09-15 · Anotado, no cerrado: el +4,4 % residual de la escala (cadena
   desde el tobillo, estatura desde el piso). Se cierra sólo con un punto de
   contacto con el suelo validado contra una verdad que no sea nuestro propio
@@ -104,13 +115,18 @@ ejemplos, porque los trabajos viejos tienen el top y la escala anteriores.
 - [en curso] 19 visor-3d-del-mocap — el swing del mocap, que es 3D medido,
   girable en la pantalla, con el colapso de la línea de caderas visible al
   girar hacia `down_the_line`. Sin dependencias nuevas. Pedido de Hernán.
+- [en curso] 20 por-que-se-ve-borroso — medir de dónde viene el borrón de
+  las manos (obturador contra nuestra recompresión) antes de tocar nada; el
+  arreglo del overlay sólo si es nuestro y sólo cuando el 16 libere
+  `explore.py`. Pedido de Hernán. Prompt escrito.
+- [pendiente] 21 visor-desde-datos — el esqueleto dibujado en canvas desde
+  `pose.npz` sobre el video, con capas conmutables (el switch que pidió
+  Hernán) y sin recompresión. Cierra la desviación de la invariante 10 y
+  cumple ADR-014. Después del 16, 19 y 20. Prompt escrito.
 - [pendiente] 17 gate-encuadre-en-px — después del 16. Prompt escrito.
 - [pendiente] re-analizar desde `pose.npz` los trabajos de `data/exploracion/`
   (invariante 18) desde la pantalla, y que `mdc.yaml` lleve el `code_sha` de
   `kinelab/metrics/` para avisar cuando la tabla quedó vieja (13, pregunta 5).
-- [pendiente] visor-desde-datos — esqueleto desde `pose.npz` sobre el video
-  en el reproductor (ADR-014, invariante 10) con `master.mp4` H.264 CFR
-  (4.2). Cierra la desviación de la cuarta sesión.
 - [pendiente] cola-con-cancelacion — cancelar y borrar trabajos desde la
   pantalla, paginado, fotos como JPEG, limpieza de `data/exploracion/`.
 - [bloqueado por Hernán] **cronómetro en Slow motion FHD 240 con el S22** —
@@ -119,6 +135,12 @@ ejemplos, porque los trabajos viejos tienen el top y la escala anteriores.
   más cerca. Con eso: `capture-paths.yaml` calibrado, ADR de Android con
   números, intrínsecos con tablero (3.1), re-correr el arnés, percepción y
   análisis sobre clips por el gate.
+- [pendiente] pasada-barata-local — correr el detector en baja resolución
+  cada N cuadros para encontrar el tramo del gesto y correr la pose completa
+  sólo ahí. En `vid1` son 1066 cuadros de los cuales el swing son ~170: el
+  ahorro es del orden de 5×. Local, determinista, dentro del stack. Es la
+  versión sana de la idea de Hernán de "una primera pasada que dé parámetros
+  a la pasada cara".
 - [pendiente] golfdb-error-de-eventos (2.5), después de decidir con Hernán.
 - [pendiente] Fase 5: repetibilidad; comparación de dos swings filmados con
   el mismo protocolo, sincronizados por evento, lado a lado y silueta
