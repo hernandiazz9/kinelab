@@ -58,7 +58,17 @@ líneas), `kinelab/metrics/generic.py`, `kinelab/analysis.py`,
    0.2.0, y la `definition` de `pelvis_sway_top_cm` con el texto del informe
    del 14. `data/examples/analysis.example.json` regenerado desde el swing
    sintético (con `method: direction_change_farthest` en los top).
-5. Tests: el validador rechaza un `analysis.json` con `summary.gain` o con
+5. **Un aviso que dice algo falso, encontrado por el encargo 24.** Con un
+   camino **calibrado**, `analysis.json` sale con
+   `warnings[1] = "camino declarado sin cronómetro: los tiempos asumen que el
+   archivo reproduce a la velocidad de captura (…, 240.15 fps asumidos)"`. El
+   camino está calibrado y esa tasa está **medida**, no asumida:
+   `kinelab/analysis.py:195` usa la nota de «declarado» para todo lo que no
+   sea `medido_aqui`. Lo correcto es distinguir los dos casos: con camino
+   calibrado y sin gate, el aviso tiene que decir que la **procedencia no se
+   verificó porque el gate no corrió**, que es lo que ADR-016 dice de verdad.
+   Con su test.
+6. Tests: el validador rechaza un `analysis.json` con `summary.gain` o con
    `sequence_order`, y uno sin `metric_version` o sin `quality.scale_px`;
    `test_fase2.py` deja de esperar la clave; un `datos` real sobre
    `~/Desktop/cortado.mp4` y `data/incoming/vid1.mp4` sale con 2.0.0,
