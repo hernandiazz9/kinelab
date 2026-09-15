@@ -59,6 +59,43 @@ así que no hace falta CORS. Los trabajos quedan en `data/exploracion/<id>/`
 
 Lo mismo sin interfaz: `.venv/bin/python -m kinelab datos VIDEO.mp4 --altura-m 1.75`.
 
+## La demo estática (lo que se despliega, y lo que no)
+
+**El motor no se despliega.** Son onnxruntime con CoreML, `rtmlib`, OpenCV y
+ffmpeg, con pesos de cientos de MB, y tardan 76 s en procesar un clip de 17,8 s:
+nada de eso entra en una función serverless. Lo que se puede publicar es **el
+visor sobre resultados ya calculados** en la Mac del entrenador. En la demo no
+se puede subir un video, y la pantalla lo dice con esas palabras.
+
+Un trabajo de `data/exploracion/` pesa hasta 424 MB (`overlay.mp4` 245 MB,
+`original.mp4` 93 MB, cuatro PNG de 18 MB). El exportador produce la versión
+web: recorta al tramo del gesto, recorta al sujeto con margen, reescala, pasa
+las fotos a JPEG, y **deja escrito cómo deshacer las tres cosas** en
+`transformacion.json` — los keypoints **no** se reescriben (`CONTEXTO.md`
+§Sistemas de coordenadas).
+
+```bash
+.venv/bin/python -m kinelab.tools.exportar_demo data/exploracion/<id> --out web/public/demo
+```
+
+Deja `web/public/demo/<id>/` y reescribe `web/public/demo/index.json` con todos
+los que haya. Medido sobre `vid1`: **424 MB → 14,9 MB**, y el golfista pasa de
+ocupar **29,0 %** del alto del cuadro a **56,0 %** (×1,93). Opciones:
+`--recorte sujeto|completo`, `--alto`, `--tramo auto|A-B`, `--margen`, `--crf`.
+
+El front tiene dos modos, con **una sola** decisión en `web/src/lib/api.ts`:
+
+```bash
+cd web && pnpm build                                  # local: habla con el backend por /api/*
+cd web && NEXT_PUBLIC_KINELAB_MODO=demo pnpm build    # demo: sitio estático en web/out/
+```
+
+En demo no hay rewrites ni proxy (`output: "export"`), el formulario de subir se
+reemplaza por la frase que explica por qué, y la página va con `noindex`: el
+enlace es para mostrar, no para que lo indexe un buscador. En Vercel:
+directorio raíz `web`, y `web/vercel.json` ya trae el `buildCommand` con la
+variable, así que no hace falta configurarla a mano.
+
 El modo exploración corre sin gate y sin MDC: son números descriptivos para
 mirar, no para juzgar. Y reproducir el `overlay.mp4` ya dibujado es un paso
 provisorio (contradice la invariante 10 de `CONTEXTO.md`); el visor definitivo

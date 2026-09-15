@@ -1,4 +1,14 @@
 // Cliente de la API local (service/app.py). Todo va por /api/*, que next.config.ts reenvía al 8765.
+//
+// Y el MODO DEMO, que es el mismo tipo de datos sin backend: `NEXT_PUBLIC_KINELAB_MODO=demo`
+// lee de `/demo/index.json` y `/demo/<id>/trabajo.json`, archivos estáticos que escribe
+// `python -m kinelab.tools.exportar_demo`. El motor no se despliega (onnxruntime con CoreML,
+// pesos de cientos de MB, 76 s por clip): lo que se despliega es un visor de resultados YA
+// calculados en la Mac del entrenador.
+//
+// La decisión de por dónde leer está en ESTE archivo y en ningún otro: los componentes
+// llaman a las mismas funciones en los dos modos. Lo único que cambia afuera es que en demo
+// no se muestra el formulario de subir (page.tsx) — porque no hay a quién subirle nada.
 
 export type Estado = "en_cola" | "cargando_modelo" | "detectando_pose" | "calculando" | "dibujando" | "listo" | "error";
 export type Origen = "subida" | "ejemplo";
@@ -176,6 +186,84 @@ export const ETAPA: Record<Estado, string> = {
   error: "error",
 };
 
+// --- el modo: `local` (con backend) o `demo` (archivos estáticos) --------------------
+
+/** La transformación afín del origen al video exportado, tal como la escribe
+ *  `kinelab.tools.exportar_demo`. Los keypoints NO se reescriben: esto es cómo
+ *  pasar de `image_px` del `pose.npz` al video que se sirve (CONTEXTO.md
+ *  §Sistemas de coordenadas: toda serie lleva su marco). */
+export interface Transformacion {
+  schema: string;
+  reference_frame_origen: string;
+  reference_frame_destino: string;
+  nota: string;
+  offset_x: number;
+  offset_y: number;
+  escala: number;
+  cuadro_offset: number;
+  cuadros: number;
+  fps: number;
+  tamano_origen: [number, number];
+  recorte: { x: number; y: number; ancho: number; alto: number };
+  tamano_destino: [number, number];
+  modo_recorte: string;
+  cuadros_origen: number;
+  tramo_origen: [number, number];
+  /** Los que caen fuera del cuadro del ORIGEN: ningún recorte los puede incluir. */
+  puntos_fuera_del_origen: { n: number; de: number; nota: string | null };
+  video_limpio: string | null;
+  video_limpio_null_reason: string | null;
+}
+
+/** `x_demo = (x_origen − offset_x) · escala`, y lo mismo en y. La misma fórmula que
+ *  `kinelab.tools.exportar_demo.aplicar`, que es contra la que se testea. */
+export function aplicarTransformacion(tr: Transformacion, x: number, y: number): [number, number] {
+  return [(x - tr.offset_x) * tr.escala, (y - tr.offset_y) * tr.escala];
+}
+
+export type Modo = "local" | "demo";
+
+/** `demo` sólo si la variable lo dice: el default es el de siempre. Se lee una vez;
+ *  en Next es una constante sustituida en el build, no un valor de runtime. */
+export const MODO: Modo = process.env.NEXT_PUBLIC_KINELAB_MODO === "demo" ? "demo" : "local";
+export const ES_DEMO = MODO === "demo";
+
+export const DEMO_BASE = "/demo";
+const INDICE_DEMO = "index.json";
+
+/** Lo que dice la pantalla en lugar del formulario de subir. El motor no se
+ *  despliega: no es una limitación de esta página, es de qué es el motor. */
+export const AVISO_DEMO =
+  "Esto es una demo estática: los resultados ya están calculados. El motor corre en la Mac del entrenador —" +
+  " onnxruntime con CoreML, pesos de cientos de MB, 76 s por clip de 18 s— y no se despliega en ningún servidor." +
+  " Acá no se puede subir un video: lo que se ve es el visor sobre resultados guardados.";
+
+/** Una fila de `/demo/index.json`. Es una `TrabajoFila` más los avisos ya juntados. */
+export interface DemoFila extends TrabajoFila {
+  avisos: string[];
+}
+
+export interface DemoIndice {
+  schema: string;
+  generado: string;
+  aviso: string;
+  trabajos: DemoFila[];
+}
+
+async function leerJson<T>(url: string): Promise<T> {
+  const r = await fetch(url, { cache: "no-store" });
+  if (!r.ok) throw new Error(await leerError(r));
+  return (await r.json()) as T;
+}
+
+/** El `transformacion.json` del trabajo, en modo demo. `null` en modo local: ahí el
+ *  video que se sirve es el del trabajo, sin recortar, y no hay nada que aplicar. */
+export async function getTransformacion(t: Trabajo): Promise<Transformacion | null> {
+  const u = t.archivos["transformacion.json"];
+  if (!u) return null;
+  return leerJson<Transformacion>(u);
+}
+
 const CLAVE_ULTIMO = "kinelab:ultimo-trabajo";
 const CLAVE_CAMINO = "kinelab:camino";
 /** El camino genérico de `capture-paths.yaml`: "no sé con qué se filmó". Es el default. */
@@ -192,15 +280,17 @@ async function leerError(r: Response): Promise<string> {
   }
 }
 
-/** GET /api/config: el deporte y los caminos de captura de `capture-paths.yaml`. */
+/** GET /api/config: el deporte y los caminos de captura de `capture-paths.yaml`.
+ *  En demo no hay backend que la responda; tampoco hay quien la use, porque el
+ *  único que la pide es el formulario de subir y en demo no se muestra. */
 export async function getConfig(): Promise<Config> {
-  const r = await fetch("/api/config", { cache: "no-store" });
-  if (!r.ok) throw new Error(await leerError(r));
-  return (await r.json()) as Config;
+  if (ES_DEMO) throw new Error(AVISO_DEMO);
+  return leerJson<Config>("/api/config");
 }
 
 /** PUT /api/datos con el archivo como cuerpo crudo. XHR porque fetch no informa el progreso de subida. */
 export function subirVideo(archivo: File, alturaM: number | null, camino: string, onProgreso: (fraccion: number) => void): Promise<Trabajo> {
+  if (ES_DEMO) return Promise.reject(new Error(AVISO_DEMO));
   const q = new URLSearchParams({ filename: archivo.name, camino });
   if (alturaM !== null) q.set("altura_m", String(alturaM));
   return new Promise((resolve, reject) => {
@@ -231,16 +321,17 @@ export function subirVideo(archivo: File, alturaM: number | null, camino: string
 }
 
 export async function getTrabajo(id: string): Promise<Trabajo> {
-  const r = await fetch(`/api/datos/${encodeURIComponent(id)}`, { cache: "no-store" });
-  if (!r.ok) throw new Error(await leerError(r));
-  return (await r.json()) as Trabajo;
+  // En demo, el `trabajo.json` estático tiene exactamente la forma que devuelve
+  // `GET /api/datos/<id>`, con `archivos` apuntando a `/demo/<id>/…`: lo escribe
+  // así el exportador para que de acá hacia afuera no haya dos caminos.
+  if (ES_DEMO) return leerJson<Trabajo>(`${DEMO_BASE}/${encodeURIComponent(id)}/trabajo.json`);
+  return leerJson<Trabajo>(`/api/datos/${encodeURIComponent(id)}`);
 }
 
 /** Los trabajos que hay en disco, del más nuevo al más viejo. Incluye los ejemplos. */
 export async function listarTrabajos(): Promise<TrabajoFila[]> {
-  const r = await fetch("/api/datos", { cache: "no-store" });
-  if (!r.ok) throw new Error(await leerError(r));
-  return (await r.json()) as TrabajoFila[];
+  if (ES_DEMO) return (await leerJson<DemoIndice>(`${DEMO_BASE}/${INDICE_DEMO}`)).trabajos;
+  return leerJson<TrabajoFila[]>("/api/datos");
 }
 
 export function recordarTrabajo(id: string): void {

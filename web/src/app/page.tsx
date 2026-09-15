@@ -9,6 +9,13 @@
 // supuesto se midió el tiempo, ADR-016), después la ficha del archivo, y recién
 // ahí los números derivados. La ficha aparece apenas el motor la escribió, con
 // la pose todavía corriendo.
+//
+// En MODO DEMO (`NEXT_PUBLIC_KINELAB_MODO=demo`) no hay backend y no se puede subir
+// nada: el formulario se reemplaza por la frase que dice por qué (el motor corre en
+// la Mac del entrenador y no se despliega). Todo lo demás es idéntico, porque la
+// lectura se decide en un solo lugar de `lib/api.ts`. Lo único que el modo demo
+// agrega acá es `transformacion.json`: el video servido es un recorte al tramo del
+// gesto, así que el reproductor necesita saber qué cuadro del origen es su t=0.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Avisos from "@/components/Avisos";
@@ -22,9 +29,12 @@ import TablaCuadros from "@/components/TablaCuadros";
 import TablaEventos from "@/components/TablaEventos";
 import Visor3D from "@/components/Visor3D";
 import {
+  AVISO_DEMO,
   CAMINO_DESCONOCIDO,
+  ES_DEMO,
   ETAPA,
   archivoUrl,
+  getTransformacion,
   getTrabajo,
   listarTrabajos,
   olvidarUltimoTrabajo,
@@ -37,6 +47,7 @@ import {
   type EventoId,
   type Trabajo,
   type TrabajoFila,
+  type Transformacion,
 } from "@/lib/api";
 import { EVENTOS, PROCEDENCIA, fmt, textoSubcuadro } from "@/lib/etiquetas";
 
@@ -163,12 +174,18 @@ export default function Pagina() {
     <main className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-6">
       <header className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
         <h1 className="text-xl font-semibold">kinelab · exploración</h1>
-        <p className="text-sm text-zinc-400">Subí un video de un swing: los palitos y toda la data que el motor produce. Sin gate, sin puntaje: números para mirar, no para juzgar.</p>
+        <p className="text-sm text-zinc-400">
+          {ES_DEMO ? "Resultados ya calculados" : "Subí un video de un swing"}: los palitos y toda la data que el motor produce. Sin gate, sin puntaje: números para mirar, no para juzgar.
+        </p>
       </header>
 
-      <section className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
-        <Subida ocupado={ocupado} camino={camino} onCamino={elegirCamino} onSubir={subir} />
-      </section>
+      {ES_DEMO ? (
+        <section className="rounded-lg border border-amber-800 bg-amber-950/30 p-4 text-sm text-amber-200">{AVISO_DEMO}</section>
+      ) : (
+        <section className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
+          <Subida ocupado={ocupado} camino={camino} onCamino={elegirCamino} onSubir={subir} />
+        </section>
+      )}
 
       <ListaTrabajos filas={filas} actual={abiertoId} cargando={lista.cargando} error={lista.error} onElegir={abrir} />
 
@@ -232,13 +249,38 @@ function Resultado({
 }) {
   const r = trabajo.resumen!;
   const [verDosCuadros, setVerDosCuadros] = useState(false);
+  // `transformacion.json` sólo existe en un trabajo exportado a la demo: ahí el
+  // video es un recorte al tramo del gesto y hay que decirle al reproductor qué
+  // cuadro del ORIGEN es su segundo 0. En local no hay archivo y todo queda en 0,
+  // que es exactamente lo que valía antes de que la demo existiera. Se guarda con
+  // el id al lado para no tener que borrarlo dentro del efecto (cascada de renders)
+  // y para que la respuesta de un trabajo anterior nunca se aplique al que se ve.
+  const [leido, setLeido] = useState<{ id: string; valor: Transformacion | null } | null>(null);
   const overlay = archivoUrl(trabajo, "overlay.mp4");
+
+  useEffect(() => {
+    let vivo = true;
+    getTransformacion(trabajo)
+      .then((x) => vivo && setLeido({ id: trabajo.id, valor: x }))
+      .catch(() => vivo && setLeido({ id: trabajo.id, valor: null }));
+    return () => {
+      vivo = false;
+    };
+  }, [trabajo]);
+  const tr = leido?.id === trabajo.id ? leido.valor : null;
+  const primerCuadro = tr?.cuadro_offset ?? 0;
+  const cuadrosVideo = tr?.cuadros ?? r.cuadros;
   const subImpacto = r.eventos_subcuadro?.impact;
   // Los dos cuadros entre los que cayó el instante estimado, si los hay.
   const parImpacto = subImpacto && subImpacto.frame_before !== null && subImpacto.frame_after !== null ? { antes: subImpacto.frame_before, despues: subImpacto.frame_after } : null;
   const csv = archivoUrl(trabajo, "datos-por-cuadro.csv");
-  const fotos = (Object.keys(EVENTOS) as EventoId[]).filter((ev) => archivoUrl(trabajo, `evento-${ev}.png`));
+  // JPEG en la demo (un PNG del overlay de vid1 pesa 18 MB), PNG en local.
+  const foto = (ev: EventoId) => archivoUrl(trabajo, `evento-${ev}.png`) ?? archivoUrl(trabajo, `evento-${ev}.jpg`);
+  const fotos = (Object.keys(EVENTOS) as EventoId[]).filter((ev) => foto(ev));
   const descargas: [string, string][] = [
+    ["video.mp4", "video sin palitos"],
+    ["pose.json", "pose por cuadro (JSON)"],
+    ["transformacion.json", "transformacion.json"],
     ["datos-por-cuadro.csv", "CSV por cuadro"],
     ["datos-eventos.json", "JSON por evento"],
     ["analysis.json", "analysis.json"],
@@ -262,7 +304,12 @@ function Resultado({
 
       {overlay ? (
         <section className="flex flex-col gap-2">
-          <Reproductor ref={reproductor} src={overlay} fps={r.fps_archivo} cuadros={r.cuadros} eventos={r.eventos_frame} onCuadro={onCuadro} />
+          <Reproductor ref={reproductor} src={overlay} fps={r.fps_archivo} cuadros={cuadrosVideo} primerCuadro={primerCuadro} eventos={r.eventos_frame} onCuadro={onCuadro} />
+          {tr && (
+            <p className="text-xs text-zinc-500">
+              Video recortado al sujeto y al tramo del gesto para poder desplegarlo: cuadros {tr.tramo_origen[0]}–{tr.tramo_origen[1]} de {tr.cuadros_origen ?? "?"}, recorte {tr.recorte.ancho}×{tr.recorte.alto} px en ({tr.offset_x},{tr.offset_y}) del cuadro de {tr.tamano_origen[0]}×{tr.tamano_origen[1]}, escala {fmt(tr.escala, 4)}. Los números de cuadro de abajo son los del video original, sin renumerar.
+            </p>
+          )}
           {subImpacto && (
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
               <span style={{ color: COLOR_EVENTO.impact }}>impacto</span>
@@ -286,7 +333,7 @@ function Resultado({
             </div>
           )}
           {verDosCuadros && parImpacto && (
-            <DosCuadros src={overlay} fps={r.fps_archivo} antes={parImpacto.antes} despues={parImpacto.despues} fraccion={subImpacto?.fraction ?? null} />
+            <DosCuadros src={overlay} fps={r.fps_archivo} antes={parImpacto.antes} despues={parImpacto.despues} fraccion={subImpacto?.fraction ?? null} primerCuadro={primerCuadro} />
           )}
         </section>
       ) : (
@@ -300,7 +347,7 @@ function Resultado({
             return (
               <figure key={ev} className="cursor-pointer rounded-lg border border-zinc-800 bg-black p-1" onClick={() => f !== undefined && irArriba(f)} title="ver ese cuadro en el reproductor">
                 {/* eslint-disable-next-line @next/next/no-img-element -- PNG grande servido por el backend, sin optimizar */}
-                <img src={archivoUrl(trabajo, `evento-${ev}.png`)!} alt={`cuadro del evento ${EVENTOS[ev]}`} loading="lazy" className="mx-auto max-h-96 object-contain" />
+                <img src={foto(ev)!} alt={`cuadro del evento ${EVENTOS[ev]}`} loading="lazy" className="mx-auto max-h-96 object-contain" />
                 <figcaption className="mt-1 text-center text-sm" style={{ color: COLOR_EVENTO[ev] }}>
                   {EVENTOS[ev]}
                   {f !== undefined && <span className="text-zinc-400"> · cuadro {f} · {fmt(r.eventos_t_s[ev], 3)} s</span>}

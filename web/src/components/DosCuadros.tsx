@@ -8,6 +8,10 @@
 // Cada cuadro es un <video> pausado en (n + 0,5) / fps —el medio del cuadro, nunca el
 // borde— y, si el navegador tiene `requestVideoFrameCallback`, se verifica cuál
 // mostró con el `mediaTime`, igual que en el Reproductor.
+//
+// `primerCuadro`: el cuadro del ORIGEN que es el t=0 del archivo (0 salvo que el
+// archivo sea un recorte al tramo; ver Reproductor.tsx). Los números que se muestran
+// son los del origen, siempre.
 
 import { useEffect, useRef, useState } from "react";
 import { fmt } from "@/lib/etiquetas";
@@ -18,7 +22,7 @@ type VideoRVFC = HTMLVideoElement & {
   cancelVideoFrameCallback?: (handle: number) => void;
 };
 
-function Cuadro({ src, fps, n, nota, resaltar }: { src: string; fps: number; n: number; nota: string; resaltar: boolean }) {
+function Cuadro({ src, fps, n, primerCuadro, nota, resaltar }: { src: string; fps: number; n: number; primerCuadro: number; nota: string; resaltar: boolean }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [llego, setLlego] = useState<number | null>(null);
 
@@ -28,10 +32,10 @@ function Cuadro({ src, fps, n, nota, resaltar }: { src: string; fps: number; n: 
     let vivo = true;
     let handle = 0;
     const marcar = (mediaTime: number) => {
-      if (vivo) setLlego(Math.round(mediaTime * fps));
+      if (vivo) setLlego(primerCuadro + Math.round(mediaTime * fps));
     };
     const ir = () => {
-      v.currentTime = (n + 0.5) / fps;
+      v.currentTime = (n - primerCuadro + 0.5) / fps;
       if (typeof v.requestVideoFrameCallback === "function") handle = v.requestVideoFrameCallback((_now, meta) => marcar(meta.mediaTime));
     };
     const alSeek = () => {
@@ -46,7 +50,7 @@ function Cuadro({ src, fps, n, nota, resaltar }: { src: string; fps: number; n: 
       v.removeEventListener("loadedmetadata", ir);
       v.removeEventListener("seeked", alSeek);
     };
-  }, [src, fps, n]);
+  }, [src, fps, n, primerCuadro]);
 
   return (
     <figure className="min-w-0">
@@ -61,7 +65,7 @@ function Cuadro({ src, fps, n, nota, resaltar }: { src: string; fps: number; n: 
   );
 }
 
-export default function DosCuadros({ src, fps, antes, despues, fraccion }: { src: string; fps: number; antes: number; despues: number; fraccion: number | null }) {
+export default function DosCuadros({ src, fps, antes, despues, fraccion, primerCuadro = 0 }: { src: string; fps: number; antes: number; despues: number; fraccion: number | null; primerCuadro?: number }) {
   const pct = fraccion === null ? null : Math.round(fraccion * 100);
   return (
     <div className="rounded-lg border border-zinc-800 p-3">
@@ -70,8 +74,8 @@ export default function DosCuadros({ src, fps, antes, despues, fraccion }: { src
         {pct !== null && ` El impacto estimado cae a ${pct} % del camino, más cerca del cuadro ${pct < 50 ? antes : despues}.`}
       </p>
       <div className="grid grid-cols-2 gap-3">
-        <Cuadro src={src} fps={fps} n={antes} nota="antes del instante estimado" resaltar={pct !== null && pct < 50} />
-        <Cuadro src={src} fps={fps} n={despues} nota="después del instante estimado" resaltar={pct !== null && pct >= 50} />
+        <Cuadro src={src} fps={fps} n={antes} primerCuadro={primerCuadro} nota="antes del instante estimado" resaltar={pct !== null && pct < 50} />
+        <Cuadro src={src} fps={fps} n={despues} primerCuadro={primerCuadro} nota="después del instante estimado" resaltar={pct !== null && pct >= 50} />
       </div>
     </div>
   );

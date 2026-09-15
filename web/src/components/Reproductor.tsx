@@ -10,6 +10,13 @@
 // Provisorio: hoy reproduce `overlay.mp4` ya dibujado. El visor definitivo
 // dibuja el esqueleto desde `pose.npz` en un canvas dentro de `marcoRef`, el
 // mismo div que se transforma para el zoom (por eso el zoom no va en el <video>).
+//
+// `primerCuadro` es el cuadro del ORIGEN que corresponde al segundo 0 del archivo
+// que se está reproduciendo. Es 0 cuando el archivo es el clip entero, y el
+// `cuadro_offset` de `transformacion.json` cuando es un recorte al tramo del gesto
+// (modo demo). Los números de cuadro que se muestran y los que llegan por `eventos`
+// son SIEMPRE los del origen: el recorte no renumera nada, y acá se convierte a
+// tiempo del archivo en un solo lugar (`aTiempo`).
 
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import type { EventoId, Eventos } from "@/lib/api";
@@ -24,6 +31,8 @@ interface Props {
   fps: number;
   cuadros: number;
   eventos: Eventos;
+  /** El cuadro del origen que es el t=0 del archivo. Default 0: el clip entero. */
+  primerCuadro?: number;
   onCuadro?: (n: number) => void;
 }
 
@@ -44,7 +53,10 @@ function acotar(x: number, y: number, z: number, w: number, h: number) {
 
 const btn = "rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm hover:bg-zinc-800 disabled:opacity-40";
 
-const Reproductor = forwardRef<ReproductorHandle, Props>(function Reproductor({ src, fps, cuadros, eventos, onCuadro }, ref) {
+const Reproductor = forwardRef<ReproductorHandle, Props>(function Reproductor({ src, fps, cuadros, eventos, primerCuadro = 0, onCuadro }, ref) {
+  const ultimoCuadro = primerCuadro + Math.max(0, cuadros - 1);
+  // El medio del cuadro n, nunca el borde entre dos.
+  const aTiempo = useCallback((n: number) => (n - primerCuadro + 0.5) / fps, [primerCuadro, fps]);
   const videoRef = useRef<HTMLVideoElement>(null);
   const cajaRef = useRef<HTMLDivElement>(null);
   const marcoRef = useRef<HTMLDivElement>(null);
@@ -56,7 +68,7 @@ const Reproductor = forwardRef<ReproductorHandle, Props>(function Reproductor({ 
   const tamanoRef = useRef<{ w: number; h: number } | null>(null);
   const arrastreRef = useRef<{ x: number; y: number; px: number; py: number; movido: boolean } | null>(null);
 
-  const [cuadro, setCuadro] = useState(0);
+  const [cuadro, setCuadro] = useState(primerCuadro);
   const [reproduciendo, setReproduciendo] = useState(false);
   const [velocidad, setVelocidad] = useState(1);
   const [zoom, setZoom] = useState(1);
@@ -99,7 +111,7 @@ const Reproductor = forwardRef<ReproductorHandle, Props>(function Reproductor({ 
     if (!v) return;
     let vivo = true;
     const alCuadro = (mediaTime: number) => {
-      const n = Math.min(cuadros - 1, Math.max(0, Math.round(mediaTime * fps)));
+      const n = Math.min(ultimoCuadro, Math.max(primerCuadro, primerCuadro + Math.round(mediaTime * fps)));
       if (n !== ultimoRef.current) {
         ultimoRef.current = n;
         setCuadro(n);
@@ -133,7 +145,7 @@ const Reproductor = forwardRef<ReproductorHandle, Props>(function Reproductor({ 
       v.removeEventListener("timeupdate", onT);
       v.removeEventListener("seeked", onT);
     };
-  }, [fps, cuadros, src]);
+  }, [fps, primerCuadro, ultimoCuadro, src]);
 
   useEffect(() => {
     const v = videoRef.current;
@@ -144,13 +156,13 @@ const Reproductor = forwardRef<ReproductorHandle, Props>(function Reproductor({ 
     (n: number) => {
       const v = videoRef.current;
       if (!v || cuadros <= 0) return;
-      const m = Math.min(cuadros - 1, Math.max(0, Math.round(n)));
+      const m = Math.min(ultimoCuadro, Math.max(primerCuadro, Math.round(n)));
       v.pause();
-      if (m === ultimoRef.current && Math.abs(v.currentTime - (m + 0.5) / fps) < 0.25 / fps) return;
+      if (m === ultimoRef.current && Math.abs(v.currentTime - aTiempo(m)) < 0.25 / fps) return;
       pedidoRef.current = m;
-      v.currentTime = (m + 0.5) / fps; // el medio del cuadro m: nunca el borde entre dos
+      v.currentTime = aTiempo(m);
     },
-    [cuadros, fps],
+    [cuadros, primerCuadro, ultimoCuadro, fps, aTiempo],
   );
 
   useImperativeHandle(ref, () => ({ irACuadro }), [irACuadro]);
@@ -159,10 +171,10 @@ const Reproductor = forwardRef<ReproductorHandle, Props>(function Reproductor({ 
     const v = videoRef.current;
     if (!v) return;
     if (v.paused) {
-      if (v.ended || ultimoRef.current >= cuadros - 1) v.currentTime = 0;
+      if (v.ended || ultimoRef.current >= ultimoCuadro) v.currentTime = 0;
       void v.play();
     } else v.pause();
-  }, [cuadros]);
+  }, [ultimoCuadro]);
 
   // --- zoom con paneo: el punto bajo el cursor se queda quieto ---
   const aplicarZoom = useCallback((nuevo: number, cx?: number, cy?: number) => {
@@ -230,10 +242,10 @@ const Reproductor = forwardRef<ReproductorHandle, Props>(function Reproductor({ 
           irACuadro(ultimoRef.current + paso);
           break;
         case "Home":
-          irACuadro(0);
+          irACuadro(primerCuadro);
           break;
         case "End":
-          irACuadro(cuadros - 1);
+          irACuadro(ultimoCuadro);
           break;
         case " ":
           alternar();
@@ -255,11 +267,11 @@ const Reproductor = forwardRef<ReproductorHandle, Props>(function Reproductor({ 
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [irACuadro, alternar, aplicarZoom, cuadros]);
+  }, [irACuadro, alternar, aplicarZoom, primerCuadro, ultimoCuadro]);
 
   const evLista = (Object.keys(EVENTOS) as EventoId[]).filter((k) => eventos[k] !== undefined);
   const enEvento = evLista.find((k) => eventos[k] === cuadro);
-  const ultimo = Math.max(0, cuadros - 1);
+  const ultimo = ultimoCuadro;
 
   return (
     <div className="flex select-none flex-col gap-2">
@@ -300,7 +312,7 @@ const Reproductor = forwardRef<ReproductorHandle, Props>(function Reproductor({ 
           type="range"
           className="linea-de-tiempo block"
           style={{ width: "calc(100% - 14px)", marginLeft: 7 }}
-          min={0}
+          min={primerCuadro}
           max={ultimo}
           step={1}
           value={cuadro}
@@ -309,7 +321,7 @@ const Reproductor = forwardRef<ReproductorHandle, Props>(function Reproductor({ 
         />
         {evLista.map((k) => {
           const f = eventos[k]!;
-          const frac = ultimo > 0 ? f / ultimo : 0;
+          const frac = ultimo > primerCuadro ? (f - primerCuadro) / (ultimo - primerCuadro) : 0;
           return (
             <button
               key={k}
