@@ -329,10 +329,12 @@ function Escenario({ d }: { d: Pose3D }) {
           onKeyDown={onKeyDown}
         >
           <canvas ref={canvasRef} className="absolute inset-0" style={{ width: tamano?.w ?? "100%", height: tamano?.h ?? 320 }} />
-          <div className="pointer-events-none absolute left-2 top-2 rounded bg-black/60 px-2 py-0.5 text-xs text-zinc-300">
+          {/* El rótulo de la fuente arriba y el ángulo ABAJO: en un panel
+              angosto el canvas mide ~320 px y los dos arriba se superponen. */}
+          <div className="pointer-events-none absolute left-2 right-2 top-2 rounded bg-black/60 px-2 py-0.5 text-xs text-zinc-300">
             mocap CMU {d.trial} · marcadores ópticos · no es video
           </div>
-          <div className="pointer-events-none absolute right-2 top-2 rounded bg-black/60 px-2 py-0.5 text-right text-xs tabular-nums text-zinc-300">
+          <div className="pointer-events-none absolute bottom-2 right-2 rounded bg-black/60 px-2 py-0.5 text-right text-xs tabular-nums text-zinc-300">
             azimut {fmt(camino.az, 0, true)}° · elevación {fmt(camino.el, 0, true)}°
             <span className="block text-zinc-500">0° = face_on · −90° = down_the_line</span>
           </div>
