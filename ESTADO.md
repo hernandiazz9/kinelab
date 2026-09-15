@@ -3,6 +3,175 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 15 de septiembre de 2026 — encargo 13: la ganancia muere, el sub-cuadro tiene MDC, y el encuadre no sale del ruido relativo
+
+Prompt: `docs/prompts/13-arnes-ganancia-subcuadro-encuadre.md`. Informe:
+`docs/informes/2026-09-15-13-arnes-ganancia-subcuadro-encuadre.md`. Corrió en
+paralelo con el 12 (`CAPTURA.md`, `docs/filmacion-s22.md`,
+`docs/checklist-captura.md`, `tests/test_service.py`), el 14
+(`truth/kinelab_truth/mocap.py`, `kinelab/metrics/core.py`, `CONTRATO.md`,
+`data/examples/`) y el 15 (`sports/golf/events.py`, `kinelab/events/`,
+`tests/test_fase2.py`, `DECISIONES.md`), ninguno de los tres commiteado al
+cerrar.
+
+### Qué existe ahora
+
+- **El arnés mide velocidad angular 3-D.** `truth/kinelab_truth/swing.py`:
+  `segment_rate_3d` (`|dû/dt|` de una línea, en °/s), `truth_gain` (picos y
+  cocientes en la misma ventana address→follow_end que usa el motor) y
+  `gain_params`, que arma un swing con **cocientes 3-D pedidos** y devuelve los
+  **conseguidos** — lo conseguido es la verdad que se reporta, nunca el
+  objetivo. Para eso la amplitud del arco de las manos dejó de estar quemada
+  (`arm_arc_top_deg` / `arm_arc_end_deg`, con los valores de siempre como
+  default: nada del banco viejo se movió).
+- **Tres barridos nuevos en `truth/kinelab_truth/harness.py`**: `gain_table`,
+  `subframe_table` y `framing_table`, más `Condition.noise_px` (ruido absoluto
+  en px, además del relativo de ESPECIFICACION 3.1) y `realize_seeds`, que
+  proyecta **una vez por condición** en vez de una por semilla. El resultado por
+  semilla no cambió: la tabla de las doce métricas reproduce exactamente el
+  `mdc.yaml` de HEAD, y hay un test que fija el orden del sorteo (primero el
+  jitter de los cuatro eventos, después el ruido).
+- **`sports/golf/mdc.yaml` tiene cuatro secciones**: `metrics` (como siempre),
+  `gain`, `events` y `framing`. Lo sigue escribiendo el arnés, nunca a mano.
+- **`truth/kinelab_truth/__main__.py`** inyecta lo del deporte (segmentos de la
+  ganancia, estimador del sub-cuadro, parámetros de evento, métricas muertas).
+  El arnés no importa ningún deporte.
+- **13 tests nuevos** en `truth/tests/test_gain_subframe.py`.
+- **Un bug arreglado que no estaba en el prompt**: al regenerar la tabla, las
+  filas de las métricas que el arnés ya mató desaparecían (el arnés itera el
+  registro, y una métrica muerta no está en el registro), y la fila ausente las
+  **revive** sin MDC en la corrida siguiente (`_m` sólo mata si la fila existe
+  con `views: []`). `DEAD_METRICS` lleva ahora unidad y razón, y sobreviven.
+
+### Medido
+
+**1 · La ganancia muere en las dos vistas.** Tres bancos con cocientes 3-D
+conocidos (1,5 / 1,0 / 2,0), 16 semillas, tolerancia 0,3 (ancho de rango
+declarado, `estimacion`):
+
+| vista | |sesgo| máx `pelvis_to_torso` | |sesgo| máx `torso_to_arm` |
+|---|---|---|
+| `face_on` | **4,796** | **3,558** |
+| `down_the_line` | **1,815** | **1,286** |
+
+El porqué, medido: las tres líneas giran alrededor del eje vertical y en el
+plano de imagen eso es degenerado. Desde `down_the_line` la línea de caderas
+apunta a la cámara, su proyección baja a **3,6 px** y el ángulo aparente se
+dispara a **11110 °/s contra 139,6 verdaderos (80×)** — el mismo número en los
+tres bancos. Desde `face_on` pasa lo contrario: la de caderas se queda
+horizontal y casi no gira (86,3 contra 139,6), y la de hombros salta
+**74,0 → 120,1 → 572,3** para verdades 139,6 → 209,5 → 279,3 (7,7× medido para
+2,0× verdadero), porque con 90° de giro pasa por su propio colapso. **El número
+de `summary.gain` no es la ganancia de velocidad angular: es el largo proyectado
+del segmento.** No se borró (el prompt lo prohíbe); la lista de los ocho
+archivos que la tocan está en el informe, con el aviso de que `gain()` es
+también quien calcula `sequence_order`, que sí está en el contrato.
+
+**2 · El instante sub-cuadro vive, con MDC.** Verdad: el mismo cruce geométrico
+a 2400 fps (`t* = 2,359769 s` en `face_on`). 16 semillas por fila.
+
+| | 240 fps | 120 fps | 60 fps | 30 fps |
+|---|---|---|---|---|
+| sesgo (ruido nominal 0,6 %) | −0,032 ms | −0,217 ms | −0,006 ms | −0,251 ms |
+| **MDC** | **2,829 ms** | **2,927 ms** | **2,909 ms** | **1,974 ms** |
+| MDC en cuadros | 0,679 | 0,351 | 0,175 | 0,059 |
+| ±1 cuadro entero, para comparar | 4,2 ms | 8,3 ms | 16,7 ms | 33,3 ms |
+
+- El sesgo va de **−0,42 a +0,01 ms** en todo el barrido (≤ 0,05 cuadros); sin
+  ruido, ≤ 0,10 ms.
+- El MDC **casi no depende del fps** (el error en tiempo es σ_px / velocidad, y
+  la velocidad en px/s no cambia con la tasa), y es **invariante al tamaño**:
+  811, 406, 203 y 89 px dan el mismo número exacto.
+- `down_the_line` sale `null` por vista, **16 de 16** (invariante 6). Único caso
+  con nulos por otra razón: 240 fps con 1,2 % de ruido, 2 de 16.
+- **La banda que el motor declara por clip nunca es optimista**:
+  `uncertainty_frames` contra la SD medida da **1,18× a 9,23×**.
+
+Está en `mdc.yaml` §`events.impact.subframe`. **No llega a `analysis.json`**: el
+registro es de métricas y no tiene lugar para eventos, y quien tendría que leer
+la tabla es `sports/golf/events.py`, prohibido en este encargo (lo toca el 15).
+
+**3 · El umbral de encuadre no sale del modelo de ruido de la spec.** Con σ
+proporcional a la altura del cuerpo (ESPECIFICACION 3.1), **el MDC es
+exactamente invariante al tamaño**: 100, 200, 400 y 800 px dan valores idénticos
+hasta el último decimal en las doce métricas. Es álgebra, no semillas: el error
+en cm es (σ/altura) · estatura · 100 y la altura se cancela. Ninguna métrica
+cruza su tolerancia. Hay un test que lo fija.
+
+Con σ **fijo en px** —el único modelo que puede dar un número— la métrica que
+manda es `head_lift_top_cm` en los dos casos:
+
+| σ | de dónde sale | propuesta `body_height_px_min` | rango de cruces |
+|---|---|---|---|
+| 4,866 px | el mismo ruido absoluto que el nominal relativo a 811 px | **717 px** | 394–717 |
+| 2,3 px | mediana de lo medido en los clips reales (1,204 · 2,274 · 2,969) | **345 px** | 188–345 |
+
+Las cuatro duraciones, `tempo_ratio` y el sub-cuadro **no cruzan nunca**: su MDC
+es cuantización de cuadros, no tamaño.
+
+**Los cuatro clips reales pasan los dos umbrales con margen**: 973 px (FHD 30
+del 7/9), 1083 (vid2), 1104 (vid1), 1132 (vid3). Y eso desarma la lectura por
+fracción de cuadro: esos clips ocupan 28,2–29,5 % del alto (UHD) y 41,9 % (FHD),
+lejos del 80–90 % de `CAPTURA.md`, y aun así el encuadre no es lo que los
+limita. **En 4K, 28 % del cuadro son 1104 px, más que el 80 % de un 1080p
+(864 px).** Lo que decide es `body_height_px`; el gate hoy tiene
+`body_height_frac_min`. **No se fijó nada en el gate** (decisión del
+orquestador): `sports/golf/config.py` sigue con `None`.
+
+Suites: **29 en verde** en el arnés (13 nuevos, 9,1 s), **272** en el motor
+(40,4 s). El arnés corre entero en **62 s**. **Mutación manual**: de seis
+mutaciones sobre el código nuevo, cinco hacen fallar al menos un test; la sexta
+—quitar el giro del eje de viaje— es un no-op real (el cruce por cero de una
+señal negada cae en el mismo lugar).
+
+### Qué falta o no se probó
+
+- **La ganancia sigue en el código y en el front.** `hip_line_rate_deg_s` y
+  `shoulder_line_rate_deg_s` se muestran al entrenador como «rotación aparente
+  de caderas / hombros» (`web/src/lib/etiquetas.ts:64-65`,
+  `web/src/components/TablaEventos.tsx:36`) y ahora está medido que el pico es
+  un artefacto. Decisión del orquestador; el informe lista los ocho archivos.
+- **El MDC del sub-cuadro no viaja a `analysis.json`.** Faltan pocas líneas en
+  `sports/golf/events.py`, que este encargo no podía tocar.
+- **La tabla se regeneró con los encargos 12, 14 y 15 ya commiteados**, que
+  cerraron mientras esta sesión corría. El 14 cambia la escala en cm y eso
+  **mueve los ocho MDC en cm entre 1 y 9 %**: `pelvis_sway_top_cm` 2,870 →
+  **2,841**, `pelvis_sway_impact_cm` 2,481 → **2,416**, `pelvis_lift_top_cm`
+  2,822 → **2,769**, `thorax_sway_top_cm` 3,462 → **3,388**,
+  `thorax_lift_top_cm` 2,889 → **2,819**, `pelvis_thrust_top_cm` 2,867 →
+  **2,610**, `head_sway_top_cm` 3,824 → **3,779**, `head_lift_top_cm` 4,501 →
+  **4,382**. Duraciones, veredicto de la ganancia y veredicto del sub-cuadro, sin
+  moverse. **Nada avisa cuando eso pasa**: `mdc.yaml` no guarda contra qué
+  versión del motor se midió. Queda como pregunta para el orquestador.
+- **El barrido de tamaño no toca el estimador.** Es nivel 0: proyección y ruido
+  gaussiano. Cómo depende de verdad el error de RTMPose del tamaño del sujeto lo
+  mide `banco/scale_sweep.py` sobre un cuadro real, y necesita los ONNX; no se
+  corrió.
+- **La cámara virtual sigue con intrínsecos `sin_verificar`** (derivados del
+  campo de visión nominal, `truth/cameras/iphone17pro-1080p120.yaml`): toda la
+  tabla hereda esa procedencia.
+- El front no se abrió ni se tocó `web/` ni `service/` (regla de trabajo).
+
+### Desviaciones
+
+- **Del contrato, ninguna.** `mdc.yaml` no es parte del contrato de datos: es la
+  salida del arnés, y la escribe él.
+- **De ESPECIFICACION 3.1, una**: la spec pide ruido gaussiano «con σ escalado
+  por altura del cuerpo en px», y con ese modelo el punto 3 del encargo **no
+  tiene respuesta** (el MDC no depende del tamaño, demostrado y con test). Se
+  **agregó** —no se reemplazó— un modelo de σ absoluto en px, y los dos van en
+  la tabla con su nombre. Sin él no hay umbral de encuadre posible.
+- Del prompt, una de alcance: el MDC del sub-cuadro **no** llega a
+  `datos-eventos.json` ni a `analysis.json`. El propio prompt preveía la
+  alternativa («si no, en `truth/reports/` y anotado en el informe») y es la que
+  aplica: el registro no tiene lugar para eventos y el archivo que habría que
+  tocar es de otro encargo.
+- Del prompt, otra: no se tocó `sports/golf/metrics.py` para registrar la
+  ganancia, porque murió. Sí se le cambió una línea por el bug de las métricas
+  muertas (`DEAD_METRICS` guarda la unidad).
+
+---
+
 ## 15 de septiembre de 2026 — encargo 14: la escala en cm sale del cuadro más extendido
 
 Prompt: `docs/prompts/14-escala-en-cm.md`. Informe:
