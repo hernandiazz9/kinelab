@@ -3,6 +3,142 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 15 de septiembre de 2026 — encargo 23: los ángulos en 3-D, y cuánto se equivoca la cámara
+
+Prompt: `docs/prompts/23-angulos-en-3d.md`. Informe:
+`docs/informes/2026-09-15-23-angulos-en-3d.md`. El 22 ya había cerrado
+(`c762bdc`); el 16, 17, 18 y 21 siguen abiertos y no se tocó ninguno de sus
+archivos. `kinelab/`, `sports/`, `service/`, `Reproductor.tsx`, `api.ts` y
+`page.tsx` quedaron intactos.
+
+### Qué existe ahora
+
+- **Once ángulos en `pose3d.json`, en 3-D y proyectados.** En el mocap el ángulo
+  3-D es el **verdadero**: tres puntos medidos en el espacio, sin proyección en
+  el medio y sin los 21–32° de ADR-007. Los ocho de tres puntos (codo, rodilla,
+  cadera y hombro de los dos lados) usan **los mismos tres puntos** que dibuja el
+  overlay plano, y un test los compara contra las columnas del propio motor
+  (`kinelab.explore.per_frame_table`) para que no se desincronicen. Más la
+  inclinación de tronco, y el **giro de la línea de caderas** y el de la **de
+  hombros** alrededor del eje vertical respecto de la línea de tiro, que en 2-D
+  no existen.
+- **`pose3d.json` pasa a `kinelab.pose3d/1.1.0`**: `angulos` (unidad, los dos
+  marcos, las procedencias, las once definiciones con sus puntos, su anclaje de
+  dibujo, su `respecto_de` y qué es el proyectado de cada una, el rótulo de la
+  capa y el resumen de este trial), `angulos_3d` y `angulos_proyectados` por
+  vista. Campos nuevos y opcionales → minor. **245 KB → 375 KB.**
+- **`python -m kinelab_truth.mocap 64 --angulos`**: la tabla de los **diez
+  trials** del sujeto 64 —sesgo y límites de acuerdo por ángulo, vista y evento,
+  más el peor cuadro de la repetición— en 2,4 s, y escrita en
+  `truth/reports/angulos-proyeccion-2026-09-15.json`.
+- **La capa de ángulos en el visor**, con su interruptor: el número al lado de
+  la articulación, con el amarillo del overlay plano, siguiendo al punto al
+  girar y sin pisarse entre rótulos. Al llegar a una de las dos vistas del
+  protocolo aparece debajo el valor proyectado y la diferencia, más la línea que
+  dice qué es cada uno. Los dos números salen **del archivo**: la pantalla no
+  compone ninguno.
+- **El esqueleto entra entero.** El encuadre se calcula sobre la caja que
+  contiene al sujeto en **todos** los cuadros, con margen fijo para los números,
+  y el zoom lo multiplica en vez de recalcularlo (si no, la rueda dejaba de
+  hacer nada).
+- **El texto ya no tapa la figura**: una línea a la vista y el argumento entero
+  detrás de «por qué esto no se puede hacer con un celular».
+- **12 tests nuevos** en `truth/tests/test_angulos.py`, y la verificación
+  headless de `pose3d.verificar.mjs` con tres comprobaciones nuevas (encuadre,
+  zoom y la capa de ángulos).
+
+### Medido
+
+**1 · El ángulo del codo de atrás, desde `face_on`, sobre-lee 28,5° en el
+address** [25,2 · 31,9] y hasta **57,8°** en el peor cuadro de la repetición. En
+64_01 el codo derecho mide **151,7° en 3-D y la cámara lo ve en 179,8°**: un
+brazo perfectamente estirado que no lo está. Sin estimador de pose y sin ruido:
+es la proyección sola. La literatura de ADR-007 mide 21,5–32,7° de error medio de
+codo **con** estimador adentro.
+
+**2 · La vista decide qué ángulo se puede leer.** El codo de atrás es el peor
+desde `face_on` (+28,5°) y el mejor desde `down_the_line` (−1,6°); el de adelante
+al revés. Las rodillas sobre-leen **28–31°** en el address desde `face_on` y
+menos de 2° desde `down_the_line`: el golfista flexiona hacia esa cámara.
+
+**3 · El giro de la línea de caderas.** Desde `face_on` el estimado por
+acortamiento acierta la magnitud dentro de **1,0°** (el signo no lo recupera:
+es un `arccos`). Desde `down_the_line`, en el address, dice **+82,8°**
+[78,0 · 87,7] cuando las caderas apuntan al objetivo, y **+88,2°** en el peor
+cuadro. Es el mismo colapso que el 13 midió en °/s y el 19 en largo proyectado,
+ahora en grados y sobre un ángulo que un entrenador nombra.
+
+**4 · La inclinación de tronco sub-lee 11,3° desde `face_on`** en el address
+(13,9° reales contra 0,8° en la imagen en 64_01): la misma geometría que
+`CONTRATO.md` §La escala midió para los cm, ahora en grados.
+
+**5 · El esqueleto se salía, y ahora no.** Recuadro de 337 × 599 px: antes, con
+la cámara en `down_the_line`, **337 de 11.648 puntos afuera del canvas en 257 de
+448 cuadros**, y en el peor de 216 ángulos, 211 puntos. Desde `face_on` entraba
+**por 3,4 px de 1920**. Ahora, en los mismos 216 ángulos, **0 puntos afuera con
+41,9 px de sobra**. El precio es tamaño: la figura queda **13 % más chica** que
+el mapeo crudo del cuadro (594 → 515 px de alto desde `face_on`).
+
+**6 · El archivo se sirve con los ángulos.** `curl` a un backend propio en el
+8767: **200**, `application/json`, **375.327 bytes**, `kinelab.pose3d/1.1.0`, 11
+definiciones, series de 11 × 448 y los dos juegos de proyectados. `pose.npz`
+sigue en 404 y un trabajo de celular no tiene `pose3d.json`.
+
+Suites: arnés **49 en verde** (12 nuevos, 12,3 s), motor **295** (44 s, no se
+tocó), `pnpm lint` y `pnpm build` limpios. **Mutación manual: 9 de 9** en
+`mocap.py` y **6 de 6** en el TypeScript. Dos mutaciones no se cazaban —el
+tronco medido contra la vertical hacia abajo (daría 153° donde hay 27°) y la
+diferencia de los giros contra el valor con signo— y se agregaron los dos tests
+que las cazan.
+
+### Qué falta o no se probó
+
+- **Hay que regenerar la demo estática del 22.** `web/public/demo/` tiene los dos
+  ejemplos de mocap con `pose3d.json` **1.0.0**, sin ángulos. El visor abre igual
+  y lo dice (interruptor apagado y la frase «este pose3d.json es anterior a la
+  capa de ángulos»), pero la capa no está. Es correr `exportar_demo.py`, que es
+  archivo del 22 y no se tocó.
+- **La pantalla no se abrió** (regla de trabajo). Sin verla, lo que más puede
+  fallar: once números al lado de once articulaciones en un recuadro angosto
+  —hay resolución de choques, pero no está mirada—, y el rótulo negro de arriba
+  del canvas sobre la cabeza ahora que la figura llena más el recuadro (42 px de
+  margen vertical contra ~26 de rótulo).
+- **El proyectado de los dos giros es `estimacion`.** Alrededor del eje vertical
+  no hay ángulo que medir en una imagen: lo que se compara es el estimado por
+  acortamiento, que es el `shoulder_rotation_deg` que `HERENCIA.md` prohíbe
+  portar, puesto acá **sólo** para medir cuánto se equivoca. No recupera el
+  signo, y por eso la diferencia va contra el valor absoluto del 3-D.
+- **Un sujeto, diez swings, una geometría de cámara** (3 m, 1,2 m de altura, dos
+  azimuts). La tabla no dice nada de otro golfista ni de otra cámara, y **no
+  mide al estimador de pose**: mide la proyección sola. Barrer distancia, altura
+  y azimut con `harness.py` es otro encargo.
+- **Nada entró al registro de métricas ni a `analysis.json`.** `kinelab/` no se
+  tocó.
+
+### Desviaciones
+
+- **Del contrato, ninguna.** No se agregó ninguna métrica, ningún campo de
+  `analysis.json` ni ninguna entrada al registro. `CONTRATO.md` §Niveles sigue
+  diciendo que los ángulos absolutos de codo, rodilla y muñeca son nivel 3, y
+  esto no los construye: los mide en el mocap para mostrar por qué están ahí.
+  `pose3d.json` sigue fuera del contrato (pregunta abierta del 19).
+- **Del prompt, una de archivos**: además de `mocap.py`, `truth/tests/` y
+  `Visor3D.tsx`, se tocaron `web/src/lib/pose3d.ts` y
+  `web/src/lib/pose3d.verificar.mjs`. Los dos son del 19 y no los tiene ningún
+  encargo abierto. Razón: el encuadre y la proyección son matemática pura, y
+  viven ahí justamente para poder verificarlos sin abrir el navegador (que es lo
+  que la regla de trabajo prohíbe); meterlos en el componente los dejaría sin
+  verificación. `proyectar()` no cambió de firma ni de resultado: ahora delega en
+  `proyectarEn`, y la verificación contra el arnés sigue dando 0,855 / 0,922 px.
+- **Del prompt, una hacia arriba**: el visor tolera un `pose3d.json` 1.0.0 sin
+  ángulos en vez de romperse. No estaba pedido, pero hay uno publicado en la
+  demo y sin esto la pantalla quedaba en blanco.
+- **`POSE3D_SCHEMA` 1.0.0 → 1.1.0** decidido en esta sesión, con el criterio de
+  `CONTRATO.md` §Versionado (campos nuevos y opcionales → minor). `pose3d.json`
+  no está en el contrato, así que no va a §Desviaciones de ahí.
+
+---
+
 ## 15 de septiembre de 2026 — encargo 22: el repo en GitHub y la demo estática
 
 Prompt: `docs/prompts/22-github-y-demo-estatica.md`. Informe:
