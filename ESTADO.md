@@ -3,6 +3,147 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 15 de septiembre de 2026 — encargo 20: el borrón es el obturador, no nuestro códec
+
+Prompt: `docs/prompts/20-por-que-se-ve-borroso.md`. Informe:
+`docs/informes/2026-09-15-20-por-que-se-ve-borroso.md`. **No se tocó ningún
+archivo de código**: el punto 6 del prompt (subir la calidad del overlay en
+`kinelab/explore.py`) esperaba a que cerrara el encargo 16, que toca ese mismo
+archivo y sigue sin informe ni commit en `main`.
+
+### Qué existe ahora
+
+- **La respuesta medida a por qué las manos se ven borrosas en `vid1`**, con su
+  banco reproducible en `data/incoming/borron-20/` (ignorado por git): once
+  scripts en `scripts/`, seis figuras PNG y las medidas crudas en
+  `medidas.json` y `fondo.csv`. Nada de esto entra al repo a propósito: es
+  material de diagnóstico de un clip, no una herramienta del motor.
+- **Un método de medición del barrido que sirve**, por si hace falta otra vez:
+  ajuste por mínimos cuadrados de una rampa (meseta · rampa de ancho L ·
+  meseta) al perfil de gris a lo largo de la dirección de viaje, sobre un borde
+  del sujeto, con el cuadro rotado para que el movimiento quede horizontal. El
+  mismo ajuste con el sujeto quieto da el ancho óptico del borde (2,5 px en
+  este clip) y se resta.
+
+### Medido
+
+**1 · No es nuestra recompresión.** El `overlay.mp4` se reescribe con
+`libx264 -preset veryfast -crf 20 -g 12` sin cambiar resolución. Comparado
+contra el cuadro original decodificado, en el mismo tramo recodificado con la
+receta exacta de `explore.py` pero **sin dibujar nada** (el esqueleto quemado
+sube los indicadores de nitidez y arruina la comparación):
+
+| caja | % del laplaciano del original que conserva | PSNR |
+|---|---|---|
+| manos | **94,1 %** | 34,6 dB |
+| árbol (fondo quieto) | **91,0 %** | 30,6–32,8 dB |
+| pasto (fondo quieto) | **93,0 %** | 33,8–36,2 dB |
+
+La pérdida es **uniforme**: le pega tanto o más a lo que no se mueve. Control
+del banco: el mismo tramo sin pérdida (`-qp 0 yuv444p`) da 53,3–53,9 dB, que es
+el piso del viaje `yuv420p → bgr24 → yuv`, y los indicadores coinciden con el
+original dentro del 0,1 %.
+
+**2 · Es el obturador, y es nueve veces más grande.** Las manos vuelven casi al
+mismo lugar en el impacto que en el address, así que la **misma caja de 400×400
+px** mira la misma escena quieta y barrida:
+
+| | laplaciano | alta frecuencia |
+|---|---|---|
+| cuadro 672 (address, manos a 3,7 px/cuadro) | 493,7 | 4,21 % |
+| cuadro 741 (impacto, manos a 59,6 px/cuadro) | 231,1 | 0,68 % |
+| | **−53,2 %** | **−83,9 %** |
+
+En esos mismos dos cuadros, un borde del **fondo quieto** mide 2,0 y 2,5 px de
+ancho de rampa, con el pico del gradiente en 49,5 y 50,0: la cámara no se movió
+y el códec no cambió.
+
+**3 · El obturador no está en ningún metadato y estimado da 1/100–1/140 s.**
+Ni `ffprobe -show_frames`, ni el `moov` (sólo `com.android.version`,
+`com.android.capture.fps` y `com.samsung.android.utc_offset`), ni el bloque
+Exif de la miniatura embebida en el `udta` (seis etiquetas, ninguna es
+`ExposureTime`). Del barrido, por ajuste de rampa sobre el borde del guante:
+
+| cuadro | barrido | desplazamiento en un cuadro | fracción expuesta | obturador |
+|---|---|---|---|---|
+| 700 | 12,0 px | 19,7 px | 0,61 | 1/98 s |
+| 710 | 11,0 px | 25,2 px | **0,44** | **1/138 s** |
+| 741 | 26,8 px | 59,6 px | **0,45** | **1/134 s** |
+
+Procedencia: `estimacion`. El 735 no es medible con este método: ahí el borde
+del guante corre casi a lo largo del movimiento.
+
+**4 · `CAPTURA.md` §Luz pide ≤ 5 px y este clip los viola por 5,4×.** Con
+683,6 px/m (cadena de estatura 1196,4 px para 1,75 m), las manos en el impacto
+van a 3578 px/s = 5,23 m/s, y 5 px exigirían **1/716 s**: 5 a 7 veces más corto
+que lo que la cámara eligió. A 240 fps el mismo swing daría **6,7 px** con la
+misma fracción, o 14,9 px con el tope duro de 1/240 s.
+
+**5 · Qué compraría subir la calidad (medido, no aplicado).** Mismo tramo de
+111 cuadros, extrapolado a los 1066 de `vid1` (hoy: 255 MB a 115,7 Mb/s, contra
+93,3 MiB a 43,1 Mb/s del original):
+
+| receta | manos | árbol | pasto | PSNR | overlay de vid1 | codificación |
+|---|---|---|---|---|---|---|
+| **crf 20 veryfast (hoy)** | 94,1 % | 91,0 % | 93,0 % | 34,6 dB | 255 MB | 20,3 s |
+| crf 16 veryfast | 96,4 % | 93,5 % | 95,0 % | 36,7 dB | 400 MB | 21,3 s |
+| crf 16 medium | 97,5 % | 95,6 % | 97,2 % | 37,2 dB | 408 MB | 46,9 s |
+| crf 12 slow | 97,8 % | 96,6 % | 97,2 % | 38,9 dB | 610 MB | 154,6 s |
+
+**El cambio, cuando `explore.py` esté libre**: en la única llamada a
+`subprocess.Popen` de `render()` (`kinelab/explore.py:298`), `"-crf", "20"` →
+`"-crf", "16"`. Nada más: no hay reescalado que sacar (el
+`scale=trunc(iw/2)*2:trunc(ih/2)*2` es un no-op sobre 2160×3840, verificado con
+`ffprobe` sobre el overlay) y el `-g 12` es del visor.
+
+**6 · Un método que no sirve, anotado para que no se repita.** Correlacionar la
+nitidez de la caja de manos contra la velocidad, cuadro por cuadro, da −0,15
+sobre 109 cuadros, y los cuadros rápidos dan *más* laplaciano que los quietos
+(539 contra 506): la caja se mueve con las manos y lo que domina el indicador
+es qué hay detrás. Y la caja de fondo quieto no es regla fina: sobre los 1066
+cuadros del clip su alta frecuencia oscila entre 24,5 % y 30,7 % por control de
+tasa del teléfono y viento en las ramas. Vale como control **dentro de un mismo
+cuadro**, no como serie.
+
+Suite del motor: **272 en verde en 28,8 s** (línea de base de HEAD; no se tocó
+código). El test rojo que reportó el informe del 11
+(`test_datos_lista_un_ejemplo_de_otro_proceso`) ya no falla. `truth/` y `web/`
+no se tocaron.
+
+### Qué falta o no se probó
+
+- **El punto 6 del prompt no se ejecutó** (encargo 16 abierto sobre
+  `explore.py`). Aplicar el cambio y volver a medir se hace con
+  `data/incoming/borron-20/scripts/recetas.py`.
+- **`quality.blur_estimate` del contrato sigue en `null`** en los cuatro clips
+  reales, y esta sesión fabricó exactamente el número que ese campo pide.
+  `CAPTURA.md` §Luz ya tiene el umbral escrito (≤ 5 px) y hoy no lo comprueba
+  ningún chequeo del gate.
+- **El obturador es `estimacion`**, de tres bordes en tres cuadros de un solo
+  clip. Para que fuera `medido_aqui` haría falta un objeto de velocidad
+  conocida, o un clip del modo *Pro Video* con el obturador fijado.
+- **No se midió cuántos grados de codo cuesta un barrido de 26,8 px** en este
+  material. `banco/degrade.py` midió −2,5° con `rtmpose-m` a 21 px de
+  desenfoque sintético; comparar contra qué verdad acá es otro encargo.
+- **No se abrió el front** (regla de trabajo). Queda sin medir si parte de la
+  blandura que ve Hernán la agrega el navegador al meter un 2160×3840 en un
+  recuadro chico; se comprueba mirando el `overlay.mp4` en QuickTime a pantalla
+  completa al lado del original.
+
+### Desviaciones
+
+- **Del contrato, ninguna.** No se escribió ningún campo nuevo ni se tocó
+  ningún schema.
+- **Del prompt, una**: el punto 6 (subir la calidad del overlay) quedó sin
+  ejecutar por la regla de §En paralelo del propio prompt, con el cambio exacto
+  y sus números escritos en el informe. No es un apartamiento: es la rama que
+  el prompt previó.
+- `CAPTURA.md` §Luz tiene una frase que la medición contradice —que al aire
+  libre el teléfono elige ~1/2000 s y "sale gratis"— y **no se tocó**: ese
+  archivo no era de este encargo. Va como pregunta al orquestador.
+
+---
+
 ## 15 de septiembre de 2026 — encargo 19: el swing 3-D del mocap, girable en la pantalla
 
 Prompt: `docs/prompts/19-visor-3d-del-mocap.md`. Informe:
