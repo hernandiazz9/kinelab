@@ -56,6 +56,16 @@ ejemplos, porque los trabajos viejos tienen el top y la escala anteriores.
   afirma reproducibilidad por checkpoint y proveedor, y una API remota no
   tiene sha256 ni versión estable. Lo que **sí** vale del pedido es la
   primera pasada barata **local**: ver más abajo, en el backlog.
+- 2026-09-15 · **Deploy: sólo el visor, nunca el motor.** onnxruntime con
+  CoreML, pesos de cientos de MB y 76 s por clip no entran en serverless. Se
+  despliega una exportación estática con resultados ya calculados. El repo va
+  **privado**: hoy tiene rutas de la máquina de Hernán, su correo en los
+  commits y las coordenadas GPS del lugar donde filmó (informe del 11). El
+  paso público (conectar Vercel) lo da Hernán, no una sesión.
+- 2026-09-15 · Dato para el 20, medido al mirar el disco: el `overlay.mp4`
+  de `vid1` pesa **245 MB** contra 93 MB del original, o sea ~115 Mb/s contra
+  43. La pérdida de nitidez **no puede venir de falta de bitrate**; quedan el
+  re-encode generacional y el obturador. El 20 lo separa igual.
 - 2026-09-15 · Anotado, no cerrado: el +4,4 % residual de la escala (cadena
   desde el tobillo, estatura desde el piso). Se cierra sólo con un punto de
   contacto con el suelo validado contra una verdad que no sea nuestro propio
@@ -119,6 +129,10 @@ ejemplos, porque los trabajos viejos tienen el top y la escala anteriores.
   las manos (obturador contra nuestra recompresión) antes de tocar nada; el
   arreglo del overlay sólo si es nuestro y sólo cuando el 16 libere
   `explore.py`. Pedido de Hernán. Prompt escrito.
+- [en curso] 22 github-y-demo-estatica — repo privado en GitHub, exportador
+  de demo (recorte al sujeto, video liviano, JPEG, transformación afín
+  declarada) y modo estático del front para desplegar en Vercel. El motor no
+  se despliega: es un visor de resultados ya calculados. Prompt escrito.
 - [pendiente] 21 visor-desde-datos — el esqueleto dibujado en canvas desde
   `pose.npz` sobre el video, con capas conmutables (el switch que pidió
   Hernán) y sin recompresión. Cierra la desviación de la invariante 10 y
