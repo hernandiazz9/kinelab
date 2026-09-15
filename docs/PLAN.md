@@ -169,6 +169,11 @@ ejemplos, porque los trabajos viejos tienen el top y la escala anteriores.
   de demo (recorte al sujeto, video liviano, JPEG, transformación afín
   declarada) y modo estático del front para desplegar en Vercel. El motor no
   se despliega: es un visor de resultados ya calculados. Prompt escrito.
+- [en curso] 24 cronometro-y-swing-lento — `~/Desktop/Cortado-lenta.mp4`: un
+  swing en cámara lenta **con el cronómetro filmado en el mismo cuadro**
+  (se lee 00:05.27 en el primer cuadro). Calibrar el camino, pasar el gate
+  por primera vez y ver si alguna métrica alcanza `judgment_allowed: true`.
+  Es el desbloqueo de la Fase 0.
 - [pendiente] 21 visor-desde-datos — el esqueleto dibujado en canvas desde
   `pose.npz` sobre el video, con capas conmutables (el switch que pidió
   Hernán) y sin recompresión. Cierra la desviación de la invariante 10 y
@@ -179,6 +184,10 @@ ejemplos, porque los trabajos viejos tienen el top y la escala anteriores.
   `kinelab/metrics/` para avisar cuando la tabla quedó vieja (13, pregunta 5).
 - [pendiente] cola-con-cancelacion — cancelar y borrar trabajos desde la
   pantalla, paginado, fotos como JPEG, limpieza de `data/exploracion/`.
+- [parcial] **el cronómetro llegó** (15/9): `Cortado-lenta.mp4` lo trae
+  filmado dentro del mismo clip del swing, que es mejor que dos clips
+  sueltos. Lo mide el encargo 24. Sigue faltando el archivo **sin recortar**
+  (éste perdió las etiquetas del fabricante) y el cronómetro de Video FHD 60.
 - [bloqueado por Hernán] **cronómetro en Slow motion FHD 240 con el S22** —
   la única llave para que este teléfono produzca un clip que pase el gate.
   Después: FHD 60 también, sesión de swings en el modo aprobado, encuadre
