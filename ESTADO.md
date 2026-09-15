@@ -3,6 +3,137 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 15 de septiembre de 2026 — encargo 22: el repo en GitHub y la demo estática
+
+Prompt: `docs/prompts/22-github-y-demo-estatica.md`. Informe:
+`docs/informes/2026-09-15-22-github-y-demo-estatica.md`. El 19 ya había cerrado
+(`1240ebb`); el 16, 17, 18, 20 y 21 seguían abiertos y sin commitear, y ninguno
+de sus archivos se tocó salvo lo que dice §Desviaciones.
+
+### Qué existe ahora
+
+- **El repo está en GitHub, privado**: https://github.com/hernandiazz9/kinelab,
+  `main` subido, `visibility: PRIVATE` verificado. La lista de lo que habría que
+  revisar antes de hacerlo público —siete puntos, del GPS del lugar de filmación
+  al correo en 79 commits— está en el informe. **No se borró nada.**
+- **`kinelab/tools/exportar_demo.py`**: de un trabajo de `data/exploracion/`
+  produce la versión web en `web/public/demo/<id>/`. Recorta al tramo del gesto,
+  recorta al rectángulo que contiene al sujeto con margen, reescala, pasa las
+  fotos a JPEG, y **deja escrito cómo deshacer las tres cosas**. Medido sobre
+  `vid1`: **424 MB → 14,89 MB**, y el golfista pasa de **29,0 % a 56,0 %** del
+  alto del cuadro (×1,93).
+- **`transformacion.json`**, el artefacto central del encargo: `offset_x`,
+  `offset_y`, `escala`, `cuadro_offset`, el recorte, los dos tamaños, la caja del
+  sujeto, y los puntos que caen fuera del cuadro del origen contados. **Los
+  keypoints no se reescriben**: `pose.json`, `analysis.json`, el CSV y los
+  eventos siguen en `image_px` y en cuadros del original. La regla está escrita
+  dentro del archivo, en `nota`, no en un comentario del código.
+- **`pose.json`**: los 26 puntos por cuadro del tramo, con nombres, huesos,
+  scores, plausibilidad y `provenance`. Formato elegido acá (`kinelab.pose2d/
+  1.0.0`) porque el 21 no había cerrado; es la forma que su prompt pide para
+  `GET /api/datos/<id>/pose`.
+- **Modo demo del front**: `NEXT_PUBLIC_KINELAB_MODO=demo` →`output: "export"`,
+  lectura de `/demo/index.json` y `/demo/<id>/trabajo.json`, sin backend. La
+  decisión está en **un solo lugar** (`web/src/lib/api.ts`); los componentes
+  llaman a las mismas funciones en los dos modos. El formulario de subir se
+  reemplaza por la frase que dice por qué. `noindex` en el `<meta>` (en los dos
+  modos) y `X-Robots-Tag` desde `web/vercel.json`.
+- **`web/vercel.json`** con `framework: nextjs` y
+  `buildCommand: NEXT_PUBLIC_KINELAB_MODO=demo pnpm build`: la demo no depende
+  de que alguien configure una variable en un panel. El único paso manual en
+  Vercel es poner el directorio raíz en `web`.
+- **`primerCuadro` en `Reproductor.tsx` y `DosCuadros.tsx`** (default 0): el
+  cuadro del origen que es el t=0 del archivo. Los números de cuadro que se ven
+  siguen siendo los del original —672 sigue siendo 672— y la conversión a tiempo
+  del archivo queda en un solo lugar.
+- **La demo exportada, commiteada**: `vid1` y los dos ejemplos de mocap, 20,4 MB.
+- **23 tests** en `tests/test_exportar_demo.py`, sobre un trabajo sintético
+  armado en el propio test.
+
+### Medido
+
+**1 · El peso.** `vid1` 424 MB → **14,89 MB** (×28,5); mocap `face_on` 4,8 →
+2,58; `down_the_line` 4,4 → 2,40. Total en el repo **20,4 MB**. Ningún archivo
+pasa de 6,51 MB. Los 14,89 dejan **0,7 % de margen** contra el objetivo de 15:
+la palanca es `--crf` (hoy 23) o `--alto`. El 23 se eligió a ojo y no se midió:
+el 20 midió el `crf 20` del overlay (94,1 % del laplaciano en las manos; el
+borrón es el obturador, no el códec), no este recorte reescalado.
+
+**2 · El sujeto ampliado.** Mediana de `body_height_px` en el tramo de `vid1`:
+1113 px, **29,0 %** del alto original y **56,0 %** del exportado. El techo no es
+el margen: la caja del sujeto mide **1655 px de alto contra 809 de ancho** (en el
+top las manos suben muy por encima de la cabeza), así que el cuerpo no puede
+pasar de ~60 % sin cortar el swing.
+
+**3 · El margen sale de medir.** 0,10 del alto de la caja. En el cuadro del top
+la cabeza del palo llega a **y≈1086 px** y el keypoint más alto del tramo está
+en **1123**: el palo no es un keypoint. Con 0,10 el recorte arranca en 957 y
+quedan **129 px de aire**. Verificado mirando el cuadro exportado.
+
+**4 · La transformación, de punta a punta sobre datos reales.** Los 291 × 26
+keypoints del tramo caen dentro del cuadro exportado (x ∈ [131,2 · 494,2] de
+618; y ∈ [178,3 · 901,9] de 1080). Y el esqueleto de `pose.json` dibujado sobre
+el `video.mp4` exportado usando **sólo** `transformacion.json` —lo mismo que va a
+hacer el front— cae sobre el golfista en el top (722) y en el impacto (741).
+
+**5 · Lo que no se puede salvar, se cuenta.** `puntos_fuera_del_origen`: 0 de
+7566 en `vid1`, 0 de 11.102 en el mocap `face_on`, **315 de 10.972 (2,9 %)** en
+el mocap `down_the_line`, donde la cámara virtual proyecta las manos del top
+fuera del lienzo. Ningún recorte los puede incluir y el archivo lo dice.
+
+**6 · El build de demo no puede hablar con un backend.** En
+`web/out/_next/static/chunks/` las cadenas `api/datos` y `api/config` **no
+aparecen** (rama muerta, el minificador la elimina); en el build local sí.
+
+Suites: motor **295 en verde** (23 nuevos, 32 s), arnés **37** (7,3 s),
+`pnpm lint` limpio y **los dos builds** limpios. Servido `web/out/` con un
+servidor estático: los 14 archivos que el front pide responden 200 con su media
+type, y `pose.npz` y `original.mp4` dan 404. **Mutación manual: 13 de 13.** Tres
+tests nacieron de ahí — el más caro: con `testsrc` como video sintético los cinco
+cuadros vecinos daban la misma diferencia que el correcto, así que un
+`cuadro_offset` en 0 pasaba sin que nada fallara.
+
+### Qué falta o no se probó
+
+- **La pantalla no se abrió** (regla de trabajo). Lo que más puede fallar sin
+  verla: que el reproductor arranque en el cuadro 612 y no en el 0 (la línea de
+  tiempo de `vid1` va de 612 a 902, a propósito), y que los botones de evento
+  salten al cuadro correcto con el offset puesto.
+- **Se exportan dos videos por trabajo**, el limpio y el overlay con palitos:
+  son el 87 % del peso. El overlay es lo que el reproductor muestra hasta que el
+  **21** dibuje desde datos; cuando eso pase, `vid1` baja a **8,4 MB**. La
+  desviación de la invariante 10 sigue abierta, igual que antes de este encargo.
+- **Range/206 no se probó en Vercel**: el servidor de prueba devuelve 200. El
+  cuadro a cuadro se apoya en `+faststart` y en que Chrome se baje los 6,4 MB.
+- **No hay `master.mp4`** (ESPECIFICACION 4.2): el video exportado es H.264 CFR
+  con `-g 12` y rotación aplicada, pero su hash no va a `analysis.json`. Es del 21.
+- **`ListaTrabajos` no muestra los `avisos`** que `index.json` trae por trabajo.
+  El componente es del 16 y no se tocó.
+- **La demo se regenera a mano.** Si se re-sube `vid1`, el id cambia y hay que
+  exportar el nuevo y borrar el viejo de `web/public/demo/`.
+
+### Desviaciones
+
+- **Del contrato, ninguna.** `transformacion.json`, `pose.json` e `index.json`
+  no están en `CONTRATO.md` §Layout y no se agregaron: son artefactos de una
+  exportación para mostrar, cada uno con su `schema` declarado adentro
+  (`kinelab.transformacion/1.0.0`, `kinelab.pose2d/1.0.0`, `kinelab.demo/1.0.0`).
+  Si el 21 sirve `pose.json` por la API, deja de ser un artefacto de demo.
+  Pregunta para el orquestador.
+- **Del prompt, dos de archivos.** `Reproductor.tsx` y `DosCuadros.tsx` reciben
+  `primerCuadro` (default 0: el modo local no cambia en nada). Sin eso el
+  reproductor pide el cuadro 672 en un video de 291 cuadros; la alternativa
+  —renumerar los eventos— mostraría «cuadro 60» donde el análisis dice 672, que
+  es exactamente lo que el resto del encargo evita. Y `layout.tsx` para el
+  `noindex`, que el propio prompt pide.
+- **Del prompt, una de alcance hacia arriba**: se exporta también el
+  `overlay.mp4` recortado además del video limpio. Es la alternativa que el
+  propio prompt prevé para el caso de que el 21 no haya cerrado.
+- El `noindex` va también en modo local: una pantalla en `localhost` tampoco
+  tiene nada que indexar, y un solo camino es menos que dos.
+
+---
+
 ## 15 de septiembre de 2026 — encargo 20: el borrón es el obturador, no nuestro códec
 
 Prompt: `docs/prompts/20-por-que-se-ve-borroso.md`. Informe:
