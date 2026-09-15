@@ -178,6 +178,36 @@ def test_repo_has_the_declared_paths_of_adr_016():
     assert cp.get("s22ultra-video-fhd30-cable").codec_expected == "h264", "medido en el original del S22"
 
 
+def test_repo_has_the_calibrated_slomo_path_of_the_s22():
+    """El primer camino CALIBRADO del proyecto (encargo 24, verificado en el 26).
+
+    Es el hermano del test de arriba, y clava lo único que separa a un camino
+    calibrado de uno declarado: que los seis campos del cronómetro estén
+    llenos, que las dos tasas sean las que midió el cronómetro filmado dentro
+    del cuadro, y que el factor de estiramiento sea su cociente y no un número
+    puesto a mano. Si alguien edita el YAML y le cambia el `fps_real`, acá se
+    entera: ese número es el eje del tiempo de todo lo que se mida con este
+    camino, y es el único del repo que habilita juicio (ADR-016).
+    """
+    cp = load_capture_paths(REPO / "data" / "capture-paths.yaml")
+    p = cp.get("s22ultra-slomo-fhd240-recorte-mac")
+    assert p is not None, "el camino calibrado salió del YAML: sin él ninguna métrica puede ser juicio"
+    assert p.calibrated is True
+    assert p.mode == "slomo", "es Slow motion FHD 240 del S22: el único modo del teléfono que pasa fps_min"
+    assert p.nominal_fps == 240 and p.codec_expected == "hevc"
+    # las dos tasas, del cronómetro filmado (informe 2026-09-15-24, §3)
+    assert p.fps_real == pytest.approx(240.15, abs=0.01), "tasa de CAPTURA: 240,15 +/- 0,60 (1 sigma) sobre 39 lecturas"
+    assert p.fps_playback == pytest.approx(30.0169, abs=0.001), "tasa de REPRODUCCIÓN, del span de PTS"
+    assert p.stretch_factor == pytest.approx(p.fps_real / p.fps_playback, abs=0.0001), "el factor es el cociente medido (8,00049), no un 8 redondo"
+    assert p.stretch_factor == pytest.approx(8.0, rel=0.01), "el slow motion del S22 está horneado x8"
+    # los seis del cronómetro, llenos: declarar no es medir, y medir se anota
+    assert all(getattr(p, f) is not None for f in ("fps_real", "fps_playback", "stretch_factor", "fps_method", "calibrated_on", "calibrated_by"))
+    assert p.calibrated_on == date(2026, 9, 15) and p.calibrated_by == "hernan"
+    assert "cronómetro" in p.fps_method, "el método dice de dónde salió el número"
+    # y el fps de captura supera el fps_min de golf: es lo que lo hace útil
+    assert p.fps_real >= 100
+
+
 # --- caminos declarados sin calibrar (ADR-016) ----------------------------
 
 DECLARED = {"id": "declarado-video", "device": "teléfono cualquiera", "mode": "video", "transfer": "cable", "calibrated": False}
