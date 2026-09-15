@@ -1,24 +1,55 @@
 # Plan
 
-Última ronda: 2026-09-15 — leídos los informes del 07, 09, 10 y 11. Los
-cuatro cerraron. Hallazgos que cambian el plan: el nivel 1 con mocap real
-(07) encontró un sesgo sistemático de +12,7 % en toda métrica en cm y una
-falla del detector de top desde `down_the_line`; el 11 confirmó que ningún
-modo Video del S22 llega a los 100 fps del gate. Escritos 12, 13, 14 y 15,
-sin archivos en común. Skill `/encargo` ajustada: el backend se puede
-levantar para `curl`; dos sesiones nunca editan el mismo archivo.
+Última ronda: 2026-09-15 (tarde) — leídos los informes del 12, 13, 14 y 15.
+Los cuatro cerraron. La ganancia muere en las dos vistas (artefacto de la
+proyección, 80×); el instante sub-cuadro tiene MDC (2–3 ms); el umbral de
+encuadre sale en px (717); la escala en cm cambió de convención con criterio
+medido (sesgo medio 1,04 → 0,49 cm sobre diez swings de mocap); el top desde
+`down_the_line` está arreglado (ADR-017) y en `face_on` lo limita la señal de
+manos. Escritos 16 (contrato 2.0.0), 17 (gate en px, después del 16) y 18
+(señal de manos, en paralelo con el 16). Hernán pregunta qué mostrar a un
+cliente: respondido en la sesión y resumido en §Demo.
 
 Regla de numeración: un ítem recibe número cuando se escribe su prompt; los
 pendientes van sin número, en orden de ejecución.
 
+## Demo hoy (lo que se puede mostrar sin mentir)
+
+La pantalla de exploración con `vid1.mp4` (el swing con contacto real):
+subir, la ficha del archivo, los avisos, los palitos sobre el video con
+cámara lenta, cuadro a cuadro y zoom, el impacto entre dos cuadros con el
+botón de los dos cuadros, las fotos por evento, la tabla por evento, «con
+este archivo» (qué se calcula y qué no, con razón), y el ejemplo de mocap
+para mostrar que corre sobre otro material. Lo que no se muestra: nada como
+puntaje; la «rotación aparente» (artefacto, la borra el 16); el ejemplo
+`down_the_line` hasta regenerarlo. Antes: re-subir los clips y regenerar los
+ejemplos, porque los trabajos viejos tienen el top y la escala anteriores.
+
 ## Decisiones del orquestador
+
+- 2026-09-15 · **ADR-018** (lo escribe el 16): la ganancia pelvis→tórax→brazo
+  y `sequence_order` mueren; `analysis.json` 2.0.0. Con el schema abierto
+  entran `metric_version` por métrica, `quality.scale_px` y el lugar para el
+  MDC del sub-cuadro. Evidencia: 13 y 14.
+- 2026-09-15 · El gate de encuadre pasa a **píxeles**: `body_height_px_min
+  = 717`, procedencia `estimacion` (nivel 0, σ nominal); a revisar con
+  `banco/scale_sweep.py` sobre los ONNX. Encargo 17.
+- 2026-09-15 · La señal de manos se pesa por confianza con umbral; el top
+  lleva banda cuando decide dentro del ruido; el MDC del sub-cuadro entra al
+  evento. Encargo 18. ADR-008 recibe una nota: el código detecta el top por
+  cambio de sentido (GolfDB), no por inflexión; `d2_inflection` no se usa.
+- 2026-09-15 · Anotado, no cerrado: el +4,4 % residual de la escala (cadena
+  desde el tobillo, estatura desde el piso). Se cierra sólo con un punto de
+  contacto con el suelo validado contra una verdad que no sea nuestro propio
+  mapeo. El checklist del iPhone se queda como está; la hoja operativa es
+  `docs/filmacion-s22.md`. El 3,4× de disco del 11 es 2,4× (12).
 
 - 2026-09-15 · El `fps_min` del gate de golf (100) **no se baja**. El S22 en
   modo Video da 60 como máximo; el camino a un clip que pase el gate es el
   cronómetro en Slow motion FHD 240. Un clip de 60 fps se mira en
   exploración con sus 8 de 12 métricas descriptivas; no se ingesta.
 - 2026-09-15 · 4K desaconsejado por escrito (11: el recorte ya se reduce
-  5,2× en FHD; 2,15× de tiempo, 3,4× de disco). WhatsApp como documento es
+  5,2× en FHD; 2,15× de tiempo, 2,4× de disco). WhatsApp como documento es
   un camino limpio, medido; como video, no. Va a `CAPTURA.md` y a la guía
   (encargo 12).
 - 2026-09-15 · El top es el cambio de signo de mayor distancia al address,
@@ -51,15 +82,22 @@ pendientes van sin número, en orden de ejecución.
 - [hecho] 11 diagnostico-vid123 — `6693c84`, `345b340`. Tres swings UHD 60
   por WhatsApp documento; `vid1` con contacto real (impacto 741→742
   verificado contra la pelota); gate: rechazo por fps solamente.
-- [en curso] 12 captura-docs — `CAPTURA.md`, la guía de filmación y el test
-  que caduca por fecha.
-- [en curso] 13 arnes-ganancia-subcuadro-encuadre — la ganancia vive o
-  muere; MDC del instante sub-cuadro; umbral de encuadre en px propuesto.
-- [en curso] 14 escala-en-cm — el +12,7 % de `px_to_cm` con diez trials;
-  convención nueva sólo si gana con criterio.
-- [en curso] 15 top-desde-down-the-line — ADR-017.
-- [pendiente] fijar el umbral de encuadre en el gate (con la tabla del 13) y
-  borrar la ganancia de explore/CSV si el 13 la mata.
+- [hecho] 12 captura-docs — `9f44eb5`…`840fc86`. Guía reescrita; 2,4× no 3,4×.
+- [hecho] 13 arnes-ganancia-subcuadro-encuadre — `4342073`, `5373b2e`. La
+  ganancia muere; sub-cuadro MDC 2,0–2,9 ms; encuadre 717 px propuesto.
+- [hecho] 14 escala-en-cm — `5991922`, `9cf32ad`. Escala = máximo de la
+  cadena proyectada en la repetición; sesgo 1,04 → 0,49 cm.
+- [hecho] 15 top-desde-down-the-line — `0f8f18e`, `e909b2f`. ADR-017; en
+  `down_the_line` el error del top pasa de +58 a −6 cuadros.
+- [en curso] 16 contrato-2-0-0 — ADR-018, sin ganancia ni orden;
+  `metric_version`, `scale_px`, lugar para el MDC del sub-cuadro; bumps del
+  14; CSV y front sin «rotación aparente».
+- [en curso] 18 senal-de-manos — centro de manos pesado por confianza, banda
+  del top, MDC del sub-cuadro en el evento. Paralelo al 16.
+- [pendiente] 17 gate-encuadre-en-px — después del 16. Prompt escrito.
+- [pendiente] re-analizar desde `pose.npz` los trabajos de `data/exploracion/`
+  (invariante 18) desde la pantalla, y que `mdc.yaml` lleve el `code_sha` de
+  `kinelab/metrics/` para avisar cuando la tabla quedó vieja (13, pregunta 5).
 - [pendiente] visor-desde-datos — esqueleto desde `pose.npz` sobre el video
   en el reproductor (ADR-014, invariante 10) con `master.mp4` H.264 CFR
   (4.2). Cierra la desviación de la cuarta sesión.
@@ -82,6 +120,9 @@ pendientes van sin número, en orden de ejecución.
 - **El cronómetro en Slow motion FHD 240.** Diez segundos, sin editar en
   Galería, archivo entero por cable o WhatsApp documento. Sin eso el S22 no
   puede pasar el gate en ningún modo. La guía se actualiza en el 12.
+- Antes de la demo: re-subir `vid1.mp4` y `cortado.mp4` desde la pantalla
+  (los trabajos viejos tienen el top y la escala anteriores) y regenerar los
+  dos ejemplos de mocap con el comando del informe del 07.
 - Probar la pantalla del 09 (selector, ficha, avisos, "con este archivo"):
   seis pasos al final de `docs/informes/2026-09-14-09-ficha-y-selector.md`.
   Y el ejemplo de mocap del 07: seis pasos al final de su informe; el de
