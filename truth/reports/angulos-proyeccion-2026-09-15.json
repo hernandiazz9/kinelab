@@ -1,0 +1,2555 @@
+{
+  "sujeto": "64",
+  "n_trials": 10,
+  "n_sujetos": 1,
+  "trials": [
+    "64_01",
+    "64_02",
+    "64_03",
+    "64_04",
+    "64_05",
+    "64_06",
+    "64_07",
+    "64_08",
+    "64_09",
+    "64_10"
+  ],
+  "aviso": "Diez swings de UN solo sujeto (CMU 64), con la cámara virtual del protocolo. Es una medición de la GEOMETRÍA de la proyección, no del estimador de pose: no hay video ni modelo en el medio. No sale de acá ningún MDC, ninguna referencia y ningún ideal.",
+  "definicion_sesgo": "`proyectado − 3-D` en grados (contra el valor absoluto del 3-D en los dos giros, que el proyectado no puede firmar). Límites de acuerdo de Bland-Altman: media ± 1,96 · SD entre trials (ADR-009 §Formato de reporte).",
+  "eventos_nota": "los tres eventos son los de `events_3d`, el mismo cuadro para las dos vistas: lo que se mide es sólo error de proyección. `peor_dif` es el cuadro de mayor |diferencia| entre el address y el impacto de cada trial.",
+  "unidad": "grados",
+  "por_trial": [
+    {
+      "trial": "64_01",
+      "cuadros": 448,
+      "eventos": {
+        "address": 145,
+        "top": 269,
+        "impact": 330
+      },
+      "por_vista": {
+        "face_on": {
+          "elbow_left_deg": {
+            "address": 3.43,
+            "top": -6.29,
+            "impact": 2.8,
+            "peor_cuadro": 249,
+            "peor_dif": -7.67
+          },
+          "elbow_right_deg": {
+            "address": 28.02,
+            "top": 24.89,
+            "impact": 38.44,
+            "peor_cuadro": 326,
+            "peor_dif": 59.61
+          },
+          "knee_left_deg": {
+            "address": 31.12,
+            "top": 14.84,
+            "impact": 4.01,
+            "peor_cuadro": 303,
+            "peor_dif": 34.27
+          },
+          "knee_right_deg": {
+            "address": 30.44,
+            "top": 10.92,
+            "impact": 12.92,
+            "peor_cuadro": 312,
+            "peor_dif": 32.05
+          },
+          "hip_left_deg": {
+            "address": 12.35,
+            "top": 29.21,
+            "impact": 12.78,
+            "peor_cuadro": 285,
+            "peor_dif": 31.12
+          },
+          "hip_right_deg": {
+            "address": 13.37,
+            "top": 22.85,
+            "impact": 5.75,
+            "peor_cuadro": 258,
+            "peor_dif": 23.99
+          },
+          "shoulder_left_deg": {
+            "address": -5.53,
+            "top": 16.73,
+            "impact": -19.97,
+            "peor_cuadro": 328,
+            "peor_dif": -26.77
+          },
+          "shoulder_right_deg": {
+            "address": -6.62,
+            "top": -1.5,
+            "impact": -0.71,
+            "peor_cuadro": 145,
+            "peor_dif": -6.62
+          },
+          "trunk_lean_deg": {
+            "address": -13.1,
+            "top": -13.65,
+            "impact": -3.3,
+            "peor_cuadro": 311,
+            "peor_dif": -18.17
+          },
+          "hip_line_turn_deg": {
+            "address": -0.17,
+            "top": 0.85,
+            "impact": 1.07,
+            "peor_cuadro": 313,
+            "peor_dif": 6.07
+          },
+          "shoulder_line_turn_deg": {
+            "address": -0.08,
+            "top": -12.2,
+            "impact": 2.9,
+            "peor_cuadro": 256,
+            "peor_dif": -13.19
+          }
+        },
+        "down_the_line": {
+          "elbow_left_deg": {
+            "address": 12.54,
+            "top": 37.99,
+            "impact": 6.5,
+            "peor_cuadro": 309,
+            "peor_dif": -154.09
+          },
+          "elbow_right_deg": {
+            "address": -1.38,
+            "top": -12.79,
+            "impact": -6.2,
+            "peor_cuadro": 297,
+            "peor_dif": -79.16
+          },
+          "knee_left_deg": {
+            "address": -1.62,
+            "top": -4.57,
+            "impact": 3.16,
+            "peor_cuadro": 243,
+            "peor_dif": -4.68
+          },
+          "knee_right_deg": {
+            "address": 0.2,
+            "top": 3.83,
+            "impact": 8.68,
+            "peor_cuadro": 330,
+            "peor_dif": 8.68
+          },
+          "hip_left_deg": {
+            "address": 6.24,
+            "top": 5.49,
+            "impact": 0.53,
+            "peor_cuadro": 175,
+            "peor_dif": 8.71
+          },
+          "hip_right_deg": {
+            "address": 6.4,
+            "top": -0.12,
+            "impact": 15.79,
+            "peor_cuadro": 330,
+            "peor_dif": 15.79
+          },
+          "shoulder_left_deg": {
+            "address": -2.75,
+            "top": 25.62,
+            "impact": -0.83,
+            "peor_cuadro": 303,
+            "peor_dif": -66.07
+          },
+          "shoulder_right_deg": {
+            "address": -2.09,
+            "top": 12.56,
+            "impact": -1.71,
+            "peor_cuadro": 305,
+            "peor_dif": -40.95
+          },
+          "trunk_lean_deg": {
+            "address": 0.12,
+            "top": -2.45,
+            "impact": -6.12,
+            "peor_cuadro": 330,
+            "peor_dif": -6.12
+          },
+          "hip_line_turn_deg": {
+            "address": 79.64,
+            "top": -19.46,
+            "impact": 13.24,
+            "peor_cuadro": 313,
+            "peor_dif": 88.79
+          },
+          "shoulder_line_turn_deg": {
+            "address": 87.08,
+            "top": -66.86,
+            "impact": 54.68,
+            "peor_cuadro": 145,
+            "peor_dif": 87.08
+          }
+        }
+      }
+    },
+    {
+      "trial": "64_02",
+      "cuadros": 493,
+      "eventos": {
+        "address": 182,
+        "top": 306,
+        "impact": 373
+      },
+      "por_vista": {
+        "face_on": {
+          "elbow_left_deg": {
+            "address": 3.2,
+            "top": -10.42,
+            "impact": -0.03,
+            "peor_cuadro": 301,
+            "peor_dif": -10.61
+          },
+          "elbow_right_deg": {
+            "address": 28.88,
+            "top": 31.23,
+            "impact": 42.24,
+            "peor_cuadro": 371,
+            "peor_dif": 63.49
+          },
+          "knee_left_deg": {
+            "address": 27.3,
+            "top": 7.46,
+            "impact": 5.42,
+            "peor_cuadro": 182,
+            "peor_dif": 27.3
+          },
+          "knee_right_deg": {
+            "address": 28.13,
+            "top": 11.59,
+            "impact": 13.3,
+            "peor_cuadro": 182,
+            "peor_dif": 28.13
+          },
+          "hip_left_deg": {
+            "address": 9.88,
+            "top": 20.55,
+            "impact": 6.93,
+            "peor_cuadro": 347,
+            "peor_dif": 26.43
+          },
+          "hip_right_deg": {
+            "address": 11.32,
+            "top": 17.79,
+            "impact": 2.28,
+            "peor_cuadro": 302,
+            "peor_dif": 18.13
+          },
+          "shoulder_left_deg": {
+            "address": -4.87,
+            "top": 19.15,
+            "impact": -20.72,
+            "peor_cuadro": 372,
+            "peor_dif": -25.48
+          },
+          "shoulder_right_deg": {
+            "address": -4.93,
+            "top": -3.95,
+            "impact": -0.22,
+            "peor_cuadro": 277,
+            "peor_dif": -6.27
+          },
+          "trunk_lean_deg": {
+            "address": -13.31,
+            "top": -12.08,
+            "impact": -2.22,
+            "peor_cuadro": 349,
+            "peor_dif": -15.64
+          },
+          "hip_line_turn_deg": {
+            "address": 1.11,
+            "top": 1.12,
+            "impact": 1.25,
+            "peor_cuadro": 359,
+            "peor_dif": 3.22
+          },
+          "shoulder_line_turn_deg": {
+            "address": 0.28,
+            "top": -10.16,
+            "impact": 5.01,
+            "peor_cuadro": 304,
+            "peor_dif": -10.24
+          }
+        },
+        "down_the_line": {
+          "elbow_left_deg": {
+            "address": 13.12,
+            "top": 43.63,
+            "impact": 12.23,
+            "peor_cuadro": 356,
+            "peor_dif": -107.16
+          },
+          "elbow_right_deg": {
+            "address": -1.4,
+            "top": -5.41,
+            "impact": -2.46,
+            "peor_cuadro": 348,
+            "peor_dif": -77.78
+          },
+          "knee_left_deg": {
+            "address": -1.99,
+            "top": -1.83,
+            "impact": 1.36,
+            "peor_cuadro": 328,
+            "peor_dif": -3.18
+          },
+          "knee_right_deg": {
+            "address": 0.21,
+            "top": 3.86,
+            "impact": 4.33,
+            "peor_cuadro": 373,
+            "peor_dif": 4.33
+          },
+          "hip_left_deg": {
+            "address": 8.07,
+            "top": 7.68,
+            "impact": 2.46,
+            "peor_cuadro": 218,
+            "peor_dif": 11.88
+          },
+          "hip_right_deg": {
+            "address": 7.91,
+            "top": -0.03,
+            "impact": 23.41,
+            "peor_cuadro": 373,
+            "peor_dif": 23.41
+          },
+          "shoulder_left_deg": {
+            "address": -2.61,
+            "top": 21.13,
+            "impact": -0.51,
+            "peor_cuadro": 352,
+            "peor_dif": -62.03
+          },
+          "shoulder_right_deg": {
+            "address": -1.85,
+            "top": 11.9,
+            "impact": -9.88,
+            "peor_cuadro": 353,
+            "peor_dif": -32.44
+          },
+          "trunk_lean_deg": {
+            "address": 0.17,
+            "top": -2.2,
+            "impact": -4.93,
+            "peor_cuadro": 373,
+            "peor_dif": -4.93
+          },
+          "hip_line_turn_deg": {
+            "address": 81.72,
+            "top": -18.09,
+            "impact": 30.35,
+            "peor_cuadro": 359,
+            "peor_dif": 88.27
+          },
+          "shoulder_line_turn_deg": {
+            "address": 84.58,
+            "top": -76.93,
+            "impact": 65.6,
+            "peor_cuadro": 186,
+            "peor_dif": 87.2
+          }
+        }
+      }
+    },
+    {
+      "trial": "64_03",
+      "cuadros": 444,
+      "eventos": {
+        "address": 105,
+        "top": 225,
+        "impact": 290
+      },
+      "por_vista": {
+        "face_on": {
+          "elbow_left_deg": {
+            "address": 3.0,
+            "top": -9.29,
+            "impact": 1.26,
+            "peor_cuadro": 219,
+            "peor_dif": -9.59
+          },
+          "elbow_right_deg": {
+            "address": 31.98,
+            "top": 20.83,
+            "impact": 40.44,
+            "peor_cuadro": 286,
+            "peor_dif": 70.96
+          },
+          "knee_left_deg": {
+            "address": 26.38,
+            "top": 5.25,
+            "impact": 3.28,
+            "peor_cuadro": 114,
+            "peor_dif": 28.07
+          },
+          "knee_right_deg": {
+            "address": 29.56,
+            "top": 13.7,
+            "impact": 13.14,
+            "peor_cuadro": 275,
+            "peor_dif": 31.17
+          },
+          "hip_left_deg": {
+            "address": 10.15,
+            "top": 19.6,
+            "impact": 15.28,
+            "peor_cuadro": 271,
+            "peor_dif": 28.96
+          },
+          "hip_right_deg": {
+            "address": 11.32,
+            "top": 17.58,
+            "impact": 4.39,
+            "peor_cuadro": 190,
+            "peor_dif": 21.14
+          },
+          "shoulder_left_deg": {
+            "address": -10.32,
+            "top": 18.91,
+            "impact": -23.07,
+            "peor_cuadro": 289,
+            "peor_dif": -28.49
+          },
+          "shoulder_right_deg": {
+            "address": -5.4,
+            "top": -7.28,
+            "impact": -0.15,
+            "peor_cuadro": 222,
+            "peor_dif": -7.34
+          },
+          "trunk_lean_deg": {
+            "address": -11.57,
+            "top": -14.58,
+            "impact": -3.49,
+            "peor_cuadro": 248,
+            "peor_dif": -18.17
+          },
+          "hip_line_turn_deg": {
+            "address": 0.19,
+            "top": 1.61,
+            "impact": 0.31,
+            "peor_cuadro": 216,
+            "peor_dif": 1.75
+          },
+          "shoulder_line_turn_deg": {
+            "address": 7.65,
+            "top": -7.57,
+            "impact": 0.53,
+            "peor_cuadro": 213,
+            "peor_dif": -8.72
+          }
+        },
+        "down_the_line": {
+          "elbow_left_deg": {
+            "address": 8.24,
+            "top": 30.99,
+            "impact": 9.06,
+            "peor_cuadro": 272,
+            "peor_dif": -152.94
+          },
+          "elbow_right_deg": {
+            "address": -1.29,
+            "top": -16.76,
+            "impact": -7.33,
+            "peor_cuadro": 259,
+            "peor_dif": -78.36
+          },
+          "knee_left_deg": {
+            "address": -1.71,
+            "top": -0.64,
+            "impact": 1.47,
+            "peor_cuadro": 139,
+            "peor_dif": -2.44
+          },
+          "knee_right_deg": {
+            "address": 0.19,
+            "top": 3.17,
+            "impact": 6.91,
+            "peor_cuadro": 290,
+            "peor_dif": 6.91
+          },
+          "hip_left_deg": {
+            "address": 7.68,
+            "top": 6.43,
+            "impact": -0.09,
+            "peor_cuadro": 145,
+            "peor_dif": 11.47
+          },
+          "hip_right_deg": {
+            "address": 7.75,
+            "top": 0.2,
+            "impact": 20.3,
+            "peor_cuadro": 289,
+            "peor_dif": 20.34
+          },
+          "shoulder_left_deg": {
+            "address": -0.39,
+            "top": 17.52,
+            "impact": -0.88,
+            "peor_cuadro": 264,
+            "peor_dif": -68.39
+          },
+          "shoulder_right_deg": {
+            "address": -1.63,
+            "top": 6.86,
+            "impact": -9.13,
+            "peor_cuadro": 269,
+            "peor_dif": -41.47
+          },
+          "trunk_lean_deg": {
+            "address": 0.11,
+            "top": -0.86,
+            "impact": -7.76,
+            "peor_cuadro": 290,
+            "peor_dif": -7.76
+          },
+          "hip_line_turn_deg": {
+            "address": 82.37,
+            "top": -14.89,
+            "impact": 12.55,
+            "peor_cuadro": 275,
+            "peor_dif": 86.3
+          },
+          "shoulder_line_turn_deg": {
+            "address": 86.8,
+            "top": -74.61,
+            "impact": 52.12,
+            "peor_cuadro": 107,
+            "peor_dif": 87.64
+          }
+        }
+      }
+    },
+    {
+      "trial": "64_04",
+      "cuadros": 412,
+      "eventos": {
+        "address": 110,
+        "top": 210,
+        "impact": 265
+      },
+      "por_vista": {
+        "face_on": {
+          "elbow_left_deg": {
+            "address": 3.57,
+            "top": -5.97,
+            "impact": 1.32,
+            "peor_cuadro": 206,
+            "peor_dif": -6.13
+          },
+          "elbow_right_deg": {
+            "address": 30.62,
+            "top": 19.37,
+            "impact": 47.78,
+            "peor_cuadro": 263,
+            "peor_dif": 64.09
+          },
+          "knee_left_deg": {
+            "address": 31.57,
+            "top": 6.15,
+            "impact": 6.98,
+            "peor_cuadro": 110,
+            "peor_dif": 31.57
+          },
+          "knee_right_deg": {
+            "address": 32.14,
+            "top": 18.97,
+            "impact": 14.41,
+            "peor_cuadro": 110,
+            "peor_dif": 32.14
+          },
+          "hip_left_deg": {
+            "address": 12.08,
+            "top": 16.9,
+            "impact": 14.04,
+            "peor_cuadro": 245,
+            "peor_dif": 31.57
+          },
+          "hip_right_deg": {
+            "address": 14.89,
+            "top": 25.37,
+            "impact": 5.21,
+            "peor_cuadro": 194,
+            "peor_dif": 26.17
+          },
+          "shoulder_left_deg": {
+            "address": -6.85,
+            "top": 14.57,
+            "impact": -22.78,
+            "peor_cuadro": 264,
+            "peor_dif": -29.21
+          },
+          "shoulder_right_deg": {
+            "address": -4.78,
+            "top": -1.74,
+            "impact": -0.08,
+            "peor_cuadro": 110,
+            "peor_dif": -4.78
+          },
+          "trunk_lean_deg": {
+            "address": -12.59,
+            "top": -11.11,
+            "impact": -4.56,
+            "peor_cuadro": 254,
+            "peor_dif": -17.84
+          },
+          "hip_line_turn_deg": {
+            "address": -0.23,
+            "top": 0.78,
+            "impact": 1.14,
+            "peor_cuadro": 250,
+            "peor_dif": 5.87
+          },
+          "shoulder_line_turn_deg": {
+            "address": 2.8,
+            "top": -8.34,
+            "impact": 1.96,
+            "peor_cuadro": 215,
+            "peor_dif": -8.78
+          }
+        },
+        "down_the_line": {
+          "elbow_left_deg": {
+            "address": 9.21,
+            "top": 38.84,
+            "impact": 9.45,
+            "peor_cuadro": 248,
+            "peor_dif": -154.12
+          },
+          "elbow_right_deg": {
+            "address": -2.21,
+            "top": -4.5,
+            "impact": -5.18,
+            "peor_cuadro": 239,
+            "peor_dif": -76.71
+          },
+          "knee_left_deg": {
+            "address": -2.09,
+            "top": -0.6,
+            "impact": 0.75,
+            "peor_cuadro": 234,
+            "peor_dif": -3.03
+          },
+          "knee_right_deg": {
+            "address": 0.2,
+            "top": 2.87,
+            "impact": 5.07,
+            "peor_cuadro": 265,
+            "peor_dif": 5.07
+          },
+          "hip_left_deg": {
+            "address": 6.5,
+            "top": 8.96,
+            "impact": 0.94,
+            "peor_cuadro": 153,
+            "peor_dif": 14.75
+          },
+          "hip_right_deg": {
+            "address": 7.35,
+            "top": -0.21,
+            "impact": 18.82,
+            "peor_cuadro": 265,
+            "peor_dif": 18.82
+          },
+          "shoulder_left_deg": {
+            "address": -2.85,
+            "top": 28.25,
+            "impact": -0.85,
+            "peor_cuadro": 172,
+            "peor_dif": 83.85
+          },
+          "shoulder_right_deg": {
+            "address": -3.34,
+            "top": 17.09,
+            "impact": -4.45,
+            "peor_cuadro": 246,
+            "peor_dif": -40.96
+          },
+          "trunk_lean_deg": {
+            "address": 0.16,
+            "top": -3.23,
+            "impact": -4.79,
+            "peor_cuadro": 172,
+            "peor_dif": -5.06
+          },
+          "hip_line_turn_deg": {
+            "address": 80.85,
+            "top": 3.72,
+            "impact": 24.05,
+            "peor_cuadro": 250,
+            "peor_dif": 87.47
+          },
+          "shoulder_line_turn_deg": {
+            "address": 81.29,
+            "top": -60.62,
+            "impact": 62.55,
+            "peor_cuadro": 119,
+            "peor_dif": 87.01
+          }
+        }
+      }
+    },
+    {
+      "trial": "64_05",
+      "cuadros": 387,
+      "eventos": {
+        "address": 77,
+        "top": 183,
+        "impact": 246
+      },
+      "por_vista": {
+        "face_on": {
+          "elbow_left_deg": {
+            "address": 3.55,
+            "top": -3.07,
+            "impact": 2.79,
+            "peor_cuadro": 77,
+            "peor_dif": 3.55
+          },
+          "elbow_right_deg": {
+            "address": 27.97,
+            "top": 13.05,
+            "impact": 36.78,
+            "peor_cuadro": 244,
+            "peor_dif": 53.3
+          },
+          "knee_left_deg": {
+            "address": 29.77,
+            "top": 11.26,
+            "impact": 7.38,
+            "peor_cuadro": 87,
+            "peor_dif": 32.12
+          },
+          "knee_right_deg": {
+            "address": 30.9,
+            "top": 14.49,
+            "impact": 20.38,
+            "peor_cuadro": 234,
+            "peor_dif": 33.61
+          },
+          "hip_left_deg": {
+            "address": 10.31,
+            "top": 17.27,
+            "impact": 11.0,
+            "peor_cuadro": 221,
+            "peor_dif": 27.1
+          },
+          "hip_right_deg": {
+            "address": 15.44,
+            "top": 18.5,
+            "impact": 4.95,
+            "peor_cuadro": 145,
+            "peor_dif": 20.53
+          },
+          "shoulder_left_deg": {
+            "address": -4.49,
+            "top": 9.32,
+            "impact": -16.86,
+            "peor_cuadro": 105,
+            "peor_dif": -25.83
+          },
+          "shoulder_right_deg": {
+            "address": -3.96,
+            "top": -2.59,
+            "impact": -0.93,
+            "peor_cuadro": 77,
+            "peor_dif": -3.96
+          },
+          "trunk_lean_deg": {
+            "address": -11.02,
+            "top": -9.32,
+            "impact": -2.41,
+            "peor_cuadro": 227,
+            "peor_dif": -16.4
+          },
+          "hip_line_turn_deg": {
+            "address": 0.05,
+            "top": 2.08,
+            "impact": 0.54,
+            "peor_cuadro": 232,
+            "peor_dif": 4.48
+          },
+          "shoulder_line_turn_deg": {
+            "address": 0.97,
+            "top": -4.28,
+            "impact": 3.09,
+            "peor_cuadro": 244,
+            "peor_dif": 6.02
+          }
+        },
+        "down_the_line": {
+          "elbow_left_deg": {
+            "address": 10.88,
+            "top": 33.86,
+            "impact": 6.93,
+            "peor_cuadro": 223,
+            "peor_dif": -153.87
+          },
+          "elbow_right_deg": {
+            "address": -1.92,
+            "top": -24.34,
+            "impact": -5.53,
+            "peor_cuadro": 207,
+            "peor_dif": -77.29
+          },
+          "knee_left_deg": {
+            "address": -1.67,
+            "top": -3.27,
+            "impact": 1.56,
+            "peor_cuadro": 196,
+            "peor_dif": -3.61
+          },
+          "knee_right_deg": {
+            "address": 0.25,
+            "top": 4.87,
+            "impact": 3.66,
+            "peor_cuadro": 159,
+            "peor_dif": 5.3
+          },
+          "hip_left_deg": {
+            "address": 7.62,
+            "top": 9.22,
+            "impact": 1.25,
+            "peor_cuadro": 112,
+            "peor_dif": 13.71
+          },
+          "hip_right_deg": {
+            "address": 6.51,
+            "top": 0.19,
+            "impact": 17.04,
+            "peor_cuadro": 246,
+            "peor_dif": 17.04
+          },
+          "shoulder_left_deg": {
+            "address": -4.22,
+            "top": 37.41,
+            "impact": -1.1,
+            "peor_cuadro": 144,
+            "peor_dif": -62.88
+          },
+          "shoulder_right_deg": {
+            "address": -3.64,
+            "top": 5.28,
+            "impact": -0.46,
+            "peor_cuadro": 217,
+            "peor_dif": -48.66
+          },
+          "trunk_lean_deg": {
+            "address": 0.16,
+            "top": -2.87,
+            "impact": -6.48,
+            "peor_cuadro": 246,
+            "peor_dif": -6.48
+          },
+          "hip_line_turn_deg": {
+            "address": 81.66,
+            "top": 3.41,
+            "impact": 29.67,
+            "peor_cuadro": 232,
+            "peor_dif": 86.9
+          },
+          "shoulder_line_turn_deg": {
+            "address": 79.08,
+            "top": -52.07,
+            "impact": 63.51,
+            "peor_cuadro": 89,
+            "peor_dif": 85.52
+          }
+        }
+      }
+    },
+    {
+      "trial": "64_06",
+      "cuadros": 529,
+      "eventos": {
+        "address": 84,
+        "top": 190,
+        "impact": 251
+      },
+      "por_vista": {
+        "face_on": {
+          "elbow_left_deg": {
+            "address": 4.05,
+            "top": -8.56,
+            "impact": 1.92,
+            "peor_cuadro": 174,
+            "peor_dif": -9.52
+          },
+          "elbow_right_deg": {
+            "address": 27.47,
+            "top": 24.63,
+            "impact": 43.85,
+            "peor_cuadro": 249,
+            "peor_dif": 58.93
+          },
+          "knee_left_deg": {
+            "address": 26.76,
+            "top": 8.27,
+            "impact": 5.85,
+            "peor_cuadro": 232,
+            "peor_dif": 30.33
+          },
+          "knee_right_deg": {
+            "address": 32.67,
+            "top": 12.02,
+            "impact": 15.82,
+            "peor_cuadro": 85,
+            "peor_dif": 32.84
+          },
+          "hip_left_deg": {
+            "address": 8.04,
+            "top": 24.05,
+            "impact": 10.61,
+            "peor_cuadro": 215,
+            "peor_dif": 27.5
+          },
+          "hip_right_deg": {
+            "address": 12.94,
+            "top": 27.44,
+            "impact": 6.89,
+            "peor_cuadro": 198,
+            "peor_dif": 27.8
+          },
+          "shoulder_left_deg": {
+            "address": -6.44,
+            "top": 23.37,
+            "impact": -21.98,
+            "peor_cuadro": 250,
+            "peor_dif": -25.95
+          },
+          "shoulder_right_deg": {
+            "address": -4.51,
+            "top": -0.85,
+            "impact": -0.13,
+            "peor_cuadro": 84,
+            "peor_dif": -4.51
+          },
+          "trunk_lean_deg": {
+            "address": -8.76,
+            "top": -13.45,
+            "impact": -5.68,
+            "peor_cuadro": 238,
+            "peor_dif": -14.39
+          },
+          "hip_line_turn_deg": {
+            "address": 0.79,
+            "top": 1.7,
+            "impact": 1.3,
+            "peor_cuadro": 236,
+            "peor_dif": 6.33
+          },
+          "shoulder_line_turn_deg": {
+            "address": 4.41,
+            "top": -17.89,
+            "impact": 2.04,
+            "peor_cuadro": 188,
+            "peor_dif": -18.0
+          }
+        },
+        "down_the_line": {
+          "elbow_left_deg": {
+            "address": 9.14,
+            "top": 38.89,
+            "impact": 7.65,
+            "peor_cuadro": 231,
+            "peor_dif": -153.14
+          },
+          "elbow_right_deg": {
+            "address": -1.27,
+            "top": -3.88,
+            "impact": -2.25,
+            "peor_cuadro": 223,
+            "peor_dif": -82.56
+          },
+          "knee_left_deg": {
+            "address": -1.56,
+            "top": -1.78,
+            "impact": 1.29,
+            "peor_cuadro": 212,
+            "peor_dif": -3.34
+          },
+          "knee_right_deg": {
+            "address": 0.22,
+            "top": 5.77,
+            "impact": 5.58,
+            "peor_cuadro": 182,
+            "peor_dif": 6.2
+          },
+          "hip_left_deg": {
+            "address": 8.72,
+            "top": 6.78,
+            "impact": 2.98,
+            "peor_cuadro": 118,
+            "peor_dif": 14.4
+          },
+          "hip_right_deg": {
+            "address": 5.91,
+            "top": -0.36,
+            "impact": 12.77,
+            "peor_cuadro": 251,
+            "peor_dif": 12.77
+          },
+          "shoulder_left_deg": {
+            "address": -1.9,
+            "top": 19.31,
+            "impact": -0.31,
+            "peor_cuadro": 136,
+            "peor_dif": -51.6
+          },
+          "shoulder_right_deg": {
+            "address": -2.41,
+            "top": 16.77,
+            "impact": -6.88,
+            "peor_cuadro": 230,
+            "peor_dif": -41.91
+          },
+          "trunk_lean_deg": {
+            "address": 0.04,
+            "top": -2.9,
+            "impact": -2.14,
+            "peor_cuadro": 124,
+            "peor_dif": -6.34
+          },
+          "hip_line_turn_deg": {
+            "address": 82.97,
+            "top": -25.97,
+            "impact": 22.57,
+            "peor_cuadro": 236,
+            "peor_dif": 87.05
+          },
+          "shoulder_line_turn_deg": {
+            "address": 83.67,
+            "top": -80.99,
+            "impact": 67.11,
+            "peor_cuadro": 89,
+            "peor_dif": 85.87
+          }
+        }
+      }
+    },
+    {
+      "trial": "64_07",
+      "cuadros": 376,
+      "eventos": {
+        "address": 92,
+        "top": 190,
+        "impact": 255
+      },
+      "por_vista": {
+        "face_on": {
+          "elbow_left_deg": {
+            "address": 1.01,
+            "top": -11.8,
+            "impact": 3.82,
+            "peor_cuadro": 182,
+            "peor_dif": -12.36
+          },
+          "elbow_right_deg": {
+            "address": 28.42,
+            "top": 15.96,
+            "impact": 35.53,
+            "peor_cuadro": 253,
+            "peor_dif": 47.64
+          },
+          "knee_left_deg": {
+            "address": 27.66,
+            "top": 7.81,
+            "impact": 4.76,
+            "peor_cuadro": 103,
+            "peor_dif": 33.08
+          },
+          "knee_right_deg": {
+            "address": 31.41,
+            "top": 8.0,
+            "impact": 15.85,
+            "peor_cuadro": 92,
+            "peor_dif": 31.41
+          },
+          "hip_left_deg": {
+            "address": 10.74,
+            "top": 21.26,
+            "impact": 7.2,
+            "peor_cuadro": 233,
+            "peor_dif": 23.99
+          },
+          "hip_right_deg": {
+            "address": 15.16,
+            "top": 15.29,
+            "impact": 4.89,
+            "peor_cuadro": 213,
+            "peor_dif": 21.36
+          },
+          "shoulder_left_deg": {
+            "address": -6.59,
+            "top": 23.94,
+            "impact": -20.3,
+            "peor_cuadro": 114,
+            "peor_dif": -25.68
+          },
+          "shoulder_right_deg": {
+            "address": -4.3,
+            "top": -5.05,
+            "impact": -2.41,
+            "peor_cuadro": 173,
+            "peor_dif": -6.14
+          },
+          "trunk_lean_deg": {
+            "address": -13.16,
+            "top": -9.59,
+            "impact": -2.11,
+            "peor_cuadro": 243,
+            "peor_dif": -14.2
+          },
+          "hip_line_turn_deg": {
+            "address": 1.15,
+            "top": 1.75,
+            "impact": 0.79,
+            "peor_cuadro": 186,
+            "peor_dif": 1.89
+          },
+          "shoulder_line_turn_deg": {
+            "address": 1.14,
+            "top": -16.5,
+            "impact": 4.37,
+            "peor_cuadro": 192,
+            "peor_dif": -16.55
+          }
+        },
+        "down_the_line": {
+          "elbow_left_deg": {
+            "address": 17.73,
+            "top": 36.91,
+            "impact": 2.06,
+            "peor_cuadro": 237,
+            "peor_dif": -148.29
+          },
+          "elbow_right_deg": {
+            "address": -1.72,
+            "top": -1.59,
+            "impact": -5.51,
+            "peor_cuadro": 226,
+            "peor_dif": -86.11
+          },
+          "knee_left_deg": {
+            "address": -1.25,
+            "top": -3.35,
+            "impact": 1.63,
+            "peor_cuadro": 155,
+            "peor_dif": -4.9
+          },
+          "knee_right_deg": {
+            "address": 0.23,
+            "top": 5.32,
+            "impact": 5.67,
+            "peor_cuadro": 255,
+            "peor_dif": 5.67
+          },
+          "hip_left_deg": {
+            "address": 7.62,
+            "top": 9.37,
+            "impact": 1.42,
+            "peor_cuadro": 120,
+            "peor_dif": 13.15
+          },
+          "hip_right_deg": {
+            "address": 6.43,
+            "top": 0.82,
+            "impact": 17.38,
+            "peor_cuadro": 255,
+            "peor_dif": 17.38
+          },
+          "shoulder_left_deg": {
+            "address": -3.61,
+            "top": 18.83,
+            "impact": -0.54,
+            "peor_cuadro": 233,
+            "peor_dif": -61.76
+          },
+          "shoulder_right_deg": {
+            "address": -3.37,
+            "top": 18.53,
+            "impact": -0.44,
+            "peor_cuadro": 232,
+            "peor_dif": -40.86
+          },
+          "trunk_lean_deg": {
+            "address": 0.18,
+            "top": -4.49,
+            "impact": -6.33,
+            "peor_cuadro": 149,
+            "peor_dif": -6.8
+          },
+          "hip_line_turn_deg": {
+            "address": 85.21,
+            "top": -34.78,
+            "impact": 29.84,
+            "peor_cuadro": 241,
+            "peor_dif": 89.45
+          },
+          "shoulder_line_turn_deg": {
+            "address": 81.77,
+            "top": -85.48,
+            "impact": 62.28,
+            "peor_cuadro": 185,
+            "peor_dif": -88.12
+          }
+        }
+      }
+    },
+    {
+      "trial": "64_08",
+      "cuadros": 364,
+      "eventos": {
+        "address": 70,
+        "top": 180,
+        "impact": 239
+      },
+      "por_vista": {
+        "face_on": {
+          "elbow_left_deg": {
+            "address": 1.8,
+            "top": -12.53,
+            "impact": 2.41,
+            "peor_cuadro": 155,
+            "peor_dif": -13.88
+          },
+          "elbow_right_deg": {
+            "address": 28.57,
+            "top": 24.39,
+            "impact": 48.19,
+            "peor_cuadro": 238,
+            "peor_dif": 48.45
+          },
+          "knee_left_deg": {
+            "address": 27.32,
+            "top": 9.75,
+            "impact": 8.05,
+            "peor_cuadro": 219,
+            "peor_dif": 32.72
+          },
+          "knee_right_deg": {
+            "address": 30.65,
+            "top": 8.47,
+            "impact": 16.88,
+            "peor_cuadro": 225,
+            "peor_dif": 31.93
+          },
+          "hip_left_deg": {
+            "address": 8.35,
+            "top": 27.7,
+            "impact": 11.97,
+            "peor_cuadro": 169,
+            "peor_dif": 27.97
+          },
+          "hip_right_deg": {
+            "address": 12.47,
+            "top": 21.14,
+            "impact": 4.79,
+            "peor_cuadro": 189,
+            "peor_dif": 21.85
+          },
+          "shoulder_left_deg": {
+            "address": -6.92,
+            "top": 26.73,
+            "impact": -23.59,
+            "peor_cuadro": 169,
+            "peor_dif": 28.53
+          },
+          "shoulder_right_deg": {
+            "address": -4.68,
+            "top": -3.21,
+            "impact": -0.7,
+            "peor_cuadro": 148,
+            "peor_dif": -5.84
+          },
+          "trunk_lean_deg": {
+            "address": -9.73,
+            "top": -10.84,
+            "impact": -3.92,
+            "peor_cuadro": 225,
+            "peor_dif": -16.78
+          },
+          "hip_line_turn_deg": {
+            "address": 1.49,
+            "top": 0.9,
+            "impact": 0.67,
+            "peor_cuadro": 70,
+            "peor_dif": 1.49
+          },
+          "shoulder_line_turn_deg": {
+            "address": 5.87,
+            "top": -19.54,
+            "impact": -1.19,
+            "peor_cuadro": 164,
+            "peor_dif": -21.86
+          }
+        },
+        "down_the_line": {
+          "elbow_left_deg": {
+            "address": 15.03,
+            "top": 41.24,
+            "impact": 4.17,
+            "peor_cuadro": 222,
+            "peor_dif": -103.46
+          },
+          "elbow_right_deg": {
+            "address": -1.35,
+            "top": 0.26,
+            "impact": -3.41,
+            "peor_cuadro": 125,
+            "peor_dif": -83.7
+          },
+          "knee_left_deg": {
+            "address": -1.78,
+            "top": -4.08,
+            "impact": 1.96,
+            "peor_cuadro": 194,
+            "peor_dif": -4.6
+          },
+          "knee_right_deg": {
+            "address": 0.22,
+            "top": 6.52,
+            "impact": 5.15,
+            "peor_cuadro": 153,
+            "peor_dif": 7.36
+          },
+          "hip_left_deg": {
+            "address": 9.25,
+            "top": 6.55,
+            "impact": 1.77,
+            "peor_cuadro": 98,
+            "peor_dif": 13.38
+          },
+          "hip_right_deg": {
+            "address": 6.52,
+            "top": -0.13,
+            "impact": 16.91,
+            "peor_cuadro": 239,
+            "peor_dif": 16.91
+          },
+          "shoulder_left_deg": {
+            "address": -2.62,
+            "top": 16.71,
+            "impact": -0.31,
+            "peor_cuadro": 220,
+            "peor_dif": -65.43
+          },
+          "shoulder_right_deg": {
+            "address": -2.14,
+            "top": 16.57,
+            "impact": -0.91,
+            "peor_cuadro": 219,
+            "peor_dif": -36.61
+          },
+          "trunk_lean_deg": {
+            "address": 0.02,
+            "top": -3.94,
+            "impact": -4.52,
+            "peor_cuadro": 116,
+            "peor_dif": -7.42
+          },
+          "hip_line_turn_deg": {
+            "address": 80.8,
+            "top": -46.56,
+            "impact": 39.4,
+            "peor_cuadro": 227,
+            "peor_dif": 89.3
+          },
+          "shoulder_line_turn_deg": {
+            "address": 86.3,
+            "top": -87.35,
+            "impact": 74.41,
+            "peor_cuadro": 172,
+            "peor_dif": -91.52
+          }
+        }
+      }
+    },
+    {
+      "trial": "64_09",
+      "cuadros": 452,
+      "eventos": {
+        "address": 148,
+        "top": 253,
+        "impact": 309
+      },
+      "por_vista": {
+        "face_on": {
+          "elbow_left_deg": {
+            "address": 2.32,
+            "top": -9.01,
+            "impact": 2.1,
+            "peor_cuadro": 230,
+            "peor_dif": -9.96
+          },
+          "elbow_right_deg": {
+            "address": 26.13,
+            "top": 28.61,
+            "impact": 36.55,
+            "peor_cuadro": 306,
+            "peor_dif": 58.64
+          },
+          "knee_left_deg": {
+            "address": 25.26,
+            "top": 10.2,
+            "impact": 4.65,
+            "peor_cuadro": 291,
+            "peor_dif": 32.56
+          },
+          "knee_right_deg": {
+            "address": 27.51,
+            "top": 9.6,
+            "impact": 15.52,
+            "peor_cuadro": 296,
+            "peor_dif": 31.29
+          },
+          "hip_left_deg": {
+            "address": 8.98,
+            "top": 25.61,
+            "impact": 11.66,
+            "peor_cuadro": 283,
+            "peor_dif": 30.87
+          },
+          "hip_right_deg": {
+            "address": 13.51,
+            "top": 22.03,
+            "impact": 4.07,
+            "peor_cuadro": 256,
+            "peor_dif": 22.44
+          },
+          "shoulder_left_deg": {
+            "address": -5.33,
+            "top": 23.24,
+            "impact": -19.91,
+            "peor_cuadro": 307,
+            "peor_dif": -25.26
+          },
+          "shoulder_right_deg": {
+            "address": -3.1,
+            "top": -0.1,
+            "impact": -0.24,
+            "peor_cuadro": 222,
+            "peor_dif": -5.03
+          },
+          "trunk_lean_deg": {
+            "address": -10.99,
+            "top": -10.36,
+            "impact": -1.96,
+            "peor_cuadro": 292,
+            "peor_dif": -16.56
+          },
+          "hip_line_turn_deg": {
+            "address": 2.98,
+            "top": 1.37,
+            "impact": 1.08,
+            "peor_cuadro": 296,
+            "peor_dif": 5.72
+          },
+          "shoulder_line_turn_deg": {
+            "address": 0.76,
+            "top": -16.48,
+            "impact": 3.43,
+            "peor_cuadro": 236,
+            "peor_dif": -18.16
+          }
+        },
+        "down_the_line": {
+          "elbow_left_deg": {
+            "address": 14.04,
+            "top": 39.23,
+            "impact": 6.65,
+            "peor_cuadro": 291,
+            "peor_dif": -118.18
+          },
+          "elbow_right_deg": {
+            "address": -1.18,
+            "top": 1.46,
+            "impact": -6.14,
+            "peor_cuadro": 283,
+            "peor_dif": -82.31
+          },
+          "knee_left_deg": {
+            "address": -1.68,
+            "top": -4.48,
+            "impact": 1.91,
+            "peor_cuadro": 215,
+            "peor_dif": -6.02
+          },
+          "knee_right_deg": {
+            "address": 0.28,
+            "top": 5.19,
+            "impact": 5.07,
+            "peor_cuadro": 242,
+            "peor_dif": 5.38
+          },
+          "hip_left_deg": {
+            "address": 9.51,
+            "top": 7.5,
+            "impact": 0.32,
+            "peor_cuadro": 182,
+            "peor_dif": 13.44
+          },
+          "hip_right_deg": {
+            "address": 6.41,
+            "top": -0.15,
+            "impact": 21.39,
+            "peor_cuadro": 309,
+            "peor_dif": 21.39
+          },
+          "shoulder_left_deg": {
+            "address": -3.16,
+            "top": 19.25,
+            "impact": -0.75,
+            "peor_cuadro": 288,
+            "peor_dif": -68.82
+          },
+          "shoulder_right_deg": {
+            "address": -2.55,
+            "top": 18.77,
+            "impact": -5.07,
+            "peor_cuadro": 289,
+            "peor_dif": -34.8
+          },
+          "trunk_lean_deg": {
+            "address": 0.06,
+            "top": -3.75,
+            "impact": -8.46,
+            "peor_cuadro": 309,
+            "peor_dif": -8.46
+          },
+          "hip_line_turn_deg": {
+            "address": 87.5,
+            "top": -37.97,
+            "impact": 20.22,
+            "peor_cuadro": 296,
+            "peor_dif": 88.58
+          },
+          "shoulder_line_turn_deg": {
+            "address": 79.67,
+            "top": -82.17,
+            "impact": 57.25,
+            "peor_cuadro": 246,
+            "peor_dif": -86.82
+          }
+        }
+      }
+    },
+    {
+      "trial": "64_10",
+      "cuadros": 562,
+      "eventos": {
+        "address": 186,
+        "top": 297,
+        "impact": 353
+      },
+      "por_vista": {
+        "face_on": {
+          "elbow_left_deg": {
+            "address": 3.34,
+            "top": -9.33,
+            "impact": 3.55,
+            "peor_cuadro": 276,
+            "peor_dif": -11.12
+          },
+          "elbow_right_deg": {
+            "address": 27.05,
+            "top": 26.76,
+            "impact": 36.05,
+            "peor_cuadro": 351,
+            "peor_dif": 53.21
+          },
+          "knee_left_deg": {
+            "address": 28.82,
+            "top": 12.88,
+            "impact": 5.96,
+            "peor_cuadro": 333,
+            "peor_dif": 36.71
+          },
+          "knee_right_deg": {
+            "address": 34.12,
+            "top": 8.06,
+            "impact": 14.88,
+            "peor_cuadro": 339,
+            "peor_dif": 34.97
+          },
+          "hip_left_deg": {
+            "address": 7.69,
+            "top": 32.31,
+            "impact": 9.93,
+            "peor_cuadro": 317,
+            "peor_dif": 33.29
+          },
+          "hip_right_deg": {
+            "address": 12.56,
+            "top": 25.08,
+            "impact": 4.59,
+            "peor_cuadro": 298,
+            "peor_dif": 25.33
+          },
+          "shoulder_left_deg": {
+            "address": -7.65,
+            "top": 26.6,
+            "impact": -22.9,
+            "peor_cuadro": 289,
+            "peor_dif": 28.0
+          },
+          "shoulder_right_deg": {
+            "address": -4.82,
+            "top": 0.25,
+            "impact": -1.32,
+            "peor_cuadro": 204,
+            "peor_dif": -6.53
+          },
+          "trunk_lean_deg": {
+            "address": -9.06,
+            "top": -11.83,
+            "impact": -2.97,
+            "peor_cuadro": 333,
+            "peor_dif": -16.24
+          },
+          "hip_line_turn_deg": {
+            "address": 2.27,
+            "top": 1.91,
+            "impact": 1.03,
+            "peor_cuadro": 340,
+            "peor_dif": 6.72
+          },
+          "shoulder_line_turn_deg": {
+            "address": 2.17,
+            "top": -20.92,
+            "impact": 1.53,
+            "peor_cuadro": 283,
+            "peor_dif": -23.24
+          }
+        },
+        "down_the_line": {
+          "elbow_left_deg": {
+            "address": 8.57,
+            "top": 37.8,
+            "impact": 3.56,
+            "peor_cuadro": 338,
+            "peor_dif": -135.92
+          },
+          "elbow_right_deg": {
+            "address": -1.94,
+            "top": 1.24,
+            "impact": -4.76,
+            "peor_cuadro": 329,
+            "peor_dif": -85.4
+          },
+          "knee_left_deg": {
+            "address": -1.82,
+            "top": -6.27,
+            "impact": 1.76,
+            "peor_cuadro": 241,
+            "peor_dif": -6.88
+          },
+          "knee_right_deg": {
+            "address": 0.26,
+            "top": 7.59,
+            "impact": 5.84,
+            "peor_cuadro": 297,
+            "peor_dif": 7.59
+          },
+          "hip_left_deg": {
+            "address": 9.79,
+            "top": 6.06,
+            "impact": 1.89,
+            "peor_cuadro": 221,
+            "peor_dif": 14.22
+          },
+          "hip_right_deg": {
+            "address": 7.62,
+            "top": -0.38,
+            "impact": 18.09,
+            "peor_cuadro": 353,
+            "peor_dif": 18.09
+          },
+          "shoulder_left_deg": {
+            "address": -2.47,
+            "top": 17.6,
+            "impact": -0.44,
+            "peor_cuadro": 335,
+            "peor_dif": -67.79
+          },
+          "shoulder_right_deg": {
+            "address": -4.19,
+            "top": 19.34,
+            "impact": -0.58,
+            "peor_cuadro": 333,
+            "peor_dif": -39.21
+          },
+          "trunk_lean_deg": {
+            "address": 0.17,
+            "top": -3.91,
+            "impact": -5.53,
+            "peor_cuadro": 241,
+            "peor_dif": -8.06
+          },
+          "hip_line_turn_deg": {
+            "address": 85.49,
+            "top": -38.18,
+            "impact": 27.26,
+            "peor_cuadro": 340,
+            "peor_dif": 89.68
+          },
+          "shoulder_line_turn_deg": {
+            "address": 80.02,
+            "top": -85.23,
+            "impact": 67.02,
+            "peor_cuadro": 287,
+            "peor_dif": -90.75
+          }
+        }
+      }
+    }
+  ],
+  "resumen": {
+    "face_on": {
+      "elbow_left_deg": {
+        "address": {
+          "n": 10,
+          "sesgo": 2.93,
+          "loa": [
+            1.09,
+            4.76
+          ],
+          "abs_max": 4.05
+        },
+        "top": {
+          "n": 10,
+          "sesgo": -8.63,
+          "loa": [
+            -14.21,
+            -3.04
+          ],
+          "abs_max": 12.53
+        },
+        "impact": {
+          "n": 10,
+          "sesgo": 2.19,
+          "loa": [
+            -0.06,
+            4.45
+          ],
+          "abs_max": 3.82
+        },
+        "peor_dif": {
+          "n": 10,
+          "sesgo": -8.73,
+          "loa": [
+            -18.21,
+            0.75
+          ],
+          "abs_max": 13.88
+        }
+      },
+      "elbow_right_deg": {
+        "address": {
+          "n": 10,
+          "sesgo": 28.51,
+          "loa": [
+            25.18,
+            31.85
+          ],
+          "abs_max": 31.98
+        },
+        "top": {
+          "n": 10,
+          "sesgo": 22.97,
+          "loa": [
+            11.89,
+            34.06
+          ],
+          "abs_max": 31.23
+        },
+        "impact": {
+          "n": 10,
+          "sesgo": 40.59,
+          "loa": [
+            31.24,
+            49.93
+          ],
+          "abs_max": 48.19
+        },
+        "peor_dif": {
+          "n": 10,
+          "sesgo": 57.83,
+          "loa": [
+            43.48,
+            72.18
+          ],
+          "abs_max": 70.96
+        }
+      },
+      "knee_left_deg": {
+        "address": {
+          "n": 10,
+          "sesgo": 28.2,
+          "loa": [
+            24.13,
+            32.26
+          ],
+          "abs_max": 31.57
+        },
+        "top": {
+          "n": 10,
+          "sesgo": 9.39,
+          "loa": [
+            3.5,
+            15.28
+          ],
+          "abs_max": 14.84
+        },
+        "impact": {
+          "n": 10,
+          "sesgo": 5.63,
+          "loa": [
+            2.65,
+            8.61
+          ],
+          "abs_max": 8.05
+        },
+        "peor_dif": {
+          "n": 10,
+          "sesgo": 31.87,
+          "loa": [
+            26.42,
+            37.33
+          ],
+          "abs_max": 36.71
+        }
+      },
+      "knee_right_deg": {
+        "address": {
+          "n": 10,
+          "sesgo": 30.75,
+          "loa": [
+            26.82,
+            34.69
+          ],
+          "abs_max": 34.12
+        },
+        "top": {
+          "n": 10,
+          "sesgo": 11.58,
+          "loa": [
+            4.82,
+            18.34
+          ],
+          "abs_max": 18.97
+        },
+        "impact": {
+          "n": 10,
+          "sesgo": 15.31,
+          "loa": [
+            10.97,
+            19.65
+          ],
+          "abs_max": 20.38
+        },
+        "peor_dif": {
+          "n": 10,
+          "sesgo": 31.95,
+          "loa": [
+            28.46,
+            35.45
+          ],
+          "abs_max": 34.97
+        }
+      },
+      "hip_left_deg": {
+        "address": {
+          "n": 10,
+          "sesgo": 9.86,
+          "loa": [
+            6.71,
+            13.01
+          ],
+          "abs_max": 12.35
+        },
+        "top": {
+          "n": 10,
+          "sesgo": 23.45,
+          "loa": [
+            13.24,
+            33.65
+          ],
+          "abs_max": 32.31
+        },
+        "impact": {
+          "n": 10,
+          "sesgo": 11.14,
+          "loa": [
+            5.9,
+            16.38
+          ],
+          "abs_max": 15.28
+        },
+        "peor_dif": {
+          "n": 10,
+          "sesgo": 28.88,
+          "loa": [
+            23.36,
+            34.4
+          ],
+          "abs_max": 33.29
+        }
+      },
+      "hip_right_deg": {
+        "address": {
+          "n": 10,
+          "sesgo": 13.3,
+          "loa": [
+            10.39,
+            16.21
+          ],
+          "abs_max": 15.44
+        },
+        "top": {
+          "n": 10,
+          "sesgo": 21.31,
+          "loa": [
+            13.53,
+            29.08
+          ],
+          "abs_max": 27.44
+        },
+        "impact": {
+          "n": 10,
+          "sesgo": 4.78,
+          "loa": [
+            2.47,
+            7.1
+          ],
+          "abs_max": 6.89
+        },
+        "peor_dif": {
+          "n": 10,
+          "sesgo": 22.87,
+          "loa": [
+            17.14,
+            28.6
+          ],
+          "abs_max": 27.8
+        }
+      },
+      "shoulder_left_deg": {
+        "address": {
+          "n": 10,
+          "sesgo": -6.5,
+          "loa": [
+            -9.78,
+            -3.22
+          ],
+          "abs_max": 10.32
+        },
+        "top": {
+          "n": 10,
+          "sesgo": 20.26,
+          "loa": [
+            9.29,
+            31.22
+          ],
+          "abs_max": 26.73
+        },
+        "impact": {
+          "n": 10,
+          "sesgo": -21.21,
+          "loa": [
+            -25.25,
+            -17.17
+          ],
+          "abs_max": 23.59
+        },
+        "peor_dif": {
+          "n": 10,
+          "sesgo": -15.61,
+          "loa": [
+            -61.01,
+            29.79
+          ],
+          "abs_max": 29.21
+        }
+      },
+      "shoulder_right_deg": {
+        "address": {
+          "n": 10,
+          "sesgo": -4.71,
+          "loa": [
+            -6.51,
+            -2.91
+          ],
+          "abs_max": 6.62
+        },
+        "top": {
+          "n": 10,
+          "sesgo": -2.6,
+          "loa": [
+            -7.2,
+            1.99
+          ],
+          "abs_max": 7.28
+        },
+        "impact": {
+          "n": 10,
+          "sesgo": -0.69,
+          "loa": [
+            -2.12,
+            0.74
+          ],
+          "abs_max": 2.41
+        },
+        "peor_dif": {
+          "n": 10,
+          "sesgo": -5.7,
+          "loa": [
+            -7.82,
+            -3.58
+          ],
+          "abs_max": 7.34
+        }
+      },
+      "trunk_lean_deg": {
+        "address": {
+          "n": 10,
+          "sesgo": -11.33,
+          "loa": [
+            -14.7,
+            -7.96
+          ],
+          "abs_max": 13.31
+        },
+        "top": {
+          "n": 10,
+          "sesgo": -11.68,
+          "loa": [
+            -15.16,
+            -8.2
+          ],
+          "abs_max": 14.58
+        },
+        "impact": {
+          "n": 10,
+          "sesgo": -3.26,
+          "loa": [
+            -5.61,
+            -0.91
+          ],
+          "abs_max": 5.68
+        },
+        "peor_dif": {
+          "n": 10,
+          "sesgo": -16.44,
+          "loa": [
+            -19.21,
+            -13.67
+          ],
+          "abs_max": 18.17
+        }
+      },
+      "hip_line_turn_deg": {
+        "address": {
+          "n": 10,
+          "sesgo": 0.96,
+          "loa": [
+            -1.13,
+            3.06
+          ],
+          "abs_max": 2.98
+        },
+        "top": {
+          "n": 10,
+          "sesgo": 1.41,
+          "loa": [
+            0.48,
+            2.33
+          ],
+          "abs_max": 2.08
+        },
+        "impact": {
+          "n": 10,
+          "sesgo": 0.92,
+          "loa": [
+            0.28,
+            1.56
+          ],
+          "abs_max": 1.3
+        },
+        "peor_dif": {
+          "n": 10,
+          "sesgo": 4.35,
+          "loa": [
+            0.28,
+            8.43
+          ],
+          "abs_max": 6.72
+        }
+      },
+      "shoulder_line_turn_deg": {
+        "address": {
+          "n": 10,
+          "sesgo": 2.6,
+          "loa": [
+            -2.48,
+            7.68
+          ],
+          "abs_max": 7.65
+        },
+        "top": {
+          "n": 10,
+          "sesgo": -13.39,
+          "loa": [
+            -24.48,
+            -2.3
+          ],
+          "abs_max": 20.92
+        },
+        "impact": {
+          "n": 10,
+          "sesgo": 2.37,
+          "loa": [
+            -1.21,
+            5.94
+          ],
+          "abs_max": 5.01
+        },
+        "peor_dif": {
+          "n": 10,
+          "sesgo": -13.27,
+          "loa": [
+            -29.96,
+            3.42
+          ],
+          "abs_max": 23.24
+        }
+      }
+    },
+    "down_the_line": {
+      "elbow_left_deg": {
+        "address": {
+          "n": 10,
+          "sesgo": 11.85,
+          "loa": [
+            5.63,
+            18.07
+          ],
+          "abs_max": 17.73
+        },
+        "top": {
+          "n": 10,
+          "sesgo": 37.94,
+          "loa": [
+            31.0,
+            44.87
+          ],
+          "abs_max": 43.63
+        },
+        "impact": {
+          "n": 10,
+          "sesgo": 6.83,
+          "loa": [
+            0.9,
+            12.75
+          ],
+          "abs_max": 12.23
+        },
+        "peor_dif": {
+          "n": 10,
+          "sesgo": -138.12,
+          "loa": [
+            -178.76,
+            -97.47
+          ],
+          "abs_max": 154.12
+        }
+      },
+      "elbow_right_deg": {
+        "address": {
+          "n": 10,
+          "sesgo": -1.57,
+          "loa": [
+            -2.26,
+            -0.87
+          ],
+          "abs_max": 2.21
+        },
+        "top": {
+          "n": 10,
+          "sesgo": -6.63,
+          "loa": [
+            -23.52,
+            10.26
+          ],
+          "abs_max": 24.34
+        },
+        "impact": {
+          "n": 10,
+          "sesgo": -4.88,
+          "loa": [
+            -8.16,
+            -1.6
+          ],
+          "abs_max": 7.33
+        },
+        "peor_dif": {
+          "n": 10,
+          "sesgo": -80.94,
+          "loa": [
+            -87.78,
+            -74.09
+          ],
+          "abs_max": 86.11
+        }
+      },
+      "knee_left_deg": {
+        "address": {
+          "n": 10,
+          "sesgo": -1.72,
+          "loa": [
+            -2.17,
+            -1.26
+          ],
+          "abs_max": 2.09
+        },
+        "top": {
+          "n": 10,
+          "sesgo": -3.09,
+          "loa": [
+            -6.71,
+            0.54
+          ],
+          "abs_max": 6.27
+        },
+        "impact": {
+          "n": 10,
+          "sesgo": 1.69,
+          "loa": [
+            0.46,
+            2.91
+          ],
+          "abs_max": 3.16
+        },
+        "peor_dif": {
+          "n": 10,
+          "sesgo": -4.27,
+          "loa": [
+            -7.03,
+            -1.5
+          ],
+          "abs_max": 6.88
+        }
+      },
+      "knee_right_deg": {
+        "address": {
+          "n": 10,
+          "sesgo": 0.23,
+          "loa": [
+            0.17,
+            0.28
+          ],
+          "abs_max": 0.28
+        },
+        "top": {
+          "n": 10,
+          "sesgo": 4.9,
+          "loa": [
+            1.96,
+            7.84
+          ],
+          "abs_max": 7.59
+        },
+        "impact": {
+          "n": 10,
+          "sesgo": 5.6,
+          "loa": [
+            2.87,
+            8.32
+          ],
+          "abs_max": 8.68
+        },
+        "peor_dif": {
+          "n": 10,
+          "sesgo": 6.25,
+          "loa": [
+            3.6,
+            8.9
+          ],
+          "abs_max": 8.68
+        }
+      },
+      "hip_left_deg": {
+        "address": {
+          "n": 10,
+          "sesgo": 8.1,
+          "loa": [
+            5.73,
+            10.47
+          ],
+          "abs_max": 9.79
+        },
+        "top": {
+          "n": 10,
+          "sesgo": 7.4,
+          "loa": [
+            4.69,
+            10.11
+          ],
+          "abs_max": 9.37
+        },
+        "impact": {
+          "n": 10,
+          "sesgo": 1.35,
+          "loa": [
+            -0.54,
+            3.23
+          ],
+          "abs_max": 2.98
+        },
+        "peor_dif": {
+          "n": 10,
+          "sesgo": 12.91,
+          "loa": [
+            9.37,
+            16.45
+          ],
+          "abs_max": 14.75
+        }
+      },
+      "hip_right_deg": {
+        "address": {
+          "n": 10,
+          "sesgo": 6.88,
+          "loa": [
+            5.5,
+            8.26
+          ],
+          "abs_max": 7.91
+        },
+        "top": {
+          "n": 10,
+          "sesgo": -0.02,
+          "loa": [
+            -0.71,
+            0.67
+          ],
+          "abs_max": 0.82
+        },
+        "impact": {
+          "n": 10,
+          "sesgo": 18.19,
+          "loa": [
+            12.31,
+            24.07
+          ],
+          "abs_max": 23.41
+        },
+        "peor_dif": {
+          "n": 10,
+          "sesgo": 18.19,
+          "loa": [
+            12.3,
+            24.08
+          ],
+          "abs_max": 23.41
+        }
+      },
+      "shoulder_left_deg": {
+        "address": {
+          "n": 10,
+          "sesgo": -2.66,
+          "loa": [
+            -4.66,
+            -0.65
+          ],
+          "abs_max": 4.22
+        },
+        "top": {
+          "n": 10,
+          "sesgo": 22.16,
+          "loa": [
+            9.39,
+            34.94
+          ],
+          "abs_max": 37.41
+        },
+        "impact": {
+          "n": 10,
+          "sesgo": -0.65,
+          "loa": [
+            -1.18,
+            -0.13
+          ],
+          "abs_max": 1.1
+        },
+        "peor_dif": {
+          "n": 10,
+          "sesgo": -49.09,
+          "loa": [
+            -141.17,
+            42.99
+          ],
+          "abs_max": 83.85
+        }
+      },
+      "shoulder_right_deg": {
+        "address": {
+          "n": 10,
+          "sesgo": -2.72,
+          "loa": [
+            -4.4,
+            -1.04
+          ],
+          "abs_max": 4.19
+        },
+        "top": {
+          "n": 10,
+          "sesgo": 14.37,
+          "loa": [
+            4.51,
+            24.23
+          ],
+          "abs_max": 19.34
+        },
+        "impact": {
+          "n": 10,
+          "sesgo": -3.95,
+          "loa": [
+            -11.17,
+            3.27
+          ],
+          "abs_max": 9.88
+        },
+        "peor_dif": {
+          "n": 10,
+          "sesgo": -39.79,
+          "loa": [
+            -48.53,
+            -31.04
+          ],
+          "abs_max": 48.66
+        }
+      },
+      "trunk_lean_deg": {
+        "address": {
+          "n": 10,
+          "sesgo": 0.12,
+          "loa": [
+            0.0,
+            0.24
+          ],
+          "abs_max": 0.18
+        },
+        "top": {
+          "n": 10,
+          "sesgo": -3.06,
+          "loa": [
+            -5.13,
+            -0.99
+          ],
+          "abs_max": 4.49
+        },
+        "impact": {
+          "n": 10,
+          "sesgo": -5.71,
+          "loa": [
+            -9.2,
+            -2.21
+          ],
+          "abs_max": 8.46
+        },
+        "peor_dif": {
+          "n": 10,
+          "sesgo": -6.74,
+          "loa": [
+            -9.09,
+            -4.39
+          ],
+          "abs_max": 8.46
+        }
+      },
+      "hip_line_turn_deg": {
+        "address": {
+          "n": 10,
+          "sesgo": 82.82,
+          "loa": [
+            77.95,
+            87.69
+          ],
+          "abs_max": 87.5
+        },
+        "top": {
+          "n": 10,
+          "sesgo": -22.88,
+          "loa": [
+            -56.64,
+            10.89
+          ],
+          "abs_max": 46.56
+        },
+        "impact": {
+          "n": 10,
+          "sesgo": 24.91,
+          "loa": [
+            8.79,
+            41.04
+          ],
+          "abs_max": 39.4
+        },
+        "peor_dif": {
+          "n": 10,
+          "sesgo": 88.18,
+          "loa": [
+            85.86,
+            90.5
+          ],
+          "abs_max": 89.68
+        }
+      },
+      "shoulder_line_turn_deg": {
+        "address": {
+          "n": 10,
+          "sesgo": 83.03,
+          "loa": [
+            77.01,
+            89.04
+          ],
+          "abs_max": 87.08
+        },
+        "top": {
+          "n": 10,
+          "sesgo": -75.23,
+          "loa": [
+            -98.39,
+            -52.07
+          ],
+          "abs_max": 87.35
+        },
+        "impact": {
+          "n": 10,
+          "sesgo": 62.65,
+          "loa": [
+            49.74,
+            75.56
+          ],
+          "abs_max": 74.41
+        },
+        "peor_dif": {
+          "n": 10,
+          "sesgo": 16.31,
+          "loa": [
+            -161.87,
+            194.49
+          ],
+          "abs_max": 91.52
+        }
+      }
+    }
+  }
+}

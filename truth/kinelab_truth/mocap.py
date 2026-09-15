@@ -47,13 +47,19 @@ from types import SimpleNamespace
 import numpy as np
 
 from kinelab.perception.keypoints import H, HALPE26_LIMBS, HALPE26_NAMES, J
+from kinelab.perception.plausibility import angle_deg
 
 INCH_M = 0.0254
 CMU_FPS = 120.0  # tasa de captura del sistema Vicon de CMU, declarada por ellos (no medida acá)
 EXAMPLES = Path(__file__).resolve().parents[2] / "data" / "examples" / "cmu-mocap"
 
 POSE3D_JSON = "pose3d.json"
-POSE3D_SCHEMA = "kinelab.pose3d/1.0.0"
+# 1.1.0: `angulos`, `angulos_3d` y `angulos_proyectados` (encargo 23) y el
+# rótulo `resumen`. Campos nuevos y opcionales, nada renombrado y ninguna
+# unidad cambiada: minor, con el criterio de `CONTRATO.md` §Versionado. El visor
+# tiene que seguir abriendo un archivo 1.0.0 —hay uno publicado en la demo— y lo
+# hace sin la capa de ángulos, no con una pantalla en blanco.
+POSE3D_SCHEMA = "kinelab.pose3d/1.1.0"
 # Milímetros. A 3 m con la focal del protocolo (~3078 px), medio milímetro es
 # medio píxel: el redondeo entra en la tolerancia de 1 px del test de ida y
 # vuelta y el archivo pesa la mitad que con seis decimales.
@@ -579,6 +585,11 @@ def rotulos(trial: str) -> dict[str, str]:
     `nota_fuente` (informe del 07, "ninguna frase de aviso se compone en la
     pantalla"). Redacción para un entrenador, no para un ingeniero."""
     return {
+        # La única línea que queda a la vista siempre: el resto del argumento va
+        # detrás de un desplegable, porque el texto entero ocupaba más que la
+        # figura y la tapaba (encargo 23, punto 6). Se escribe acá, no en la
+        # pantalla: la pantalla no compone ninguna de estas frases.
+        "resumen": f"Mocap del sujeto 64 de CMU, toma {trial}, medido con marcadores ópticos: no es un video y no es un swing de Hernán.",
         "fuente": f"Swing de laboratorio del sujeto 64 de la base de mocap de CMU, toma {trial}, medido con marcadores ópticos: la posición de cada articulación en el espacio está medida, punto por punto.",
         "no_es_video": "No es un video y no es un swing de Hernán. Es el único material con profundidad medida que hay en el proyecto, y está acá para mostrar qué se puede ver cuando la profundidad existe de verdad.",
         "no_con_un_celular": "Esto no se puede hacer con un clip de celular: una cámara sola no mide profundidad. De un video sale dónde está cada punto EN LA IMAGEN, no en el espacio, y la profundidad que falta no se deduce, se inventa. Para ver así un swing propio harían falta dos cámaras sincronizadas y calibradas, o marcadores como los de acá.",
@@ -605,6 +616,239 @@ def indicador_lineas() -> dict:
         "medido": "Encargo 13, sobre el swing sintético del arnés: desde down_the_line la línea de caderas se proyecta en 3,6 px y su giro aparente da 11110 °/s contra 139,6 verdaderos, 80 veces más. Es la misma geometría que se ve girando este mocap, con otro cuerpo.",
         "procedencia": "medido_aqui",
     }
+
+
+# --- los ángulos: en el mocap son verdaderos ---------------------------------
+
+# En 3-D un ángulo articular es el ángulo de verdad: tres puntos medidos en el
+# espacio, sin proyección en el medio. Es la única parte del proyecto donde eso
+# existe. Sirve de REFERENCIA, igual que la verdad 3-D del sway: `CONTRATO.md`
+# §Niveles pone los ángulos absolutos de codo, rodilla y muñeca en nivel 3 —no
+# se construyen como métrica del producto— y nada de esto entra al registro ni
+# a `analysis.json`. Lo que sí hace es mostrar POR QUÉ están en nivel 3.
+
+ANGULOS_DECIMALES = 2  # el punto está en milímetros: 0,01° ya es más de lo que informa
+
+
+def angle3_deg(a: np.ndarray, b: np.ndarray, c: np.ndarray) -> np.ndarray:
+    """Ángulo en `b` formado por A-B-C, en grados, en [0, 180], **en 3-D**.
+
+    Es la misma definición que mide el motor en el plano de imagen
+    (`kinelab.perception.plausibility.angle_deg`: `arctan2(|v1 × v2|, v1 · v2)`,
+    que no pierde precisión cerca de 0° ni de 180°), con el producto vectorial
+    de 3 componentes en vez del escalar de 2. No se puede importar tal cual
+    porque aquella indexa `[..., 0]` y `[..., 1]` y nada más; lo que garantiza
+    que sigan siendo la misma es un test: con `z = 0` las dos tienen que dar el
+    mismo número, y los ángulos proyectados de acá tienen que reproducir columna
+    por columna los del motor (`test_angulos.py`).
+    """
+    v1 = np.asarray(a, float) - np.asarray(b, float)
+    v2 = np.asarray(c, float) - np.asarray(b, float)
+    cross = np.linalg.norm(np.cross(v1, v2), axis=-1)
+    dot = np.einsum("...i,...i->...", v1, v2)
+    n1 = np.linalg.norm(v1, axis=-1)
+    n2 = np.linalg.norm(v2, axis=-1)
+    return np.where((n1 == 0) | (n2 == 0), np.nan, np.degrees(np.arctan2(cross, dot)))
+
+
+# Los ocho ángulos de tres puntos son **los mismos tres puntos** que dibuja el
+# overlay plano (`kinelab/explore.py`, `per_frame_table`): si acá se cambiara
+# uno, la comparación 3-D contra proyección dejaría de ser justa. El test
+# `test_los_proyectados_son_los_del_motor` los compara contra las columnas del
+# propio motor, cuadro por cuadro, así que un cambio de allá rompe acá.
+_TRES_PUNTOS: dict[str, tuple[int, int, int]] = {
+    "elbow_left_deg": (H.LEFT_SHOULDER, H.LEFT_ELBOW, H.LEFT_WRIST),
+    "elbow_right_deg": (H.RIGHT_SHOULDER, H.RIGHT_ELBOW, H.RIGHT_WRIST),
+    "knee_left_deg": (H.LEFT_HIP, H.LEFT_KNEE, H.LEFT_ANKLE),
+    "knee_right_deg": (H.RIGHT_HIP, H.RIGHT_KNEE, H.RIGHT_ANKLE),
+    "hip_left_deg": (H.LEFT_SHOULDER, H.LEFT_HIP, H.LEFT_KNEE),
+    "hip_right_deg": (H.RIGHT_SHOULDER, H.RIGHT_HIP, H.RIGHT_KNEE),
+    "shoulder_left_deg": (H.LEFT_ELBOW, H.LEFT_SHOULDER, H.LEFT_HIP),
+    "shoulder_right_deg": (H.RIGHT_ELBOW, H.RIGHT_SHOULDER, H.RIGHT_HIP),
+}
+
+# Las dos líneas cuyo giro alrededor del eje vertical es directo en 3-D e
+# imposible en 2-D. El par va (izquierda, derecha): el vector apunta al objetivo
+# cuando el golfista está de frente a la pelota.
+_GIROS: dict[str, tuple[int, int]] = {
+    "hip_line_turn_deg": (H.LEFT_HIP, H.RIGHT_HIP),
+    "shoulder_line_turn_deg": (H.LEFT_SHOULDER, H.RIGHT_SHOULDER),
+}
+
+_TRUNK = "trunk_lean_deg"
+
+
+def _mid(P: np.ndarray, idx: tuple[int, ...]) -> np.ndarray:
+    return P[:, list(idx)].mean(axis=1)
+
+
+def angulos_3d(P: np.ndarray) -> dict[str, np.ndarray]:
+    """Los once ángulos, cuadro por cuadro, sobre los puntos 3-D en metros.
+
+    Son **verdaderos**: no hay proyección en el medio y por lo tanto no
+    arrastran los 21–32° de error de la pose monocular que mide ADR-007. El
+    marco es `HARNESS_FRAME`; los dos giros se miden ahí y nada más."""
+    out: dict[str, np.ndarray] = {}
+    for nombre, (a, b, c) in _TRES_PUNTOS.items():
+        out[nombre] = angle3_deg(P[:, a], P[:, b], P[:, c])
+    # tronco: ángulo en la cadera entre la vertical hacia arriba y la línea
+    # cadera→hombro. Es el mismo ángulo de tres puntos, con un punto auxiliar un
+    # metro por encima de la cadera. Sin signo: en 3-D el tronco se inclina en
+    # dos direcciones a la vez y un solo número con signo mentiría.
+    cadera, hombro = _mid(P, (H.LEFT_HIP, H.RIGHT_HIP)), _mid(P, (H.LEFT_SHOULDER, H.RIGHT_SHOULDER))
+    arriba = cadera + np.array([0.0, 1.0, 0.0])
+    out[_TRUNK] = angle3_deg(arriba, cadera, hombro)
+    for nombre, (izq, der) in _GIROS.items():
+        v = P[:, izq] - P[:, der]
+        out[nombre] = np.degrees(np.arctan2(v[:, 2], v[:, 0]))
+    return out
+
+
+def angulos_proyectados(px: np.ndarray) -> dict[str, np.ndarray]:
+    """Los mismos once, medidos sobre la proyección 2-D `(T,26,2)` en
+    `image_px`: lo que el motor calcularía si el swing se hubiera filmado desde
+    esa cámara.
+
+    Los ocho de tres puntos y el tronco salen de `angle_deg`, **la función del
+    motor**, con los mismos tres puntos. Los dos giros no: alrededor del eje
+    vertical no hay ángulo que medir en la imagen, y lo único que se puede
+    hacer es el estimado por acortamiento —`arccos(largo / largo máximo de la
+    toma)`— que es exactamente el `shoulder_rotation_deg` que `HERENCIA.md`
+    prohíbe portar. Va acá para medir cuánto se equivoca, no para usarlo: no
+    recupera el signo (por eso se compara contra el valor absoluto del 3-D) y
+    su procedencia es `estimacion`."""
+    out: dict[str, np.ndarray] = {}
+    for nombre, (a, b, c) in _TRES_PUNTOS.items():
+        out[nombre] = np.asarray(angle_deg(px[:, a], px[:, b], px[:, c]), float)
+    cadera, hombro = _mid(px, (H.LEFT_HIP, H.RIGHT_HIP)), _mid(px, (H.LEFT_SHOULDER, H.RIGHT_SHOULDER))
+    arriba = cadera + np.array([0.0, -1.0])  # en image_px la y crece hacia ABAJO
+    out[_TRUNK] = np.asarray(angle_deg(arriba, cadera, hombro), float)
+    for nombre, (izq, der) in _GIROS.items():
+        d = px[:, izq] - px[:, der]
+        largo = np.hypot(d[:, 0], d[:, 1])
+        ref = float(np.nanmax(largo))
+        out[nombre] = np.degrees(np.arccos(np.clip(largo / ref, 0.0, 1.0))) if ref > 0 else np.full(px.shape[0], np.nan)
+    return out
+
+
+# Dónde va el número en la pantalla y qué mide cada uno. El punto de anclaje es
+# el vértice del ángulo (para los giros, el medio de la línea): el visor dibuja
+# el número al lado de ese punto y lo sigue al girar la cámara.
+def angulos_doc() -> dict:
+    """Las definiciones, con su unidad, su marco y su procedencia. Van como
+    DATO adentro del archivo: la pantalla no compone ninguna de estas frases."""
+    tres = {
+        "elbow_left_deg": ("codo izquierdo", "hombro → codo → muñeca"),
+        "elbow_right_deg": ("codo derecho", "hombro → codo → muñeca"),
+        "knee_left_deg": ("rodilla izquierda", "cadera → rodilla → tobillo"),
+        "knee_right_deg": ("rodilla derecha", "cadera → rodilla → tobillo"),
+        "hip_left_deg": ("cadera izquierda", "hombro → cadera → rodilla"),
+        "hip_right_deg": ("cadera derecha", "hombro → cadera → rodilla"),
+        "shoulder_left_deg": ("hombro izquierdo", "codo → hombro → cadera"),
+        "shoulder_right_deg": ("hombro derecho", "codo → hombro → cadera"),
+    }
+    defs: dict[str, dict] = {}
+    for nombre, (a, b, c) in _TRES_PUNTOS.items():
+        etiqueta, cadena = tres[nombre]
+        defs[nombre] = {
+            "etiqueta": etiqueta,
+            "definicion": f"ángulo de tres puntos {cadena}, con el vértice en el punto del medio",
+            "puntos": [HALPE26_NAMES[a], HALPE26_NAMES[b], HALPE26_NAMES[c]],
+            "anclaje": [HALPE26_NAMES[b]],
+            "respecto_de": "los tres puntos",
+            "rango": [0, 180],
+            "comparar": "valor",
+            "proyectado": "el mismo ángulo de tres puntos medido sobre la proyección: es lo que calcula el motor en un video (`kinelab.perception.plausibility.angle_deg`).",
+        }
+    defs[_TRUNK] = {
+        "etiqueta": "inclinación de tronco",
+        "definicion": "ángulo en el medio de las caderas entre la vertical hacia arriba y la línea al medio de los hombros. Sin signo: es cuánto se aparta el tronco de la vertical, no hacia dónde.",
+        "puntos": ["vertical", "hip_center", "shoulder_center"],
+        "anclaje": ["left_hip", "right_hip"],
+        "respecto_de": "la vertical del marco",
+        "rango": [0, 180],
+        "comparar": "valor",
+        "proyectado": "el mismo ángulo con la vertical de la IMAGEN (y hacia abajo en `image_px`): coincide con el valor absoluto de `trunk_lean_deg` del motor, que además lleva signo.",
+    }
+    for nombre, (izq, der) in _GIROS.items():
+        etiqueta = "giro de la línea de caderas" if nombre.startswith("hip") else "giro de la línea de hombros"
+        defs[nombre] = {
+            "etiqueta": etiqueta,
+            "definicion": "ángulo de la línea izquierda→derecha proyectada sobre el plano horizontal, respecto de la línea de tiro: `atan2(z, x)` en el marco del arnés. 0° = la línea apunta al objetivo; positivo = gira hacia la pelota, que es el sentido del backswing de un diestro.",
+            "puntos": [HALPE26_NAMES[izq], HALPE26_NAMES[der]],
+            "anclaje": [HALPE26_NAMES[izq], HALPE26_NAMES[der]],
+            "respecto_de": "la línea de tiro",
+            "rango": [-180, 180],
+            "comparar": "abs",
+            "proyectado": "NO es el mismo ángulo: alrededor del eje vertical no hay ángulo que medir en la imagen. Es el estimado por acortamiento, `arccos(largo proyectado / largo proyectado máximo de la toma)`, el mismo `shoulder_rotation_deg` que HERENCIA.md prohíbe portar. No recupera el signo, así que se compara contra el valor absoluto del 3-D. Procedencia: `estimacion`.",
+        }
+    return {
+        "unidad": "grados",
+        "decimales": ANGULOS_DECIMALES,
+        "marco_3d": HARNESS_FRAME["id"],
+        "marco_proyectado": "image_px del `pose.npz` de esa vista (y hacia abajo)",
+        "procedencia_3d": "medido_aqui",
+        "procedencia_proyectado": "medido_aqui, salvo los dos giros, que son `estimacion`",
+        "nota_respecto_de": "un ángulo `de los tres puntos` no cambia si se gira la escena entera: es del cuerpo y de nadie más. Los otros tres se miden contra un eje del marco —la vertical (la gravedad) y la línea de tiro— y giran con él, a propósito: sin un eje externo no hay inclinación ni giro que medir.",
+        "definiciones": defs,
+        "rotulo": "Estos ángulos son del mocap medido con marcadores ópticos: en 3-D son ángulos de verdad, sin proyección en el medio. Un video de celular no los puede dar —una cámara sola no mide profundidad— y la diferencia que aparece al girar hasta una de las dos vistas del protocolo es exactamente por qué.",
+        "texto_comparacion": "arriba, el ángulo real medido en 3-D; abajo, lo que mediría una cámara puesta ahí, y la diferencia.",
+        "nota_nivel": "CONTRATO.md §Niveles pone los ángulos absolutos de codo, rodilla y muñeca en nivel 3: no se construyen como métrica del producto. Estos son del mocap y son referencia; ninguno entra al registro de métricas ni a ningún `analysis.json`. Se muestran, no se juzgan (ADR-012).",
+        "nota_diferencia": "la diferencia es `proyectado − 3-D` (contra el valor absoluto del 3-D en los dos giros, que el proyectado no puede firmar) y no se guarda: es la resta de las dos series que sí están.",
+    }
+
+
+def _serie_angulo(v: np.ndarray) -> list:
+    """Una serie de ángulos lista para el JSON: redondeada y con los `NaN`
+    convertidos a `null` (`CONTRATO.md` §Frontera Python ↔ JSON)."""
+    return [None if not np.isfinite(x) else round(float(x), ANGULOS_DECIMALES) for x in np.asarray(v, float)]
+
+
+def _diferencia(nombre: str, p: np.ndarray, t: np.ndarray, defs: dict) -> np.ndarray:
+    """`proyectado − 3-D`, contra el valor absoluto del 3-D donde el proyectado
+    no puede recuperar el signo (los dos giros)."""
+    return p - (np.abs(t) if defs[nombre]["comparar"] == "abs" else t)
+
+
+def angulos_resumen(P: np.ndarray, cameras: dict[str, dict], eventos: dict[str, int], ventana: tuple[int, int]) -> dict:
+    """Cuánto se equivoca la proyección contra el 3-D, en **este** trial: la
+    diferencia en cada uno de los tres eventos y en el peor cuadro de la
+    ventana de la repetición. Un trial: la tabla de los diez está en
+    `angles_table` y se corre con `--angulos`."""
+    defs = angulos_doc()["definiciones"]
+    t3 = angulos_3d(P)
+    a, b = int(ventana[0]), int(ventana[1])
+    out: dict[str, dict] = {}
+    for vista, cam in cameras.items():
+        px = _proyectar_con(P, cam)
+        pr = angulos_proyectados(px)
+        por_angulo = {}
+        for nombre in defs:
+            dif = _diferencia(nombre, pr[nombre], t3[nombre], defs)
+            tramo = dif[a : b + 1]
+            k = int(np.nanargmax(np.abs(tramo))) if np.isfinite(tramo).any() else 0
+            por_angulo[nombre] = {
+                **{ev: (None if f is None or not np.isfinite(dif[f]) else round(float(dif[f]), ANGULOS_DECIMALES)) for ev, f in eventos.items()},
+                "peor_cuadro": a + k,
+                "peor_dif": round(float(tramo[k]), ANGULOS_DECIMALES),
+            }
+        out[vista] = por_angulo
+    return {
+        "ventana": [a, b],
+        "eventos": dict(eventos),
+        "nota": "diferencia `proyectado − 3-D` en grados, en los cuadros de `eventos_3d` (los mismos para las dos vistas, así lo que se ve es sólo error de proyección) y en el peor cuadro de la ventana. Un trial de un sujeto.",
+        "por_vista": out,
+    }
+
+
+def _proyectar_con(P: np.ndarray, cam: dict) -> np.ndarray:
+    """(T,26,3) metros → (T,26,2) `image_px` con una cámara del archivo, usando
+    `camera.project` (el mismo camino que arma el `pose.npz`)."""
+    from kinelab_truth.camera import Extrinsics, Intrinsics, project
+
+    intr = Intrinsics("mocap-virtual", int(cam["ancho"]), int(cam["alto"]), float(cam["fx"]), float(cam["fy"]), float(cam["cx"]), float(cam["cy"]), tuple(float(x) for x in cam["dist"]), str(cam["procedencia"]))
+    extr = Extrinsics(position=np.asarray(cam["posicion_m"], float), target=np.asarray(cam["objetivo_m"], float))
+    return project(P, intr, extr)
 
 
 def _json_legible(doc: dict) -> str:
@@ -686,6 +930,7 @@ def pose3d_doc(mp: MocapPose, *, events: dict[str, int] | None = None) -> dict:
         "camaras": mp.cameras,
         "camaras_nota": "la cámara del protocolo de las dos vistas. Los puntos 3-D son los mismos para las dos; lo único que cambia es desde dónde se mira. Proyectando con cualquiera de las dos se reproduce el `pose.npz` de esa vista dentro de 1 px (test `test_pose3d.py`).",
         "indicador": indicador_lineas(),
+        "angulos": {**angulos_doc(), "resumen": angulos_resumen(P, mp.cameras, {"address": t3["address"], "top": t3["top_far"], "impact": t3["impact"]}, (t3["address"], t3["impact"]))},
         "rotulos": rotulos(prov["trial"]),
         "atribucion": prov["attribution"],
         "licencia": "ver data/examples/cmu-mocap/ATRIBUCION.md",
@@ -701,6 +946,12 @@ def write_pose3d(mp: MocapPose, take_dir: Path, *, events: dict[str, int] | None
     líneas y compacto entero sería una sola. El encabezado va indentado, que es
     lo que alguien va a leer a ojo."""
     doc = pose3d_doc(mp, events=events)
+    # Las series van acá y no en `pose3d_doc` para que el documento se pueda
+    # mirar en un test sin arrastrar 448 × 26 puntos y 448 × 39 ángulos.
+    doc["angulos_3d"] = {k: _serie_angulo(v) for k, v in angulos_3d(mp.points_m).items()}
+    doc["angulos_3d_nota"] = "los once ángulos cuadro por cuadro sobre los puntos 3-D: son los verdaderos. Ver `angulos.definiciones`."
+    doc["angulos_proyectados"] = {vista: {k: _serie_angulo(v) for k, v in angulos_proyectados(_proyectar_con(mp.points_m, cam)).items()} for vista, cam in mp.cameras.items()}
+    doc["angulos_proyectados_nota"] = "los mismos once medidos sobre la proyección de cada cámara del protocolo: lo que el motor calcularía si el swing se hubiera filmado desde ahí."
     marca = "@@PUNTOS@@"
     doc["puntos"] = marca
     filas = ",\n    ".join("[" + ",".join("[" + ",".join(_n(float(v)) for v in pt) + "]" for pt in frame) + "]" for frame in mp.points_m)
@@ -824,6 +1075,76 @@ def level1_table(take_dir: Path, mp: MocapPose) -> dict:
         "cociente_altura_declarada_sobre_cabeza_tobillo": round(float(mp.height_m / (P[ev["address"], H.HEAD, 1] - ank)), 4),
         "filas": filas,
     }
+
+
+# --- la tabla: cuánto se equivoca la proyección, sobre los diez trials --------
+
+ANGULOS_EVENTOS = ("address", "top", "impact")
+
+
+def angles_table(subject: str, trials: list[str] | None = None) -> dict:
+    """Sesgo medio y límites de acuerdo de la proyección contra el 3-D, por
+    ángulo y por vista, en los tres eventos y en el peor cuadro de la
+    repetición, sobre TODOS los trials del sujeto que estén en `data/examples/`.
+
+    **Un sujeto, N swings.** Sale una media con límites de acuerdo de este
+    golfista y de esta geometría de cámara; no sale ningún MDC, ninguna
+    referencia y ningún ideal, y nada de esto entra al registro de métricas
+    (ADR-009 nivel 1 mide la matemática y la convención, no el estimador).
+
+    Los eventos son los leídos en 3-D (`events_3d`): son el **mismo cuadro**
+    para las dos vistas, así que la diferencia que aparece es sólo error de
+    proyección, sin el error de detección de eventos adentro."""
+    trials = trials or sorted(p.stem for p in EXAMPLES.glob(f"{subject}_*.amc"))
+    if not trials:
+        raise ValueError(f"no hay ningún {subject}_NN.amc en {EXAMPLES}")
+    defs = angulos_doc()["definiciones"]
+    filas: list[dict] = []
+    for trial in trials:
+        mp = build(trial, VIEWS[0])
+        P = mp.points_m
+        t3 = events_3d(P)
+        ev = {"address": t3["address"], "top": t3["top_far"], "impact": t3["impact"]}
+        res = angulos_resumen(P, mp.cameras, ev, (t3["address"], t3["impact"]))
+        filas.append({"trial": trial, "cuadros": int(P.shape[0]), "eventos": ev, "por_vista": res["por_vista"]})
+    resumen: dict[str, dict] = {}
+    for vista in VIEWS:
+        por_angulo = {}
+        for nombre in defs:
+            col = {}
+            for campo in (*ANGULOS_EVENTOS, "peor_dif"):
+                v = np.array([f["por_vista"][vista][nombre][campo] for f in filas if f["por_vista"][vista][nombre][campo] is not None], float)
+                sd = float(v.std(ddof=1)) if v.size > 1 else float("nan")
+                col[campo] = {"n": int(v.size), "sesgo": round(float(v.mean()), 2), "loa": [round(float(v.mean()) - 1.96 * sd, 2), round(float(v.mean()) + 1.96 * sd, 2)], "abs_max": round(float(np.abs(v).max()), 2)}
+            por_angulo[nombre] = col
+        resumen[vista] = por_angulo
+    return {
+        "sujeto": subject, "n_trials": len(filas), "n_sujetos": 1, "trials": [f["trial"] for f in filas],
+        "aviso": "Diez swings de UN solo sujeto (CMU 64), con la cámara virtual del protocolo. Es una medición de la GEOMETRÍA de la proyección, no del estimador de pose: no hay video ni modelo en el medio. No sale de acá ningún MDC, ninguna referencia y ningún ideal.",
+        "definicion_sesgo": "`proyectado − 3-D` en grados (contra el valor absoluto del 3-D en los dos giros, que el proyectado no puede firmar). Límites de acuerdo de Bland-Altman: media ± 1,96 · SD entre trials (ADR-009 §Formato de reporte).",
+        "eventos_nota": "los tres eventos son los de `events_3d`, el mismo cuadro para las dos vistas: lo que se mide es sólo error de proyección. `peor_dif` es el cuadro de mayor |diferencia| entre el address y el impacto de cada trial.",
+        "unidad": "grados",
+        "por_trial": filas,
+        "resumen": resumen,
+    }
+
+
+def print_angles_table(t: dict) -> None:
+    defs = angulos_doc()["definiciones"]
+    print(f"\n  ÁNGULOS · sujeto {t['sujeto']} · {t['n_trials']} trials — {t['aviso']}")
+    print(f"  {t['definicion_sesgo']}")
+    print(f"  {t['eventos_nota']}")
+    for vista in t["resumen"]:
+        print(f"\n  desde {vista}: sesgo [límites de acuerdo], en grados")
+        print(f"  {'ángulo':<24}" + "".join(f"{k:>26}" for k in (*ANGULOS_EVENTOS, "peor de la repetición")))
+        for nombre, col in t["resumen"][vista].items():
+            fila = f"  {nombre:<24}"
+            for campo in (*ANGULOS_EVENTOS, "peor_dif"):
+                r = col[campo]
+                fila += f"{r['sesgo']:>9.1f} [{r['loa'][0]:>6.1f},{r['loa'][1]:>6.1f}]"
+            print(fila)
+    print(f"\n  los dos giros ({', '.join(k for k, v in defs.items() if v['comparar'] == 'abs')}) no son el mismo ángulo medido de dos formas:")
+    print("  en la imagen no hay giro alrededor del eje vertical que medir, y el proyectado es el estimado por acortamiento (procedencia `estimacion`).")
 
 
 # --- la escala: cuántos píxeles mide la estatura declarada ---------------------
@@ -1020,7 +1341,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--vista", default="face_on", choices=("face_on", "down_the_line"))
     ap.add_argument("--out", type=Path, default=None, help="carpeta de salida (la toma). Obligatoria salvo con --escala")
     ap.add_argument("--escala", action="store_true", help="la tabla de escala: sesgo de las métricas en cm contra la verdad 3-D, por candidata de divisor, sobre TODOS los trials del sujeto")
-    ap.add_argument("--tabla", type=Path, default=None, help="con --escala, dónde escribir la tabla en JSON")
+    ap.add_argument("--angulos", action="store_true", help="la tabla de ángulos: cuánto se equivoca la proyección contra el 3-D, por ángulo, vista y evento, sobre TODOS los trials del sujeto")
+    ap.add_argument("--tabla", type=Path, default=None, help="con --escala o --angulos, dónde escribir la tabla en JSON")
     ap.add_argument("--asf", type=Path, default=None)
     ap.add_argument("--amc", type=Path, default=None)
     ap.add_argument("--solo-pose", action="store_true", help="escribir pose.npz y parar (sin eventos ni overlay)")
@@ -1029,9 +1351,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--deporte", default="golf")
     args = ap.parse_args(argv)
 
-    if args.escala:
-        tabla = scale_table(args.trial.split("_")[0], args.vista)
-        print_scale_table(tabla)
+    if args.escala or args.angulos:
+        if args.escala and args.angulos:
+            ap.error("--escala y --angulos son dos tablas distintas: una por corrida")
+        tabla = scale_table(args.trial.split("_")[0], args.vista) if args.escala else angles_table(args.trial.split("_")[0])
+        (print_scale_table if args.escala else print_angles_table)(tabla)
         if args.tabla:
             args.tabla.write_text(json.dumps(tabla, ensure_ascii=False, indent=2), encoding="utf-8")
             print(f"  {args.tabla}")
