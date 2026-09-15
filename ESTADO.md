@@ -3,6 +3,150 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 15 de septiembre de 2026 — encargo 14: la escala en cm sale del cuadro más extendido
+
+Prompt: `docs/prompts/14-escala-en-cm.md`. Informe:
+`docs/informes/2026-09-15-14-escala-en-cm.md`. Commit `5991922` (datos, motor,
+arnés, contrato y tests) y el de cierre con `ESTADO.md` y el informe. Corrió en
+paralelo con el 12 (ya commiteado), el 13 (`truth/` salvo `mocap.py`,
+`sports/golf/mdc.yaml`, `sports/golf/metrics.py`, `kinelab/metrics/` salvo
+`core.py`) y el 15 (ya commiteado).
+
+### Qué existe ahora
+
+- **Los diez «Swing» del sujeto 64 de CMU en el repo** (`64_03`…`64_10` nuevos,
+  2,7 MB), bajados a mano uno por uno, con bytes y sha256 en
+  `data/examples/cmu-mocap/ATRIBUCION.md`, que dice además por qué esos diez y
+  ninguno de los otros veinte.
+- **`cd truth && .venv/bin/python -m kinelab_truth.mocap 64 --escala`**: la
+  tabla de escala, ~30 s, reproducible desde el repo. Por trial, el cociente
+  cabeza→tobillos en address / estatura y los divisores de seis candidatas; al
+  final, sesgo medio y límites de acuerdo contra la verdad 3-D por métrica y
+  candidata, con el veredicto del criterio del encargo. `scale_table()` acepta
+  una lista de trials (los tests corren dos).
+- **La escala nueva, en `kinelab/metrics/core.py`**: `stature_chain_px` y
+  `MetricContext.scale_px`. El divisor de toda métrica en cm es el **máximo,
+  dentro de la repetición, de la suma de largos proyectados de
+  tobillo→rodilla→cadera→hombro→cabeza** (puntos medios de los dos lados), con
+  una mediana móvil de 0,25 s (`SCALE_SMOOTH_S`) antes del máximo. Una escala
+  por repetición. Si la cadena no se puede medir en ningún cuadro, cae a la
+  altura cabeza→tobillos del cuadro cero, que es la convención anterior.
+- **`CONTRATO.md` §La escala**, nueva, con la definición, la tabla de candidatas
+  y el residual medido; la `definition` del ejemplo del registro actualizada; y
+  §Versionado con el bump decidido (`metric_version` minor en las métricas en
+  cm, `registry_version` minor) y las tres razones por las que no es major.
+- `tests/test_escala.py` (8) y tres tests nuevos en `truth/tests/test_mocap.py`.
+- Arreglado de paso en `mocap.py`: la tabla de `--nivel1` reventaba al imprimir
+  una fila con `motor_2d` en `null` (`pelvis_thrust_top_cm` desde `face_on`,
+  que volvió al registro cuando el 13 le puso vista en `mdc.yaml`).
+
+### Medido
+
+**Los diez trials, `face_on`.** La altura cabeza→tobillos del address —el
+divisor anterior— mide **0,8907 ± 0,0062** de la estatura del ASF
+(0,8817–0,9038): la escala vieja sobre-leía **×1,1227**. Un solo sujeto.
+
+| candidata | px (media) | \|sesgo\| medio | cumple el criterio |
+|---|---|---|---|
+| **a** cabeza→tobillos en address (la anterior) | 1532,5 | 1,035 cm | — |
+| **b** cadena de segmentos en el address | 1533,1 | 1,032 cm | no |
+| **c** máxima extensión vertical de la repetición | 1584,1 | 0,777 cm | no |
+| **d** **máximo de la cadena en la repetición** | **1648,4** | **0,493 cm** | **SÍ** |
+| e ídem d, desde el talón (informativa) | 1740,5 | 0,407 cm | sí |
+| z la escala exacta (sólo con verdad 3-D) | 1720,6 | 0,399 cm | sí |
+
+El umbral era 0,517 (la mitad de 1,035) y ninguna métrica podía empeorar más de
+1 cm: `d` da 0,493 y empeora como mucho 0,013 cm.
+
+- **Sumar largos de segmento en el address no arregla nada** (1533,1 contra
+  1532,5 px): en `face_on` el golfista se agacha **hacia la cámara**, y la
+  cadena se acorta en la imagen exactamente lo mismo que la vertical. Lo que
+  arregla es mirar el cuadro extendido.
+- **La fila `z` es el piso: 0,399 cm** de error de **proyección**, que ninguna
+  escala puede tocar. `d` cubre el 85 % de lo recuperable. Lo que sobra es casi
+  todo `head_sway_top_cm`, cuyo piso ya es −1,08.
+- **`d` está a 0,3 % de su techo geométrico**: el +4,4 % residual es que la
+  cadena arranca en el tobillo y la estatura declarada arranca en el piso.
+- Por métrica (sesgo antes → ahora, MDC): `pelvis_sway_top` −1,83 → **−0,38**
+  (2,87) · `pelvis_sway_impact` +0,57 → **+0,08** (2,42) · `pelvis_lift` −0,07 →
+  −0,09 (2,82) · `thorax_sway` −1,55 → **−0,75** (3,46) · `thorax_lift` −0,17 →
+  +0,05 (2,89) · `head_sway` −2,35 → **−1,53** (3,82) · `head_lift` +0,69 →
+  +0,57 (4,50). Todos por debajo de su MDC antes y después.
+
+**La mediana móvil de 0,25 s, medida**: una cabeza saltada 200 px durante 1 a 15
+cuadros infla el máximo crudo un **+6,6 %** (las siete métricas, −6,2 %) y la
+ventana lo absorbe entero (0,0 %); una racha de 31 cuadros (0,258 s) pasa, como
+debe. En datos limpios la ventana cuesta 0,3 px sobre 1649.
+
+**Las dos corridas reales, con el cambio aislado** (misma pose, mismos eventos,
+sólo el divisor):
+
+| | `cortado.mp4` | `vid1.mp4` |
+|---|---|---|
+| escala vieja → nueva | 868,9 → **1089,6** px | 1052,9 → **1196,4** px |
+| factor | **×1,2539** | **×1,1363** |
+| cuadro del máximo | 75 (el último de la rep) | 818 (la rep termina en 842) |
+
+`pelvis_sway_impact_cm` 7,5 → **6,0** y 14,3 → **12,6**; `pelvis_lift_top_cm`
+−0,4 → −0,3 y −11,7 → **−10,3**; `head_sway_top_cm` 3,4 → 2,7 y −9,2 → **−8,1**.
+El movimiento más grande es 1,7 cm, por debajo del MDC de esa métrica (2,42).
+
+**La corrección en los clips de Hernán es el doble que en el mocap** porque su
+address está mucho más escorzado: en `cortado.mp4`, del address al cuadro
+extendido, cadera→hombro pasa de 320 a 386 px y hombro→cabeza de 132 a 245. Su
+address mide el **79 %** del cuerpo extendido, contra el 93 % del golfista de
+CMU. **No es un artefacto del recorte**: el original de 9 s del mismo swing
+(265 cuadros) da ×1,2634 con el máximo en el cuadro 206, 0,8 % de diferencia.
+
+Suites: motor **272 en verde** (39 s), arnés **29 en verde** (9 s).
+
+### Qué falta o no se probó
+
+- **Los bumps de versión no se pudieron escribir**: `metric_version 1.0.0 →
+  1.1.0` en las ocho métricas en cm y `registry_version 0.1.0 → 0.2.0` viven en
+  `sports/golf/metrics.py` y `kinelab/metrics/registry.py`, que son del 13. El
+  texto exacto, incluida la `definition` nueva de `pelvis_sway_top_cm`, está en
+  el punto 1 de «queda abierto» del informe, listo para pegar. `_m()` además no
+  recibe `metric_version` todavía.
+- **`metric_version` no viaja al `analysis.json`**: el contrato lo declara por
+  métrica y el sextuplo no lo lleva, así que el bump que avisa que estos siete
+  números cambiaron no se puede leer desde un análisis. Toca `analysis.py` y
+  `contract/schema.json`.
+- **La escala usada no queda registrada**: `quality.body_height_px` informa la
+  serie vieja, que ya no es el divisor de nada. Un `quality.scale_px` con el
+  cuadro del máximo haría auditable el número que multiplica a siete métricas.
+- **`core.py` importa `_rolling_nanmedian`, que es privada de
+  `kinelab/perception/framing.py`.** Duplicarla habría sido peor (es el caso del
+  `_ascii` del encargo 07). Cuando `framing.py` esté libre: hacerla pública y
+  mudar `stature_chain_px` al lado de `body_height_px`, que es su casa.
+- **De los clips de Hernán no hay verdad 3-D.** El ×1,25 se apoya en la
+  geometría (la cadena es cota inferior de la estatura en px y no puede
+  alargarse), no en una medición contra la verdad.
+- Los eventos de las dos corridas reales cambiaron respecto de `ESTADO` anterior
+  (`cortado` top 39 → 33, `vid1` top 726 → 722): es el encargo 15 (`0f8f18e`),
+  no éste. Por eso el antes/después del informe es el aislado.
+- El ejemplo de la pantalla se regeneró con la escala nueva:
+  `pelvis_sway_top_cm` pasa de −19,4 a **−18,0** contra una verdad 3-D de
+  −17,69 (sesgo −1,71 → **−0,31**).
+- El front no se abrió ni se tocó `web/` ni `service/` (regla de trabajo).
+
+### Desviaciones
+
+- Ninguna del contrato: no se renombró ningún campo ni cambió ninguna unidad, y
+  `schema_version` de `analysis.json` sigue en 1.2.0. §Desviaciones no recibió
+  entrada porque una candidata cumplió el criterio; si ninguna lo hubiera
+  cumplido, el sesgo entraba ahí con su número.
+- Del prompt, una de alcance: los bumps de versión y la `definition` de
+  `sports/golf/metrics.py` quedaron escritos en el informe y no en el código,
+  porque ese archivo lo toca el 13 (el prompt lo preveía para la `definition`;
+  los bumps también caen ahí).
+- Del prompt, otra: se midieron **seis** candidatas y no cuatro. Las dos de más
+  (la cadena desde el talón y la escala exacta) no compiten: la primera mide una
+  aproximación de nuestro propio mapeo y la segunda sólo existe porque hay verdad
+  3-D. Están para que se lea cuánto del error es proyección y cuánto es escala.
+
+---
+
 ## 15 de septiembre de 2026 — encargo 15: el top es el cambio de sentido más lejano (ADR-017)
 
 Prompt: `docs/prompts/15-top-desde-down-the-line.md`. Informe:

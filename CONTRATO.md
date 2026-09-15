@@ -538,10 +538,11 @@ homografía.
      eventos, el mismo eje, la misma unidad. Lo que cambió es el divisor, que
      es del motor y no de la métrica: la misma corrección les entra a las siete
      a la vez.
-  2. **El movimiento queda por debajo del MDC de cada métrica.** Medido: sobre
-     los diez trials de mocap el cambio más grande es 1,45 cm
-     (`pelvis_sway_top_cm`) contra un MDC de 2,87; sobre los dos clips reales
-     del S22, 1,7 cm (`pelvis_sway_impact_cm`) contra 2,42. Ningún valor
+  2. **El movimiento queda por debajo del MDC de cada métrica** (los MDC de
+     `sports/golf/mdc.yaml`, la tabla del arnés). Medido: sobre los diez trials
+     de mocap el cambio más grande es 1,45 cm (`pelvis_sway_top_cm`) contra un
+     MDC de 2,87; sobre los dos clips reales del S22, 1,7 cm
+     (`pelvis_sway_impact_cm`) contra 2,42. Ningún valor
      histórico cruza un umbral por esto — y hoy, además, ningún
      `judgment_allowed` es verdadero (todo `sin_verificar`, ADR-016). El cambio
      es proporcional (−7 % en el mocap, −20 % en los clips del S22), así que a
