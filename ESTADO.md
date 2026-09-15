@@ -3,6 +3,151 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 15 de septiembre de 2026 — encargo 25: publicar un trabajo a internet desde la pantalla
+
+Prompt: `docs/prompts/25-publicar-un-trabajo.md`. Informe:
+`docs/informes/2026-09-15-25-publicar-un-trabajo.md`. Corrió con el 24 en
+paralelo (`data/capture-paths.yaml`, `data/incoming/`): ese archivo aparece
+modificado en `git status` y **no se tocó ni se commiteó**. El 16, 18 y 21 siguen
+abiertos; ninguno de sus archivos se tocó (`kinelab/explore.py`,
+`kinelab/events/`, `sports/`, `truth/`, `Reproductor.tsx`, `page.tsx` quedaron
+intactos).
+
+### Qué existe ahora
+
+- **`kinelab/tools/publicar.py`**: `python -m kinelab.tools.publicar TRABAJO
+  [--quitar] [--solo-construir]`. Cuatro pasos —exportar, registrar, construir,
+  desplegar—, uno por trabajo, reversible. El índice se arma del **conjunto que
+  hay en disco**, nunca del argumento: publicar uno nuevo no saca del listado a
+  los que ya estaban. `--solo-construir` deja el sitio listo sin tocar internet.
+- **`web/public/demo/` salió de git** (`git rm -r --cached`, 38 archivos,
+  20,4 MB). Sigue en disco. Lo que va a git es **`data/publicados.json`**: el
+  registro de qué se mandó afuera, desde cuándo y con qué enlace.
+- **Lo que se sube es un árbol armado acá**, no el repo: `web/.vercel/output/`
+  con la Build Output API v3 (`static/` + `config.json`), y de ahí
+  `vercel deploy --prebuilt --prod`. El `noindex` viaja en `config.json`, porque
+  con `--prebuilt` el `web/vercel.json` no se aplica.
+- **En el backend**: `POST /api/datos/{id}/publicar` y su `DELETE`, que corren el
+  comando en un hilo y devuelven 202 con el paso; `GET /api/publicacion` con qué
+  está publicado y qué está corriendo; y `publicado`, `publicado_url` y
+  `publicado_en` en cada fila de `GET /api/datos`. Uno por vez: el segundo pedido
+  es 409. La cola está en `service/publicacion.py`, archivo nuevo.
+- **En la pantalla** (`ListaTrabajos.tsx`): botón «publicar» por fila, con una
+  confirmación que dice el texto entero —el video y sus datos quedan accesibles
+  para cualquiera que tenga el enlace—, el paso en el que va mientras corre, y
+  publicado: la etiqueta, el enlace, «copiar enlace» y «quitar de internet».
+  Nada de publicar al subir, ni por defecto, ni en lote. En modo demo no se
+  muestra ninguna de las acciones.
+- **25 tests nuevos**: 19 en `tests/test_publicar.py` (comando, con el ejecutor
+  de comandos inyectado) y 6 en `tests/test_service.py` (endpoints, con el
+  comando simulado).
+
+### Medido
+
+**1 · El ciclo, sobre trabajos reales.** Publicado `17ed40a4…` (`cortado.mp4`)
+con `--solo-construir`: **3,60 MB, 12 archivos, 14,4 s** de punta a punta.
+El índice quedó con **cuatro**: los tres que ya estaban más el nuevo. Después
+`--quitar` sobre ése: **10,6 s**, el índice volvió a **tres**, el `video.mp4` del
+quitado da **404** servido por `curl` y el de `vid1` sigue dando **200** con sus
+6.422.370 bytes. El registro lo pasó a `quitados` con su fecha.
+
+**2 · El estático servido por `curl`** desde `web/.vercel/output/static/` (sin
+abrir el navegador): `/` 200 text/html 6604 B · `/demo/index.json` 200 4614 B ·
+`trabajo.json` 24.541 B · `video.mp4` 200 video/mp4 1.328.950 B ·
+`transformacion.json` 1235 B · `pose3d.json` 375.327 B · un archivo inexistente,
+404.
+
+**3 · El registro quedó al día con la realidad.** Los tres que están en el sitio
+se re-exportaron y se anotaron: `vid1.mp4` 14,89 MB (13 archivos),
+`cmu-64_01-face_on` 2,71 MB, `cmu-64_01-down_the_line` 2,53 MB. Total en disco
+**22 MB** en `web/public/demo/`, cero en git. De paso, los dos de mocap pasaron a
+`pose3d.json` **1.1.0** con la capa de ángulos: era lo que el 23 dejó pendiente.
+
+**4 · El backend, con `curl` contra `python -m service` de verdad** (sin
+publicar nada): `GET /api/publicacion` devuelve los tres con su enlace,
+`corriendo: null`; `GET /api/datos` marca `publicado=true` en esos tres y
+`false` en los otros quince. `POST` de un id que no existe, 404 con la frase;
+`DELETE` de uno que no está publicado, 404 con la suya; `..%2F..%2Fx`, 404.
+
+**5 · El bug que el prompt anticipaba no existía.** `escribir_indice` ya
+recorría la carpeta de salida en vez de la lista de argumentos (encargo 22). El
+test que lo cuida se escribió igual, y la mutación que lo reintroduce lo pone
+rojo.
+
+Suites: motor **320 en verde** (25 nuevos, 52 s), arnés **49** (12,3 s),
+`pnpm lint` limpio y los dos builds limpios. **Mutación manual: 13 de 13.** Una
+se escapaba —reescribir `publicado_en` al republicar: las dos fechas caían en el
+mismo segundo y el test pasaba igual— y el test se rehizo con una fecha vieja
+escrita a mano.
+
+### Qué falta o no se probó
+
+- **No se desplegó nada.** Todo lo de esta sesión se corrió con
+  `--solo-construir`: internet no se tocó. El paso 4 —`vercel link` +
+  `vercel deploy --prebuilt --prod`— está escrito y testeado con el ejecutor
+  inyectado, pero **nunca corrió contra Vercel de verdad**. Lo dispara Hernán
+  desde la pantalla o con el comando sin `--solo-construir`.
+- **`web/` todavía no está vinculado**: no hay `web/.vercel/project.json`, así
+  que el primer deploy corre `vercel link --yes --project kinelab --scope
+  hernandiazz9s-projects`. Si el proyecto o el equipo no se llaman así, ese
+  comando falla y hay que vincular a mano (las dos constantes están arriba de
+  `kinelab/tools/publicar.py`).
+- **La `SITIO` que se anota es la URL de deploy que traía el prompt**
+  (`kinelab-qnm5fa60a-…`), no el alias estable de producción. Si Vercel da otro
+  alias, se cambia con `--sitio` o `KINELAB_SITIO` y los enlaces del registro se
+  reescriben al republicar.
+- **La pantalla no se abrió** (regla de trabajo). Sin verla, lo que más puede
+  fallar: los botones de la derecha de cada fila en una ventana angosta (la
+  fila pasó de ser un `<button>` entero a un `<div>` con el botón principal y las
+  acciones al lado), y `navigator.clipboard`, que en `http://localhost` existe
+  pero en un `http://` de red no.
+- **El deploy no informa progreso**: el paso 4 es una sola línea que dura lo que
+  dure `vercel deploy`. La pantalla dice «paso 4 de 4 · desplegando» y no se
+  mueve hasta que termina.
+- **Sin borrado del trabajo local.** Quitar de internet no borra
+  `data/exploracion/<id>/`, a propósito; eso sigue siendo `rm -rf`.
+- **El sitio entero se reconstruye y se sube por cada publicación.** Con tres
+  trabajos son 22 MB y ~15 s de build; con veinte, no se midió.
+
+### Desviaciones
+
+- **Del contrato, ninguna.** `data/publicados.json` no es un artefacto del
+  contrato: no hay métricas, ni números con unidad, ni nada derivado de la pose.
+  Es el registro operativo de qué salió de esta Mac, con su `schema` adentro
+  (`kinelab.publicados/1.0.0`), igual que `transformacion.json` y `pose.json` del
+  22. `CONTRATO.md` §Layout no se tocó.
+- **Del prompt, tres de archivos.** (1) `service/publicacion.py`, archivo
+  **nuevo**: la cola de publicación no es la de exploración y meterla en
+  `service/exploracion.py` mezclaba dos colas en un archivo cuyo encabezado habla
+  de otra cosa. Al ser nuevo no puede chocar con ninguna sesión. (2)
+  `web/eslint.config.mjs`: una línea para ignorar `.vercel/**`. Sin eso
+  `pnpm lint` pasa a lintear el bundle minificado que arma este encargo y
+  devuelve 2861 problemas que no son de nadie. (3) `tests/test_publicar.py` y el
+  bloque nuevo de `tests/test_service.py`, que el propio prompt pide.
+- **Del prompt, una de alcance hacia arriba**: `GET /api/publicacion`. El prompt
+  pedía `publicado` y su URL en las filas de `GET /api/datos`, y está; pero el
+  progreso vive en otro lado porque la lista se refresca desde `page.tsx`, que
+  **no** es archivo de este encargo, y sin un endpoint propio `ListaTrabajos` no
+  podía sondear nada sin tocarlo.
+- **`service/exploracion.py` quedó sin cambios** aunque el prompt lo asignaba:
+  `publicado` se agrega en `service/app.py` al armar la respuesta. La fila de un
+  trabajo no tiene por qué saber de publicaciones.
+- **De proceso: el commit `1b0a640` del encargo 24 se llevó trabajo de éste.**
+  Además de sus tres archivos (`data/capture-paths.yaml`, `ESTADO.md` y su
+  informe), ese commit contiene las **38 eliminaciones de `web/public/demo/`**
+  que esta sesión había dejado en el índice con `git rm -r --cached` (41 archivos
+  cambiados en total). El árbol quedó como tenía que quedar —los datos
+  publicados están fuera de git—, pero la baja figura en el commit equivocado y
+  con el mensaje equivocado. **No se corrigió**: reescribir el commit de otra
+  sesión que puede seguir corriendo es peor que la molestia. Es exactamente lo
+  que avisa §5 de la skill de encargo: el índice de git es uno solo.
+
+  Para el que venga: si hay otra sesión en el mismo directorio, dejar algo
+  **staged** y seguir trabajando es lo que hay que evitar. `git rm --cached` y el
+  commit que lo acompaña tienen que ir juntos.
+
+---
+
 ## 15 de septiembre de 2026 — encargo 24: el cronómetro filmado, y el primer camino calibrado
 
 Prompt: `docs/prompts/24-cronometro-y-swing-lento.md`. Informe:
