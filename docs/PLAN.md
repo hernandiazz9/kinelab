@@ -19,8 +19,10 @@ La pantalla de exploración con `vid1.mp4` (el swing con contacto real):
 subir, la ficha del archivo, los avisos, los palitos sobre el video con
 cámara lenta, cuadro a cuadro y zoom, el impacto entre dos cuadros con el
 botón de los dos cuadros, las fotos por evento, la tabla por evento, «con
-este archivo» (qué se calcula y qué no, con razón), y el ejemplo de mocap
-para mostrar que corre sobre otro material. Lo que no se muestra: nada como
+este archivo» (qué se calcula y qué no, con razón), el ejemplo de mocap
+para mostrar que corre sobre otro material, y —cuando cierre el 19— el
+swing 3D girable, que es lo único 3D honesto que hay: mocap medido con
+marcadores, nunca un clip de celular. Lo que no se muestra: nada como
 puntaje; la «rotación aparente» (artefacto, la borra el 16); el ejemplo
 `down_the_line` hasta regenerarlo. Antes: re-subir los clips y regenerar los
 ejemplos, porque los trabajos viejos tienen el top y la escala anteriores.
@@ -38,6 +40,11 @@ ejemplos, porque los trabajos viejos tienen el top y la escala anteriores.
   lleva banda cuando decide dentro del ruido; el MDC del sub-cuadro entra al
   evento. Encargo 18. ADR-008 recibe una nota: el código detecta el top por
   cambio de sentido (GolfDB), no por inflexión; `d2_inflection` no se usa.
+- 2026-09-15 · El 3D girable sale **sólo** del mocap, que está medido con
+  marcadores. De un clip monocular no se reconstruye profundidad: nivel 3 del
+  contrato y ADR-010. La pantalla lo dice con todas las letras. Encargo 19.
+  Camino futuro si se quiere el swing de Hernán en 3D: dos cámaras
+  sincronizadas y calibración estéreo, que hoy no está en ninguna fase.
 - 2026-09-15 · Anotado, no cerrado: el +4,4 % residual de la escala (cadena
   desde el tobillo, estatura desde el piso). Se cierra sólo con un punto de
   contacto con el suelo validado contra una verdad que no sea nuestro propio
@@ -94,6 +101,9 @@ ejemplos, porque los trabajos viejos tienen el top y la escala anteriores.
   14; CSV y front sin «rotación aparente».
 - [en curso] 18 senal-de-manos — centro de manos pesado por confianza, banda
   del top, MDC del sub-cuadro en el evento. Paralelo al 16.
+- [en curso] 19 visor-3d-del-mocap — el swing del mocap, que es 3D medido,
+  girable en la pantalla, con el colapso de la línea de caderas visible al
+  girar hacia `down_the_line`. Sin dependencias nuevas. Pedido de Hernán.
 - [pendiente] 17 gate-encuadre-en-px — después del 16. Prompt escrito.
 - [pendiente] re-analizar desde `pose.npz` los trabajos de `data/exploracion/`
   (invariante 18) desde la pantalla, y que `mdc.yaml` lleve el `code_sha` de
