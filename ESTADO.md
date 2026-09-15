@@ -3,6 +3,159 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 15 de septiembre de 2026 — encargo 19: el swing 3-D del mocap, girable en la pantalla
+
+Prompt: `docs/prompts/19-visor-3d-del-mocap.md`. Informe:
+`docs/informes/2026-09-15-19-visor-3d-del-mocap.md`. Corrió en paralelo con el
+16 (`kinelab/`, contrato, `etiquetas.ts`, `TablaEventos.tsx`,
+`tests/test_fase2.py`, `data/examples/`) y el 18 (`kinelab/events/`,
+`sports/golf/events.py`, `tests/data/`), ninguno commiteado al cerrar.
+
+### Qué existe ahora
+
+- **`pose3d.json`, que lo escribe `truth/kinelab_truth/mocap.py`**: los 26
+  puntos Halpe26 en **metros**, en el marco del arnés, cuadro por cuadro, con 3
+  decimales. El marco, las unidades, la mano y el modelo de cámara van **como
+  dato adentro del archivo** (`HARNESS_FRAME`, `PINHOLE_MODEL`,
+  CONTEXTO.md §Sistemas de coordenadas), más fps, cuadros, nombres, huesos, los
+  eventos del motor y los leídos en 3-D, la estatura del ASF, `APPROX_NOTES` y
+  la atribución de CMU. 245 KB, 557 líneas (una por cuadro).
+- **Las dos cámaras del protocolo dentro del archivo** (`camera_record`,
+  `MocapPose.cameras`): `face_on` y `down_the_line` con su posición y objetivo
+  en metros, su focal y la receta pinhole escrita en `modelo`. Los puntos 3-D
+  son los mismos para las dos vistas, así que el visor puede ir a cualquiera de
+  las dos desde cualquier trabajo.
+- **Los rótulos y el indicador también son del archivo** (`rotulos()`,
+  `indicador_lineas()`): las frases que la pantalla muestra las escribe quien
+  produjo el dato, no la pantalla (la misma regla que `nota_fuente`, informe
+  del 07).
+- **`pose3d.json` en la lista blanca de `service/exploracion.py`**, con el
+  comentario de por qué sólo puede tenerlo un trabajo medido en 3-D.
+- **`web/src/components/Visor3D.tsx`**: esqueleto de 26 puntos y 27 huesos
+  sobre grilla de suelo con escala en metros; arrastrar para girar, rueda para
+  acercar; línea de tiempo, reproducir / pausa / cuadro a cuadro / cámara lenta
+  / ir a address, top e impacto; botones «ver como face_on» y «ver como
+  down_the_line»; y el indicador permanente del largo proyectado de la línea de
+  caderas y de la de hombros. Canvas 2-D, **sin dependencias nuevas** (ADR-015).
+  Aparece **sólo** si el trabajo tiene `pose3d.json`.
+- **`web/src/lib/pose3d.ts`**: el tipo del archivo y la proyección, sin React y
+  sin canvas, para poder correrla fuera del navegador. **`pose3d.verificar.mjs`**
+  al lado: la corrida que compara el TypeScript del visor contra el `pose.npz`
+  del arnés (`node --experimental-strip-types`).
+- **8 tests nuevos** en `truth/tests/test_pose3d.py`, con la proyección rehecha
+  a mano (sin `cv2`, sin `camera.py`): es el mismo código que hay en el visor.
+- El punto de entrada en `page.tsx` son 7 líneas, entre las fotos por evento y
+  «Con este archivo».
+
+### Medido
+
+**1 · El visor y el arnés son el mismo swing.** Proyectar el `pose3d.json` con
+cada cámara del protocolo y comparar contra el `pose.npz` de esa vista, en las
+cuatro combinaciones (los dos archivos × las dos cámaras), 448 × 26 puntos cada
+una:
+
+| | peor error |
+|---|---|
+| ver como `face_on` (f 3077,7 px) | **0,855 px** |
+| ver como `down_the_line` (f 3193,5 px) | **0,922 px** |
+
+Es el redondeo a milímetros del archivo y nada más: medio milímetro a 3 m con
+esa focal vale 0,51 px. Se mide dos veces, con el mismo resultado: en Python
+(`truth/tests/test_pose3d.py`, la fórmula escrita a mano) y en el TypeScript que
+de verdad corre en la pantalla (`pose3d.verificar.mjs`, que además pasa por la
+vuelta azimut/elevación que usan los botones).
+
+**2 · La línea de caderas colapsa, y se ve.** Largo proyectado en porcentaje del
+largo real, en el cuadro de address de cada trabajo:
+
+| desde | caderas | hombros |
+|---|---|---|
+| `face_on` | **99,6–99,9 %** | 100,0 % |
+| `down_the_line` | **4,2 % / 8,9 %** | 6,3 % / 3,0 % |
+
+Los dos números de `down_the_line` son los dos trabajos (address 141 y 146: cada
+vista detecta el suyo). En el **top**, con las caderas ya giradas, la misma línea
+desde `down_the_line` vuelve a **75,9 %**: el colapso es del ángulo, no de la
+línea. Es la misma geometría que el encargo 13 midió en °/s (3,6 px y 80× de
+error), ahora sobre un humano y mirable.
+
+**3 · El indicador no depende del zoom.** Con la focal × 0,3, 0,5, 1, 2 y 4 en un
+ángulo que no es de ningún protocolo (az −37°, el 17°), la línea de caderas en el
+top da **97,9 %** en las cinco, hasta 1e-9. Hay test en las dos implementaciones.
+
+**4 · Girar no saca al sujeto del cuadro.** Barrido de 24 azimuts × 7
+elevaciones con la focal del protocolo: el peor caso deja **98,2 %** de los
+448 × 26 puntos dentro del cuadro (az 60°, elevación 5°; lo que sale son las
+manos en el top). Con la rueda hacia abajo (0,3×) entra el **100 %** en todos.
+
+**5 · Los dos ejemplos regenerados, con ADR-017 y con la escala del 14.**
+
+| | `face_on` | `down_the_line` |
+|---|---|---|
+| address / top / impacto | 141 / 270 / 329 | 146 / **263** / 332 |
+| backswing / downswing | 1075,0 / 491,7 ms | **975,0 / 575,0 ms** |
+
+`down_the_line` tenía top 327 y downswing de 41,7 ms: son exactamente los
+números que ADR-017 predijo. Y de paso, con la escala del 14,
+`pelvis_sway_top_cm` del ejemplo pasa de −19,4 a **−18,0** contra una verdad
+3-D de −17,69: el sesgo de la medición sola baja de −1,71 a **−0,31 cm**.
+
+**6 · El archivo se sirve, y sólo donde tiene que estar.** `curl` al backend:
+200, `application/json`, 251.649 bytes, y `GET .../archivos/pose.npz` sigue
+dando 404 (la lista blanca no se ablandó). Un trabajo de celular
+(`cortado.mp4`) no lista `pose3d.json` y pedirlo da 404: el visor no aparece.
+
+Suites: arnés **37 en verde** (8 nuevos, 6,7 s), motor **272 en verde** (27 s),
+`cd web && pnpm lint && pnpm build` limpios. **Mutación manual**: 5 de 5
+mutaciones en `mocap.py` hacen fallar al menos un test (suelo con `argmax`,
+fps + 1, x espejada al escribir, redondeo a centímetros, las dos cámaras iguales)
+y 4 de 4 en el TypeScript rompen la verificación (grados por radianes,
+`d = r × f`, `r = (0,1,0) × f`, focal fija en el indicador). La cuarta del
+TypeScript **no se cazaba** hasta agregar el chequeo de invariancia al zoom:
+está agregado en las dos implementaciones.
+
+### Qué falta o no se probó
+
+- **La pantalla no se abrió** (regla de trabajo). Lo que más puede fallar sin
+  verla: el alto del recuadro vertical sumado a lo que ya hay arriba, y que las
+  flechas del teclado sólo mueven el visor cuando el recuadro tiene el foco (se
+  maneja en el propio div y con `stopPropagation`, justamente para no mover el
+  reproductor de arriba a la vez).
+- **El suelo del visor es el cero del trial, no el piso anatómico.** `y = 0` es
+  el punto más bajo de **todo** el trial —la punta del pie izquierdo en el
+  cuadro 426, ya en el acompañamiento— y en el address los pies quedan
+  **8,9 cm** por encima: el esqueleto de CMU no apoya la planta. Está medido y
+  declarado dentro del archivo (`suelo`), y la pantalla lo dice en «de dónde
+  sale cada número». No se tocó `to_harness_frame`: ese marco es el de todas las
+  métricas y moverlo movería todo.
+- **No hay test permanente del lado del navegador.** `pose3d.verificar.mjs` se
+  corre a mano; montar un runner en `web/` es ADR-015 (nada nuevo sin preguntar).
+  El guardián permanente es el test de Python, que fija la fórmula que el
+  TypeScript transcribe.
+- **El visor no dibuja el palo** (el mocap no lo tiene) ni una traza de las
+  manos, que es lo que haría ver el plano del swing en 3-D.
+- **Nada sincroniza el visor con el reproductor de arriba**: cada uno tiene su
+  línea de tiempo y su cuadro.
+- El indicador se calcula en el cuadro que se está viendo. El colapso se ve en
+  el address; el visor arranca ahí a propósito.
+
+### Desviaciones
+
+- **Del contrato, ninguna.** `pose3d.json` no está en `CONTRATO.md` §Layout y no
+  se agregó: es un archivo del arnés en una carpeta de exploración, con su
+  propio `schema` (`kinelab.pose3d/1.0.0`) declarado adentro. Si algún día un
+  video produjera 3-D —dos cámaras calibradas— ahí sí habría que meterlo en el
+  contrato. Queda como pregunta para el orquestador.
+- **Del prompt, una de archivos**: además del componente, dos archivos nuevos en
+  `web/src/lib/` (`pose3d.ts` con la proyección pura y `pose3d.verificar.mjs`
+  con la corrida). Razón: sin ellos la matemática del visor sólo se podría
+  verificar abriendo el navegador, que es lo que la regla de trabajo prohíbe.
+  Ninguno pisa un archivo de otro encargo.
+- `tests/test_service.py` no se tocó (`tests/` no era de este encargo): que la
+  lista blanca sirva `pose3d.json` está verificado por `curl`, no por test.
+
+---
+
 ## 15 de septiembre de 2026 — encargo 13: la ganancia muere, el sub-cuadro tiene MDC, y el encuadre no sale del ruido relativo
 
 Prompt: `docs/prompts/13-arnes-ganancia-subcuadro-encuadre.md`. Informe:
