@@ -92,3 +92,34 @@ paths:
     calibrated_on: null
     calibrated_by: null
     notes: "sin cronómetro; reproducción efectiva medida 60,025-60,026 fps en tres clips; 60 fps de captura siguen por debajo del fps_min de golf (100)"
+
+  # EL PRIMER CAMINO CALIBRADO DEL PROYECTO (encargo 24, informe
+  # docs/informes/2026-09-15-24-cronometro-y-swing-lento.md). Hernán filmó el
+  # swing con un teléfono apoyado en el pasto mostrando un cronómetro DENTRO DEL
+  # MISMO CUADRO, abajo a la izquierda: eso es lo que ningún metadato puede
+  # decir, y es lo que convierte la tasa de captura en una medición.
+  #
+  # EL ID DICE LO QUE SE MIDIÓ, Y NO MÁS. El archivo leído
+  # (Cortado-lenta.mp4, sha256 ff13415e…) NO es el que sale del teléfono: es un
+  # RECORTE hecho en la Mac. Lo prueban tres cosas medidas: el `udta` de Samsung
+  # pasó de ~1 MB a 185 B, el handler dice `Core Media Video` (AVFoundation) y
+  # hay un `elst` de QuickTime que esconde los primeros 14 cuadros (612 paquetes
+  # en el archivo, 598 cuadros presentados). El bitstream parece pasar sin
+  # recodificar —los PTS son los del original, 0,03333 s uniformes— pero eso no
+  # está probado. Mientras no llegue el ORIGINAL SIN RECORTAR de DCIM/Camera,
+  # este camino vale para este recorte y para los que salgan del mismo gesto;
+  # el camino del teléfono crudo sigue sin calibrar.
+  - id: s22ultra-slomo-fhd240-recorte-mac
+    device: "Samsung Galaxy S22 Ultra"
+    mode: slomo
+    transfer: recorte-quicktime-mac
+    calibrated: true
+    nominal_fps: 240 # lo que declara el modo Slow motion FHD del teléfono
+    codec_expected: hevc # medido: hevc Main, tag hvc1, 1920x1080 con rotación -90
+    fps_real: 240.15 # tasa de CAPTURA, del cronómetro filmado
+    fps_playback: 30.0169 # tasa de REPRODUCCIÓN, del span de PTS (598 cuadros, 19,8888 s)
+    stretch_factor: 8.0005 # fps_real / fps_playback: el slow motion está horneado x8
+    fps_method: "cronómetro filmado dentro del cuadro. Primera lectura legible 00:05.27 en el cuadro 0; última 00:07.76 en el cuadro 593; 598 cuadros decodificados. Dos puntos: 593 cuadros / 2,49 s = 238,15 fps. Ajuste por mínimos cuadrados sobre las 39 lecturas del refresco del cronómetro (una cada ~0,065 s, leídas por plantilla y verificadas a ojo): 240,15 fps con 1 sigma de 0,60, residuo rms 0,011 s (2,7 cuadros) y máximo 0,037 s (9,0 cuadros) sobre 593 cuadros. Uniforme: ver notes."
+    calibrated_on: 2026-09-15
+    calibrated_by: hernan
+    notes: "UNIFORME, medido: los tres tercios del clip dan 238,38 / 239,66 / 242,73 fps, cada uno dentro de su propio 1 sigma del global (2,6 / 2,1 / 4,2), y una sola recta explica las 39 lecturas con 2,7 cuadros de rms. Si un tramo hubiera sido capturado a velocidad normal, el cronómetro habría corrido 8x más rápido ahí: el residuo máximo de 0,037 s acota ese tramo a 1,3 cuadros. vfr_ratio 1,0027 (CFR) y primer delta 0,0333 s (el recorte se llevó el arranque de la cámara). OJO: la duración REAL es 598/240,15 = 2,49 s, por debajo del mínimo de 3 s del gate."

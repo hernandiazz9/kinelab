@@ -3,6 +3,140 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 15 de septiembre de 2026 — encargo 24: el cronómetro filmado, y el primer camino calibrado
+
+Prompt: `docs/prompts/24-cronometro-y-swing-lento.md`. Informe:
+`docs/informes/2026-09-15-24-cronometro-y-swing-lento.md`. El 16, 17, 18 y 21
+siguen abiertos y no se tocó ninguno de sus archivos. Hay otra sesión trabajando
+en `service/app.py`, `kinelab/tools/publicar.py`, `service/publicacion.py` y
+`tests/test_publicar.py`: no se tocaron. En esta sesión **no se cambió una sola
+línea de código**: sólo `data/capture-paths.yaml`, `data/incoming/` (ignorado
+por git), `ESTADO.md` y el informe.
+
+### Qué existe ahora
+
+- **El primer camino CALIBRADO del proyecto**, en `data/capture-paths.yaml`:
+  `s22ultra-slomo-fhd240-recorte-mac`, `calibrated: true`, `mode: slomo`,
+  `fps_real` **240,15**, `fps_playback` **30,0169**, `stretch_factor`
+  **8,0005**, con `fps_method` contando las dos lecturas y el conteo de cuadros.
+  Hasta hoy los cuatro caminos del repo eran declarados (ADR-016) y por eso
+  ninguna métrica del proyecto podía ser juicio.
+- **La primera tasa de captura medida**, del cronómetro que Hernán filmó
+  **dentro del mismo cuadro** que el swing (`~/Desktop/Cortado-lenta.mp4`, copia
+  en `data/incoming/`, sha256 `ff13415e…`). 41 lecturas leídas del clip, 39
+  usadas: ajuste **240,15 fps ±0,60 (1 σ)**, residuo rms 0,011 s (2,7 cuadros).
+- **Es uniforme, y está acotado.** Los tres tercios dan 238,38 / 239,66 /
+  242,73 fps, cada uno dentro de su propio 1 σ del global. Y el residuo máximo
+  de la recta (0,037 s) acota a **1,3 cuadros de 598** cualquier tramo que
+  hubiera sido capturado a velocidad normal. El modo *Slow motion* FHD del S22
+  no mezcla velocidades.
+- **El gate pasa 8 de 9.** Por primera vez pasan `fps_min_for_gesture` (240,15
+  contra 100) y `fps_matches_path`, y por primera vez un `capture.json` sale con
+  `fps_provenance: medido_aqui`. **Rechaza por `duration_plausible`**: la toma
+  dura **2,49 s reales** (598 cuadros / 240,15) y el gate pide 3. **El umbral no
+  se tocó.** Con `stretch_factor` 8, llegar a 3 s reales pide **≥ 721 cuadros,
+  o sea ≥ 24 s de reproducción**.
+- **Las doce métricas, calculadas** (modo exploración, porque `run_perception`
+  se niega sobre una toma rechazada): **diez con valor**, `follow_duration_ms`
+  sin `follow_end` y `pelvis_thrust_top_cm` por vista. Con
+  `fps_provenance="medido_aqui"`, **diez tendrían `judgment_allowed: true`** —
+  evaluado con la propia función del registro sobre estos valores, sin tocar
+  nada. Hoy las doce dicen `false`, y **no por el fps**: la exploración fuerza
+  `sin_verificar` siempre (ADR-016, encargo 06). Falta un solo eslabón, y es el
+  gate.
+- **El impacto verificado contra la pelota a 240 fps.** La pelota está en el tee
+  hasta el cuadro 367 y ya salió en el 368; el motor pone el impacto en el 365
+  (cruce sub-cuadro en 364,79). **Sesgo −11,3 ms (2,71 cuadros), el motor
+  temprano**, contra una incertidumbre sub-cuadro declarada de ±1,3 ms. A 60 fps
+  eran 0,68 cuadros y por eso en `vid1` el motor «acertaba».
+- Imágenes para mirar en `data/incoming/cronometro-24/` (siete cuadros por
+  índice y siete tiras ampliadas del cronómetro y de la pelota) y salidas del
+  motor en `data/incoming/Cortado-lenta.kinelab/`. Los dos, ignorados por git.
+
+### Medido
+
+**1 · El archivo es un recorte hecho en la Mac, no el del teléfono.** `udta` de
+Samsung de 1 MB → **185 B**, `handler_name` `Core Media Video`, y un `elst` de
+QuickTime con `media_time` 40432/90000 = 0,449 s que esconde **los primeros 14
+cuadros**: **612 paquetes, 598 cuadros presentados**. No tiene
+`com.android.capture.fps` ni ninguna `com.samsung.*`. ffprobe, ffmpeg y el motor
+coinciden los tres en 598.
+
+**2 · Reproducción 30,016828 fps, `vfr_ratio` 1,0027** (CFR), primer delta
+0,033333 s: normal, porque el recorte se llevó el arranque de la cámara.
+`fps_truth --duracion-real 2.4901 --nominal 240` → veredicto **`ESTIRADO`**,
+captura 240,15, factor 8,00.
+
+**3 · Calidad `confiable`**: detección 1,0000; cuerpo **414 px = 21,6 % del
+alto** (el peor encuadre de los cinco clips reales: antes 28,2 / 28,7 / 29,5 /
+41,9 %); plausibilidad 22/598 (3,7 %, 19 de codo); movimiento de cámara 1,05 px;
+**multi-sujeto 0,0134 = 8 cuadros**: el carrito de golf de la derecha se detecta
+como persona en el 1,3 % de los cuadros, y el seguidor nunca lo sigue.
+
+**4 · Eventos**: address 86 (0,3581 s), top 293 (1,2201 s), impacto 365
+(1,5199 s), sin `follow_end`. **Backswing 862,0 ms** [857,8 · 866,1],
+**downswing 299,8 ms** [295,6 · 304,0], **tempo 2,88**. A 240,15 fps ±1 cuadro
+son **±4,16 ms**: por primera vez la cuantización del tiempo queda por debajo
+del MDC de las duraciones (12,6 y 13,0 ms).
+
+**5 · El cronómetro refresca ~15 veces por segundo**, no 100: cada meseta dura
+10–22 cuadros y el valor salta 6 o 7 centésimas. Ahí está todo el ruido que
+quedó. Y el teléfono del cronómetro se corre **30 px en x y 71 px en y** a lo
+largo del clip, así que hubo que alinear cuadro por cuadro para leerlo.
+
+Suites: motor **320 en verde** (51,6 s; incluye los de la sesión paralela),
+arnés **49** (14,1 s), `tests/test_capture_paths.py` **47**. El camino nuevo es
+**el primero que ejercita la rama `calibrated: true`** de
+`test_repo_capture_paths_yaml_is_valid`.
+
+### Qué falta o no se probó
+
+- **Falta el archivo ORIGINAL sin recortar**, de `DCIM/Camera`, del mismo modo y
+  con el mismo cronómetro. Es el pedido abierto a Hernán y resuelve dos cosas
+  juntas: calibrar el camino **del teléfono** (el de hoy calibra un recorte) y,
+  si dura ≥ 24 s de reproducción, **pasar el gate entero por primera vez**.
+- **Hay un segundo clip lento sin mirar**: `~/Desktop/cartado2-lenta.mp4`
+  (318 paquetes / **292 cuadros**, mismo modo y mismo recorte). Son 1,22 s
+  reales: tampoco pasaría `duration_plausible`. No se ingestó ni se exploró.
+- **El delta de arranque de *Slow motion* FHD 240 sigue sin medirse** (pregunta
+  3 del informe del 03): el recorte se llevó los cuadros del arranque.
+- **El aviso de `analysis.json` dice algo falso con un camino calibrado**:
+  `warnings[1]` sale *"camino declarado sin cronómetro … 240.15 fps asumidos"*
+  cuando el camino **está** calibrado y el número está **medido**. Es
+  `kinelab/analysis.py:195`, que usa `DECLARED_NOTE` para todo lo que no sea
+  `medido_aqui`. **No se tocó**: el prompt prohibía `kinelab/`.
+- **No hay test que fije el camino calibrado.** Existe
+  `test_repo_has_the_declared_paths_of_adr_016` para los declarados; el nuevo
+  sólo se valida por schema. Son cinco líneas en
+  `tests/test_capture_paths.py`, que no me asignaba el prompt.
+- **La pantalla no se abrió** (regla de trabajo). No hacía falta: todo esto es
+  motor y archivos.
+- **Un solo swing, un solo cronómetro, un solo teléfono.** El `fps_real` de
+  *Video* FHD 60 y FHD 30 del mismo S22 sigue sin cronómetro, y sus tres caminos
+  siguen declarados.
+
+### Desviaciones
+
+- **Del contrato, ninguna.** El camino nuevo usa el schema 1.1.0 tal como está;
+  `capture.json` sale en 1.2.0 sin campos nuevos; no se agregó ni se movió
+  ninguna métrica.
+- **Del prompt, una de criterio, anotada.** El prompt pedía escribir el camino
+  sólo si los tramos daban la misma tasa **dentro de un 1 %**; los extremos
+  difieren **1,81 %**. Se escribió igual, con la razón en el informe §4 y en las
+  `notes` del YAML: cada tramo cae dentro de su propio 1 σ (la diferencia entre
+  el primero y el tercero es 0,9 σ), el 1,81 % es ruido del refresco del
+  cronómetro y no una diferencia medible, y la cota dura —que ningún tramo mayor
+  a 1,3 cuadros pudo haberse capturado a velocidad normal— es la que contesta de
+  verdad la pregunta que el 1 % quería hacer. Si el orquestador prefiere el
+  criterio literal, el camino sale del YAML borrando su bloque.
+- **Del prompt, una hacia abajo**: no se corrieron `kinelab.perception` ni
+  `kinelab analyze` sobre la toma ingestada, porque el gate la rechazó y
+  `run_perception` se niega (`kinelab/perception/run.py:74`). Los números
+  salieron por `kinelab datos` con el mismo camino, que es lo que el encargo 06
+  ya había hecho en la misma situación.
+
+---
+
 ## 15 de septiembre de 2026 — encargo 23: los ángulos en 3-D, y cuánto se equivoca la cámara
 
 Prompt: `docs/prompts/23-angulos-en-3d.md`. Informe:
