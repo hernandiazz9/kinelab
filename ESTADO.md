@@ -3,6 +3,161 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 15 de septiembre de 2026 — encargo 18: la señal de manos pesada por confianza, la banda del top y el MDC del sub-cuadro
+
+Prompt: `docs/prompts/18-senal-de-manos.md`. Informe:
+`docs/informes/2026-09-15-18-senal-de-manos.md`. Corrió en paralelo con el **16**
+(contrato 2.0.0) y el **26** (guía de filmación). Con el 16 hubo que coordinar:
+tres enganches de este encargo viven en archivos suyos y **los escribió él**, a
+pedido y con el código exacto (ver §Desviaciones). No se tocó ningún archivo del
+16 ni del 26.
+
+### Qué existe ahora
+
+- **`hands_center` pesa por confianza** (`kinelab/events/signal.py`). Acepta los
+  `scores` del modelo y un `min_score`: cada muñeca pesa lo que el modelo dice
+  que vale en ese cuadro, y la que cae bajo el umbral **no entra**. Si se caen
+  las dos, el punto queda `NaN` y lo rellena el mismo relleno acotado de la
+  percepción (`interpolate_gaps`, rachas ≤ 5, sin extrapolar bordes). Sin
+  `scores`, las dos pesan igual: la firma vieja sigue dando lo de siempre.
+- **La banda del top** (`kinelab/events/primitives.py`):
+  `direction_change_farthest_band` deja la regla de ADR-017 intacta —gana la
+  mayor excursión— y agrega los **rivales**, los candidatos a menos de `margin`
+  de la excursión ganadora; `tol_frames` es la distancia en cuadros hasta el más
+  lejano. Y `still_noise_px`, el σ de los residuos de una recta ajustada a la
+  quietud del address, que ahora comparten la banda y el sub-cuadro del impacto.
+- **En `sports/golf/events.py`**: `wrist_score_min` **0,55** y `top_band_sigmas`
+  **2,0** en `GolfEventParams` (procedencia `estimacion`); `margin = 2 σ_px` con
+  el σ del propio clip; y `events[].impact.subframe.mdc` leído de
+  `sports/golf/mdc.yaml` §`events.impact.subframe` — **nunca escrito a mano**
+  (ESPECIFICACION 3.3), con `provenance: medido_aqui` para el MDC, distinto de la
+  `estimacion` del valor.
+- **19 tests nuevos** en `tests/test_eventos_senal.py`.
+
+### Medido
+
+**1 · El umbral salió de un barrido con un criterio que no mira el resultado.**
+De 0,00 a 0,65 sobre los cinco clips reales y el mocap: se eligió **el mayor
+umbral con el que en ningún cuadro se caen las dos muñecas**. Hasta 0,55 son cero
+cuadros sin muñeca; en 0,60 aparecen 3; en 0,65 `vid1` se queda con una racha de
+5 —que ya no se rellena— y el top se va a 570. El techo está medido y a dos
+décimas. Los scores que lo justifican: en los dos clips del 7/9 la muñeca
+izquierda cae a **0,34–0,44 justo en el top** y la derecha no baja de 0,53;
+en los otros tres clips ninguna baja de 0,458; en el mocap valen 1,000.
+
+**2 · El peso y el umbral hacen cosas distintas, y hay que separarlos.** Desde el
+`pose.npz` guardado (invariante 1) y confirmado de punta a punta con `datos`.
+`igual` es como estaba (las dos muñecas pesan lo mismo), `pesado` agrega el peso
+por confianza sin umbral, `umbral` es lo que queda hoy:
+
+| clip · vista | address | top `igual` | top `pesado` | **top `umbral`** | impacto | referencia |
+|---|---|---|---|---|---|---|
+| `cortado.mp4` | 7 | 33 | 33 | **35** | 44 | 36 |
+| `20260907_170638.mp4` | 111 | 137 | 137 | **139** | 147 | 139 |
+| `vid1.mp4` | 672 | 722 | 722 | **722** | 741 | 722 |
+| `vid2.mp4` | 58 | 115 | 115 | **115** | 134 | 114 |
+| `vid3.mp4` | — | 0 repeticiones en los tres modos | | | — | — |
+| mocap 64_01 `face_on` | 141 | 270 | 270 | **270** | 329 | 269 |
+| mocap 64_01 `down_the_line` | 146 | 263 | 263 | **263** | 332 | 269 |
+
+**El peso por confianza, solo, no mueve ningún top**: ni uno, en ninguno de los
+siete casos. Lo que lo mueve es el **umbral**, y tiene sentido — con 0,36 contra
+0,67 la muñeca perdida todavía se lleva el 35 % del promedio, y el 35 % de un
+salto de 300 px son 105 px. Pesar reparte; hace falta decidir.
+
+La «referencia» es la muñeca derecha sola, la señal limpia que usó el 15: **el
+error contra ella pasa de −3 / −2 / 0 / +1 a −1 / 0 / 0 / +1**. Donde más se nota
+es en el `follow_end`, que sale de la misma quietud: `20260907` 219 → 232 →
+**188** y `vid1` 842 → 931 → **931**, y las dos terminan en el cuadro de la señal
+limpia (188 y 930). En `20260907` son 31 cuadros —1,03 s— de follow-through que
+antes se contaban de más.
+
+**El mocap no se mueve en ningún modo ni en ninguna vista**: con scores 1,000 en
+todos los cuadros, pesar y filtrar tienen que ser la identidad, y lo son. Address
+e impacto no se movieron en ningún clip; el instante **sub-cuadro** del impacto sí
+se corre, pero **por debajo de su propio MDC** en los cuatro clips (0,07 · 0,35 ·
+0,60 · 0,74 ms contra 2,927).
+
+**3 · La banda la enciende un solo clip, y es el que había que agarrar.** En
+`vid1` los cinco cambios de sentido dan 28,5 · 51,7 · **590,9** · 587,7 · 588,5 px
+de excursión: el ganador se lleva el top por **2,2 px** sobre el 726 y **3,2 px**
+sobre el 725, con **4,70 px** de ruido medido (el mismo estimador sobre la señal
+vieja da **2,274 px**, que reproduce exacto el 2,27 que citó el 15). La banda no
+depende del cambio de señal: `vid1` da tolerancia 4 en los tres modos de arriba. Antes salía con `tol_frames` 1,
+como si no hubiera duda; ahora sale con **4**, y se propaga: `tempo_ratio` 2,632
+pasa de **[2,45 · 2,83] a [2,0 · 3,6]**. Es hoy el único número del proyecto
+donde la banda se ve: el resto de las duraciones de los clips reales sigue en
+`null` por `fps_min` 120. En los otros seis casos la ventaja del ganador es de
+cientos de px y la tolerancia queda en 1.
+
+**4 · El MDC del sub-cuadro llegó al evento**: `2,927 ms`, en los siete clips, y
+**también cuando el cruce sale `null`** por vista (`down_the_line`): el MDC
+describe al estimador, no a la toma. Contra ±1 cuadro entero son **11×** a 30 fps
+y **5,7×** a 60.
+
+**5 · Lo que el umbral cuesta, medido y fijado con tests.** Dejar una muñeca
+afuera cambia de estimador a mitad de la señal: el centro de las dos pasa a ser
+la otra sola, un escalón de **media empuñadura**. Aislado en el sintético
+—muñeca intacta, sólo el score bajado— el top se corre **5 cuadros a 120 fps y 8
+a 240**. Con el daño posicional realista encima, el umbral igual gana siempre:
+−1 contra −11 a 120 fps, −9 contra −15 a 240. En los clips reales el efecto total
+fue de 1 a 2 cuadros y siempre hacia el cuadro de la señal limpia.
+
+Suites: **motor en verde** (los 19 nuevos incluidos). **Mutación manual: 8 de 8**
+ponen en rojo entre 1 y 9 tests, incluidos los dos que pedía el prompt —pesar por
+1 − confianza (7 rojos) y umbral en 0 (6 rojos)—, más el margen al revés, la
+banda con el rival más cercano, ADR-017 al revés, el ruido como desvío de la
+media, la procedencia del MDC y la banda desactivada.
+
+### Qué falta o no se probó
+
+- **El escalón de media empuñadura** (medido arriba). Corregirlo sería estimar el
+  medio vector de la empuñadura e interpolarlo por la racha; no se hizo porque es
+  un estimador nuevo que el prompt no pedía y porque ese vector es justo lo que
+  más rota en el top. **Decisión del orquestador.**
+- **`web/src/components/Metricas.tsx:42` dice «±1 cuadro» en texto fijo** y con
+  el `tol_frames` 4 de `vid1` eso es falso. No es archivo de este encargo; el 16
+  también lo anotó. Es de una línea.
+- **`kinelab/events/order.py` quedó huérfano** cuando el 16 borró
+  `sequence_order`. Está en mi directorio y **no lo di de baja**: borrarlo antes
+  de que el 16 cerrara rompía el árbol.
+- **La exploración por cuadro no usa la señal nueva**: `kinelab/explore.py:165`
+  llama `swing_signals(pose, fps)` sin deporte, así que el CSV y el overlay
+  siguen con el centro a peso igual mientras los eventos del mismo archivo salen
+  de la señal pesada. Es archivo del 16.
+- **El error del top sigue sin medirse contra GolfDB** (ESPECIFICACION 2.5). La
+  «referencia» de este encargo es una segunda señal, no una verdad.
+- Las 17 tomas de `data/exploracion/` conservan su top viejo hasta que se
+  re-analicen (invariante 18). No se rehicieron.
+- El front no se abrió ni se tocó `web/` ni `service/` (regla de trabajo).
+
+### Desviaciones
+
+- **Del contrato, ninguna.** `subframe.mdc` es campo del schema 2.0.0, que
+  escribió el 16 con la forma que este encargo necesitaba
+  (`{value, unit, provenance, source}`).
+- **Del prompt, una de archivos, y es la grande.** El encargo pedía tres cosas
+  cuyos enganches viven en archivos del 16 —`kinelab/analysis.py` (pasarle
+  `scores` y umbral a `hands_center`), `kinelab/metrics/core.py` (propagar
+  `tol_frames` en vez de ±1 fijo) y `kinelab/contract/schema.json` (el lugar de
+  `subframe.mdc`)—, y el propio prompt los ponía en la lista de NO tocar. **No se
+  tocaron**: se le pidieron al 16 por escrito, con el código exacto, y los
+  escribió él. Sin esos enganches el trabajo de este encargo quedaba escrito y
+  sin correr. Es el caso que la §5 de la skill de encargo no cubre —un encargo
+  que necesita una línea de un archivo ajeno—, y la salida fue coordinar, no
+  rodear.
+- **De orden de commits, otra consecuencia de lo mismo.** `sports/golf/events.py`
+  escribe `subframe.mdc`, y con el schema 1.2.0 (`additionalProperties: false`)
+  esa clave hace fallar la validación de **todo** `analysis.json`. Por eso este
+  encargo commiteó en dos partes: primero los dos archivos del motor —verificados
+  solos sobre una copia limpia de HEAD, 320 en verde— y recién después de que el
+  schema 2.0.0 del 16 estuviera en HEAD, el deporte y los tests.
+- **Del prompt, una de alcance hacia abajo:** el escalón de media empuñadura se
+  midió y se documentó, pero **no se corrigió**. El prompt no lo pedía y la
+  corrección es un estimador nuevo.
+
+---
+
 ## 15 de septiembre de 2026 — encargo 26: lo que enseñó el cronómetro, el segundo clip y el test del camino calibrado
 
 Prompt: `docs/prompts/26-lo-que-enseno-el-cronometro.md`. Informe:
