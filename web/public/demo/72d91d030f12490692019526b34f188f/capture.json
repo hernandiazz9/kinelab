@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.2.0",
+  "athlete": "exploracion",
+  "gesture": "driver",
+  "view": "face_on",
+  "capture_path_id": "s22ultra-video-fhd60-cable",
+  "capture_path_calibrated": false,
+  "fps_provenance": "sin_verificar",
+  "fps_real": 60.026,
+  "fps_playback": 60.026,
+  "fps_playback_raw": 59.713,
+  "stretch_factor": 1.0,
+  "fps_source": "declarado:s22ultra-video-fhd60-cable · EXPLORACIÓN: sin gate, sin MDC, tasa de cuadros del archivo sin calibrar. Números descriptivos para mirar, no para juzgar.",
+  "codec": "hevc",
+  "width": 2160,
+  "height": 3840,
+  "rotation_deg": 90,
+  "frames_decoded": 1066,
+  "duration_s": 17.759,
+  "duration_playback_s": 17.835,
+  "vfr_ratio": 1.001,
+  "vfr_ratio_raw": 6.579,
+  "first_delta_s": 0.109567,
+  "fps_note": "el primer delta es 0.1096 s (arranque de la cámara); sin él, ratio 1.00 y reproducción 60.026 fps (con él: ratio 6.58, 59.713 fps). El resto de los deltas es uniforme: no es tasa variable.",
+  "recorded_at": "2026-09-14T19:52:59.000000Z",
+  "sha256_original": "f4d19a56db13ff447843713e5c00103f3764c193751fbba13846d1a3f64276e3",
+  "original_name": "vid1.mp4",
+  "gate": {
+    "verdict": "ok",
+    "checks": [
+      {
+        "id": "exploracion",
+        "passed": null,
+        "value": "s22ultra-video-fhd60-cable",
+        "expected": null,
+        "tolerance": null,
+        "reason": "EXPLORACIÓN: sin gate, sin MDC, tasa de cuadros del archivo sin calibrar. Números descriptivos para mirar, no para juzgar. Camino: 's22ultra-video-fhd60-cable' es un camino declarado sin cronómetro: los tiempos asumen que el archivo reproduce a la velocidad de captura (Samsung Galaxy S22 Ultra, modo video). Filmá el cronómetro para convertirlo en calibrado."
+      },
+      {
+        "id": "body_height_frac",
+        "passed": null,
+        "value": 0.28737537066141766,
+        "expected": null,
+        "tolerance": null,
+        "reason": "Sin evaluar: umbral sin medir (se fija midiendo sobre los clips reales, ESPECIFICACION 1.3). El jugador ocupa 29 % del alto del cuadro."
+      },
+      {
+        "id": "detection_rate",
+        "passed": true,
+        "value": 1.0,
+        "expected": 0.9,
+        "tolerance": null,
+        "reason": null
+      },
+      {
+        "id": "single_subject",
+        "passed": true,
+        "value": 0.0,
+        "expected": 0.1,
+        "tolerance": null,
+        "reason": null
+      }
+    ],
+    "reasons": []
+  }
+}

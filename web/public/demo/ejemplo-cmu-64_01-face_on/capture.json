@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.2.0",
+  "athlete": "exploracion",
+  "gesture": "driver",
+  "view": "face_on",
+  "capture_path_id": "desconocido-video",
+  "capture_path_calibrated": false,
+  "fps_provenance": "sin_verificar",
+  "fps_real": 120.0,
+  "fps_playback": 120.0,
+  "fps_playback_raw": 120.0,
+  "stretch_factor": 1.0,
+  "fps_source": "pose.npz:cmu-mocap · fps 120 exacto por construcción (mocap CMU 64_01), cámara virtual, no es video: no hay archivo que reproduzca ni cronómetro que filmar, y por eso ninguna métrica puede ser juicio.",
+  "codec": "ninguno",
+  "width": 1080,
+  "height": 1920,
+  "rotation_deg": 0,
+  "frames_decoded": 448,
+  "duration_s": 3.733,
+  "duration_playback_s": 3.733,
+  "vfr_ratio": 1.0,
+  "vfr_ratio_raw": 1.0,
+  "first_delta_s": 0.008333,
+  "fps_note": "120 fps exacto por construcción (mocap CMU): es la tasa del sistema Vicon declarada por CMU, no una medición de esta Mac.",
+  "recorded_at": "2002-09-07",
+  "sha256_original": "ef1380e6ba40e97ad2b6aa9e1def83767d24f8e2b02d2d59049ad829c19ee23f",
+  "original_name": "64_01.amc",
+  "gate": {
+    "verdict": "ok",
+    "checks": [
+      {
+        "id": "exploracion",
+        "passed": null,
+        "value": "desconocido-video",
+        "expected": null,
+        "tolerance": null,
+        "reason": "EXPLORACIÓN: sin gate, sin MDC, tasa de cuadros del archivo sin calibrar. Números descriptivos para mirar, no para juzgar. fps 120 exacto por construcción (mocap CMU 64_01), cámara virtual, no es video: no hay archivo que reproduzca ni cronómetro que filmar, y por eso ninguna métrica puede ser juicio."
+      }
+    ],
+    "reasons": []
+  }
+}

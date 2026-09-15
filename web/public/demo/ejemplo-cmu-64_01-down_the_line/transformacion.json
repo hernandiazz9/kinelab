@@ -1,0 +1,50 @@
+{
+  "schema": "kinelab.transformacion/1.0.0",
+  "generado": "2026-09-15T13:56:13+00:00",
+  "trabajo": "ejemplo-cmu-64_01-down_the_line",
+  "reference_frame_origen": "image_px",
+  "reference_frame_destino": "demo_px",
+  "nota": "x_demo = (x_origen - offset_x) * escala ; y_demo = (y_origen - offset_y) * escala ; cuadro_demo = cuadro_origen - cuadro_offset. Los keypoints NO se reescribieron: pose.json, analysis.json, datos-eventos.json y datos-por-cuadro.csv siguen en image_px y en cuadros del origen. Esta transformacion es lo unico que cambia.",
+  "offset_x": 184,
+  "offset_y": 0,
+  "escala": 0.5625,
+  "cuadro_offset": 26,
+  "cuadros": 422,
+  "fps": 120.0,
+  "tamano_origen": [
+    1080,
+    1920
+  ],
+  "recorte": {
+    "x": 184,
+    "y": 0,
+    "ancho": 896,
+    "alto": 1920
+  },
+  "tamano_destino": [
+    504,
+    1080
+  ],
+  "modo_recorte": "sujeto",
+  "margen_recorte": 0.1,
+  "cuadros_origen": 448,
+  "tramo_origen": [
+    26,
+    447
+  ],
+  "caja_sujeto": [
+    380.9,
+    -12.4,
+    952.4,
+    1953.9
+  ],
+  "puntos_fuera_del_origen": {
+    "n": 315,
+    "de": 10972,
+    "nota": "keypoints del tramo que caen fuera del cuadro del ORIGEN: ningun recorte los puede incluir porque ya estaban afuera. El recorte si garantiza que todo lo que estaba adentro sigue adentro."
+  },
+  "video_limpio": null,
+  "video_limpio_null_reason": "esta toma no tiene original: la pose no vino de un video (kinelab.explore, modo pose_npz). El unico video que hay es el overlay dibujado sobre fondo liso.",
+  "overlay": "overlay.mp4",
+  "palitos_quemados_en_overlay": true
+}

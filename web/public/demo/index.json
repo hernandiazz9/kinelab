@@ -1,0 +1,86 @@
+{
+  "schema": "kinelab.demo/1.0.0",
+  "generado": "2026-09-15T13:56:14+00:00",
+  "aviso": "Demo estática: resultados YA calculados en la Mac del entrenador. El motor no se despliega (onnxruntime con CoreML, pesos de cientos de MB, 76 s por clip). Acá no se puede subir un video: esto es un visor de resultados.",
+  "trabajos": [
+    {
+      "id": "72d91d030f12490692019526b34f188f",
+      "estado": "listo",
+      "origen": "subida",
+      "etiqueta": null,
+      "video": "vid1.mp4",
+      "altura_m": null,
+      "vista": "face_on",
+      "creado": "2026-09-15T13:17:13+00:00",
+      "terminado": "2026-09-15T13:18:28+00:00",
+      "segundos": 74.9,
+      "error": null,
+      "camino": "s22ultra-video-fhd60-cable",
+      "fps_provenance": "sin_verificar",
+      "fps_archivo": 60.026,
+      "cuadros": 1066,
+      "eventos_frame": {
+        "address": 672,
+        "top": 722,
+        "impact": 741,
+        "follow_end": 842
+      },
+      "avisos": [
+        "EXPLORACIÓN: sin gate, sin MDC, tasa de cuadros del archivo sin calibrar. Números descriptivos para mirar, no para juzgar.",
+        "Tasa de cuadros sin verificar: camino declarado sin cronómetro: los tiempos asumen que el archivo reproduce a la velocidad de captura ('s22ultra-video-fhd60-cable', 60.026 fps asumidos). Los tiempos y las duraciones son descriptivos; ninguna métrica puede ser juicio hasta filmar el cronómetro."
+      ]
+    },
+    {
+      "id": "ejemplo-cmu-64_01-down_the_line",
+      "estado": "listo",
+      "origen": "ejemplo",
+      "etiqueta": "ejemplo · mocap CMU 64_01 · cámara virtual · no es video · fps 120 exacto por construcción",
+      "video": "cmu-64_01-down_the_line",
+      "altura_m": 1.6405,
+      "vista": "down_the_line",
+      "creado": "2026-09-15T12:00:37+00:00",
+      "terminado": "2026-09-15T12:00:37+00:00",
+      "segundos": null,
+      "error": null,
+      "camino": "desconocido-video",
+      "fps_provenance": "sin_verificar",
+      "fps_archivo": 120.0,
+      "cuadros": 448,
+      "eventos_frame": {
+        "address": 146,
+        "top": 263,
+        "impact": 332
+      },
+      "avisos": [
+        "EXPLORACIÓN: sin gate, sin MDC, tasa de cuadros del archivo sin calibrar. Números descriptivos para mirar, no para juzgar.",
+        "fps 120 exacto por construcción (mocap CMU 64_01), cámara virtual, no es video: no hay archivo que reproduzca ni cronómetro que filmar, y por eso ninguna métrica puede ser juicio."
+      ]
+    },
+    {
+      "id": "ejemplo-cmu-64_01-face_on",
+      "estado": "listo",
+      "origen": "ejemplo",
+      "etiqueta": "ejemplo · mocap CMU 64_01 · cámara virtual · no es video · fps 120 exacto por construcción",
+      "video": "cmu-64_01-face_on",
+      "altura_m": 1.6405,
+      "vista": "face_on",
+      "creado": "2026-09-15T12:00:33+00:00",
+      "terminado": "2026-09-15T12:00:33+00:00",
+      "segundos": null,
+      "error": null,
+      "camino": "desconocido-video",
+      "fps_provenance": "sin_verificar",
+      "fps_archivo": 120.0,
+      "cuadros": 448,
+      "eventos_frame": {
+        "address": 141,
+        "top": 270,
+        "impact": 329
+      },
+      "avisos": [
+        "EXPLORACIÓN: sin gate, sin MDC, tasa de cuadros del archivo sin calibrar. Números descriptivos para mirar, no para juzgar.",
+        "fps 120 exacto por construcción (mocap CMU 64_01), cámara virtual, no es video: no hay archivo que reproduzca ni cronómetro que filmar, y por eso ninguna métrica puede ser juicio."
+      ]
+    }
+  ]
+}
