@@ -3,6 +3,126 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 15 de septiembre de 2026 — encargo 26: lo que enseñó el cronómetro, el segundo clip y el test del camino calibrado
+
+Prompt: `docs/prompts/26-lo-que-enseno-el-cronometro.md`. Informe:
+`docs/informes/2026-09-15-26-lo-que-enseno-el-cronometro.md`. Corrió con el 16,
+el 18 y otras sesiones en paralelo: `kinelab/`, `sports/`, `service/`, `web/` y
+`truth/` aparecen modificados en `git status` y **no se tocó ni se commiteó
+nada de eso**. Lo mío: `CAPTURA.md`, `docs/filmacion-s22.md`,
+`docs/checklist-captura.md`, `tests/test_capture_paths.py`, `data/incoming/`
+(ignorado por git), `ESTADO.md` y el informe.
+
+### Qué existe ahora
+
+- **`docs/filmacion-s22.md` reescrita** con las nueve lecciones que midió el 24,
+  cada una con su porqué en una línea, más una décima que se midió en esta
+  sesión. Arriba de todo, una sola regla: *Slow motion FHD 240, cronómetro
+  andando dentro del cuadro, 25 segundos por toma*.
+- **`CAPTURA.md`**, cuatro lugares: §Calibración con cronómetro gana la
+  subsección **«El método preferido: el cronómetro DENTRO del cuadro del
+  gesto»** con los cinco números medidos y sus tres cuidados; §Encuadre gana la
+  **serie de seis clips** (21,6 % el peor, 36,0 % el último) y el carrito de
+  golf; §Transferencia gana la fila del **recorte en la Mac**; §El gate de
+  ingesta gana la nota de **`duration_plausible` en cámara lenta** (el umbral no
+  se movió); §Lo que queda por verificar se parte en «contestado» y «abierto».
+- **`docs/checklist-captura.md`** sincronizado en cinco casillas (cronómetro en
+  marcha, duración real vs. reproducción, no recortar, la serie de encuadre, el
+  carrito).
+- **`tests/test_capture_paths.py`**: `test_repo_has_the_calibrated_slomo_path_of_the_s22`,
+  el hermano del de los declarados. Clava `mode: slomo`, `fps_real` 240,15,
+  `fps_playback` 30,0169, el `stretch_factor` como cociente medido y los seis
+  campos del cronómetro llenos. **48 en verde** en ese archivo (eran 47).
+
+### Medido
+
+**1 · El segundo clip no pudo verificar nada: su cronómetro está detenido.**
+`cartado2-lenta.mp4` (292 cuadros, mismo modo, mismo recorte, 5 minutos después
+del otro) lee **00:00.00 en los 292 cuadros**. Verificado por plantilla seguida
+cuadro a cuadro (correlación mínima 0,986 contra el cuadro 0 sobre el ancla, y
+0,82 en las centésimas, todo explicado por deriva sub-píxel y desenfoque: los
+cinco cuadros peor correlacionados leen 00:00.00 a ojo). Tiras en
+`data/incoming/cronometro-26/`. **La tasa de captura del proyecto sigue siendo
+n = 1.**
+
+**2 · Lo que el segundo clip sí confirma es la REPRODUCCIÓN.** `fps_playback`
+30,016952 contra los 30,0169 del camino (0,00017 % de diferencia), `vfr_ratio`
+1,0027063599 — **idéntico hasta el décimo decimal** al del primer clip y al del
+tercero —, y los mismos 10 deltas de PTS distintos. Los tres archivos salen del
+mismo proceso de retiming. Pero la reproducción no es lo que el cronómetro mide.
+
+**3 · Apareció un tercer clip lento, y con él el gate pasó entero por primera
+vez.** `~/Desktop/cortado3-lento.mp4` (creado 17:26, una hora después de los
+otros dos; 2977 cuadros, 99,14 s de reproducción, **12,40 s reales**). Con
+`s22ultra-slomo-fhd240-recorte-mac`: **9 de 9 chequeos, `verdict: ok`**,
+`fps_provenance: medido_aqui`. **Es el primer `capture.json` del proyecto que
+pasa**, y pasó por la lección 4 del 24 —filmar más largo—, sin mover un umbral.
+
+**4 · Y con él, los primeros `judgment_allowed: true` del proyecto.**
+Percepción: 2977 cuadros, detección **1,0000**, cuerpo **691 px = 36,0 % del
+alto** (el mejor encuadre de los seis clips reales), cámara 1,35 px, gate de
+Fase 1 OK. `analyze`: calidad **confiable**, `warnings: []`, **2 repeticiones**
+(1 descartada por `sin_address`), `follow_end` detectado por primera vez en un
+clip real. **Once de las doce métricas con `judgment_allowed: true`**; la única
+que no es `pelvis_thrust_top_cm`, y falla por vista.
+
+**5 · La serie de encuadre ganó su sexto punto, y sube.** 28,2 / 28,7 / 29,5 /
+41,9 / **21,6** / **36,0 %**. El salto de 14,4 puntos entre el quinto y el sexto
+es sólo trípode: misma lente, mismo modo, mismo teléfono.
+
+Suites: `tests/test_capture_paths.py` **48 en verde**; **4 de 4 mutaciones** del
+YAML ponen rojo al test nuevo (`fps_real`, `mode`, `stretch_factor` redondeado,
+`calibrated_by`). La suite entera del motor **no está en verde y no es mía**:
+las corridas dieron entre 3 y 25 rojos según el minuto, todos en
+`tests/test_fase2.py`, `tests/test_perception.py` y `tests/test_service.py`, y
+todos por trabajo a medio escribir de las sesiones paralelas sobre
+`kinelab/events/signal.py`, `kinelab/analysis.py`, `kinelab/metrics/generic.py`
+y `sports/golf/events.py`. El único archivo de código que toqué es
+`tests/test_capture_paths.py`.
+
+### Qué falta o no se probó
+
+- **La verificación independiente de los 240,15 fps sigue pendiente**, y ahora
+  se sabe exactamente qué hace falta: un clip de *Slow motion* FHD 240 con el
+  cronómetro **andando** en el cuadro. Es el pedido a Hernán.
+- **Sigue faltando el ORIGINAL sin recortar** de `DCIM/Camera` (pedido del 24).
+  Los tres clips lentos son recortes de la Mac: `elst` que esconde 14, 26 y 4
+  cuadros respectivamente.
+- **El delta de arranque de Slow motion FHD 240 sigue sin medirse**, por la
+  misma razón.
+- **Los números de §4 no son reproducibles desde HEAD.** `analyze` corrió
+  contra un árbol de trabajo con cambios sin commitear de las sesiones 16 y 18
+  (la primera corrida se cayó con `NameError: interpolate_gaps` en
+  `kinelab/events/signal.py`, a medio editar; la segunda, minutos después, ya
+  funcionó). **El gate de §3 sí es reproducible**: la ingesta no toca ninguno de
+  esos archivos. Los valores de las métricas y los cuadros de los eventos hay
+  que rehacerlos cuando el 16 y el 18 cierren.
+- **`cortado3-lento.mp4` no tiene cronómetro propio**: pasó el gate con la
+  calibración prestada del otro clip. Lo que el gate verifica por clip es la
+  reproducción, no la captura. Está escrito en `CAPTURA.md`.
+- **Dos repeticiones, una descartada, y un `follow_duration_ms` de SD 1292 ms.**
+  Los primeros números con juicio habilitado del proyecto son también los
+  primeros que nadie revisó. No se ingestó la toma a `data/sessions/`.
+- **La pantalla no se abrió** (regla de trabajo). No hacía falta: todo esto es
+  documentos, un test y el motor por línea de comandos.
+
+### Desviaciones
+
+- **Del contrato, ninguna.** No se tocó `capture-paths.yaml`, ni el schema, ni
+  ninguna métrica. El camino calibrado quedó exactamente como lo escribió el 24.
+- **Del prompt, una hacia arriba y anotada: se midió un clip que el prompt no
+  nombraba.** El punto 3 pedía verificar los 240,15 fps contra
+  `cartado2-lenta.mp4`, y ese clip no puede contestar (§1). `cortado3-lento.mp4`
+  apareció en el escritorio después de escrito el prompt, es del mismo modo y
+  del mismo camino, y es la única pieza de material capaz de decir algo sobre la
+  misma pregunta. Se midió, se reportó, y **no se escribió ningún camino
+  nuevo**: usa el que ya existe.
+- **Del prompt, una de archivos**: se tocó `docs/checklist-captura.md`, que el
+  prompt daba como opcional («si hace falta»). Hizo falta: tres de sus casillas
+  quedaban contradiciendo lo nuevo.
+
+---
+
 ## 15 de septiembre de 2026 — encargo 25: publicar un trabajo a internet desde la pantalla
 
 Prompt: `docs/prompts/25-publicar-un-trabajo.md`. Informe:
