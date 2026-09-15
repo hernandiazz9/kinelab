@@ -32,48 +32,64 @@ Las tres preguntas de ADR-010, contestadas por separado:
 
 CMU pide además, si se publican resultados, mandar la cita a
 `jkh+mocap@cs.cmu.edu`. Y pide expresamente **no crawlear** la base: de las 30
-tomas del sujeto 64 se bajaron a mano las tres que se iban a mirar, y quedaron
-las dos elegidas.
+tomas del sujeto 64 se bajaron a mano, una por una, las diez «Swing», que son
+las únicas que el motor puede analizar.
 
 ## Los archivos
 
-Bajados el 14 de septiembre de 2026 de `http://mocap.cs.cmu.edu/subjects/64/`.
+Bajados a mano de `http://mocap.cs.cmu.edu/subjects/64/`: el ASF, `64_01` y
+`64_02` el 14 de septiembre de 2026; `64_03` a `64_10` el 15, para el encargo
+14 (la escala en cm). **Los diez «Swing» del sujeto, y ninguno más**: no se
+bajó ningún putt ni ninguna maniobra, y no se crawleó la base.
 
 | archivo | bytes | sha256 |
 |---|---|---|
 | `64.asf` | 7 270 | `931aa1defb080cb8487817b92138cfc042d6bb5c2e84aecc7da0da3af20cd585` |
 | `64_01.amc` | 356 466 | `ef1380e6ba40e97ad2b6aa9e1def83767d24f8e2b02d2d59049ad829c19ee23f` |
 | `64_02.amc` | 393 045 | `cddcd98c0dde69cf22ec412ff15f9bde8a77168fb605ff32869778e3b8b2785d` |
+| `64_03.amc` | 352 883 | `4ed45f30af228cc9a99a2b890fd8babfa1ce7730494ff6ecb5d414d8f365b366` |
+| `64_04.amc` | 328 561 | `aa60487c42171358d3e2edf88062f7f3f0156502fd9d9f36c0959c8426467a04` |
+| `64_05.amc` | 308 036 | `14c0fab8ecaf19229852ee97ec62c8437aee726a639f718882f2da6a5c7f2beb` |
+| `64_06.amc` | 421 654 | `3b3025fc9cf96e69981f3d469eff7b9ad0059d2d7874965bdffbacf208aa0d2f` |
+| `64_07.amc` | 299 796 | `fd1cca4dec308cfe200dedb6f26db9dc330729f2912a83b4c3ceec6e34c1296f` |
+| `64_08.amc` | 289 725 | `d815e1815bc3d845acde7ca325cbb620eb959efabfa524bacce1ea48034cfc01` |
+| `64_09.amc` | 360 687 | `1610ddacf457582c12bef00accc18a926497c7e0e6210cdbfedf5b3d60c5ce17` |
+| `64_10.amc` | 447 487 | `2a1e5988512b3f832946c12636f741fb691f79ee2cce48f67b42bf13121ca058` |
 
 El `.asf` es el esqueleto calibrado del sujeto (uno solo, compartido por todas
 sus tomas); cada `.amc` es una toma. Los dos `sha256` van también dentro del
 `provenance` de cada `pose.npz` que sale de ellos, así que un `pose.npz` siempre
 dice de qué archivo exacto salió.
 
-## Por qué el sujeto 64 y por qué estos dos trials
+## Por qué el sujeto 64 y por qué los diez
 
 El índice del sitio (`search.php?subjectnumber=64`) titula al sujeto **«golf»** y
 lista sus 30 tomas: **1–10 «Swing»**, 11–15 «Putt», 16–20 «Placing Tee», 21–25
 «Placing Ball», 26–30 «Picking up Ball». Es el único sujeto de golf de la base.
 Todas a **120 Hz**, sistema Vicon de 12 cámaras MX-40, 41 marcadores.
 
-De los diez «Swing» se miraron los tres primeros y quedaron **64_01** y
-**64_02**, por tres razones:
+Están los **diez «Swing»** y ninguna de las otras veinte: 11–15 son putt y 16–30
+son poner la bola y el tee, que no son el gesto que mide `sports/golf/`.
 
-1. **Son el gesto entero.** Los dos tienen más de un segundo de quietud antes
-   del takeaway (address 145 y 182, sobre 448 y 493 cuadros), que es lo que el
-   address determinista necesita: se define como el final de una ventana de
-   quietud, no se detecta (ADR-008).
-2. **No son putts ni maniobras.** 11–15 son putt y 16–30 son poner la bola y el
-   tee: no son el gesto que mide `sports/golf/`.
-3. **Son dos y no uno** para que el número de nivel 1 no dependa de una sola
-   toma. 64_03 se miró y da la misma lectura, pero no se guardó: con dos alcanza
-   para ver si el sesgo se repite, y la base pide no acumular copias.
+Los diez tienen el gesto entero: más de medio segundo de quietud antes del
+takeaway (el address del motor cae entre el cuadro 67 y el 183, sobre trials de
+364 a 562 cuadros), que es lo que el address determinista necesita — se define
+como el final de una ventana de quietud, no se detecta (ADR-008).
 
-**64_01 es el ejemplo** que queda en la pantalla, en las dos vistas. 64_02 es la
-segunda lectura del número de nivel 1.
+Por qué diez y no dos. El encargo 07 guardó `64_01` y `64_02` y vio con ellos que
+el sesgo de las métricas en cm se repetía. El encargo 14 necesitaba **medir** una
+convención de escala, no verla: diez swings dan una media con límites de acuerdo.
+Siguen siendo **un solo sujeto**: de acá no sale ningún MDC ni ninguna
+referencia. La tabla se rehace con
 
-Lo que estos trials **no** tienen: un finish quieto. Los dos cortan mientras el
+```bash
+cd truth && .venv/bin/python -m kinelab_truth.mocap 64 --escala
+```
+
+**64_01 es el ejemplo** que queda en la pantalla, en las dos vistas. Los otros
+nueve sólo se leen desde esa tabla.
+
+Lo que estos trials **no** tienen: un finish quieto. Los diez cortan mientras el
 golfista todavía se está acomodando, así que `follow_end` queda en `null` con su
 razón, y `follow_duration_ms` también.
 

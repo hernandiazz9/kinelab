@@ -224,3 +224,59 @@ def test_pose_completa_y_eventos_3d_del_trial_de_golf():
     # medio segundo largo de bajada
     assert e["address"] > int(0.5 * CMU_FPS)
     assert (e["impact"] - e["top_far"]) / CMU_FPS > 0.2
+
+
+def test_la_altura_cabeza_tobillos_del_address_no_es_la_estatura():
+    """El origen del +12,3 %: un golfista en address mide, de la coronilla a los
+    tobillos, bastante menos que de pie. Es lo que la escala vieja usaba de
+    divisor (encargo 14)."""
+    mp = build("64_01", "face_on")
+    P = mp.points_m
+    address = events_3d(P)["address"]
+    tobillos = (P[address, H.LEFT_ANKLE, 1] + P[address, H.RIGHT_ANKLE, 1]) / 2.0
+    aparente = float(P[address, H.HEAD, 1] - tobillos)
+    assert aparente == pytest.approx(1.4554, abs=0.005)
+    assert mp.height_m == pytest.approx(1.6405, abs=0.005)
+    assert aparente / mp.height_m == pytest.approx(0.887, abs=0.01)
+
+
+def test_las_candidatas_de_escala_se_ordenan_como_dice_la_geometria():
+    """Cada eslabón se acorta con la perspectiva y nunca se alarga, así que la
+    cadena es una cota inferior de la estatura en px: el máximo dentro de la
+    repetición tiene que quedar entre el address y la escala exacta."""
+    from kinelab_truth.mocap import _scale_divisors
+
+    mp = build("64_01", "face_on")
+    kp = mp.keypoints_px.astype(float)
+    address = events_3d(mp.points_m)["address"]
+    tobillos = (mp.points_m[address, H.LEFT_ANKLE, 1] + mp.points_m[address, H.RIGHT_ANKLE, 1]) / 2.0
+    cociente = float(mp.points_m[address, H.HEAD, 1] - tobillos) / float(mp.height_m)
+    d = _scale_divisors(kp, CMU_FPS, address, address, kp.shape[0] - 1, cociente)
+    # agacharse hacia la cámara acorta la cadena tanto como la vertical: en el
+    # address las dos primeras candidatas son la misma cosa
+    assert d["b_cadena_address"] == pytest.approx(d["a_cabeza_tobillos_address"], rel=0.005)
+    # el máximo dentro de la repetición recupera parte de lo que la postura comió
+    assert d["a_cabeza_tobillos_address"] < d["c_vertical_max_rep"] < d["d_cadena_max_rep"] < d["z_escala_exacta"]
+    # y llega al 95 % de la escala exacta, contra el 89 % del address
+    assert d["d_cadena_max_rep"] / d["z_escala_exacta"] > 0.95
+    assert d["a_cabeza_tobillos_address"] / d["z_escala_exacta"] == pytest.approx(0.887, abs=0.01)
+
+
+def test_tabla_de_escala_sobre_dos_trials():
+    """La tabla que decidió la convención, en chico: la candidata implementada
+    tiene que bajar el sesgo medio contra la verdad 3-D."""
+    from kinelab_truth.mocap import scale_table
+
+    t = scale_table("64", "face_on", trials=["64_01", "64_02"])
+    assert t["n_trials"] == 2 and t["n_sujetos"] == 1
+    assert 0.85 < t["aparente_sobre_estatura"]["media"] < 0.92
+    actual = t["resumen"]["a_cabeza_tobillos_address"]["sesgo_abs_medio"]
+    nueva = t["resumen"]["d_cadena_max_rep"]["sesgo_abs_medio"]
+    assert nueva < actual / 2
+    assert t["resumen"]["d_cadena_max_rep"]["empeora_mas_cm"] <= 1.0
+    # las siete de `face_on`: la de thrust es de down_the_line y no entra
+    fila = t["trials"][0]["metricas"]
+    assert len(fila) == 7 and "pelvis_thrust_top_cm" not in fila
+    # el `motor_cm` del analysis.json es el de la convención implementada
+    for mid, m in fila.items():
+        assert m["motor_cm"] == pytest.approx(m["cm"]["d_cadena_max_rep"], abs=0.06), mid

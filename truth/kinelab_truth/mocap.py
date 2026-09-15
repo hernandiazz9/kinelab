@@ -1,6 +1,7 @@
 """Un swing de mocap REAL (CMU) visto por la cámara virtual del arnés.
 
     python -m kinelab_truth.mocap 64_01 --vista face_on --out DIR
+    python -m kinelab_truth.mocap 64 --escala            # la tabla de escala, todos los trials
 
 Nivel 1 de ADR-009: movimiento humano real, licencia libre, sin estimador de
 pose en el medio. Lo que entra son los archivos ASF/AMC de
@@ -602,6 +603,165 @@ def level1_table(take_dir: Path, mp: MocapPose) -> dict:
     }
 
 
+# --- la escala: cuántos píxeles mide la estatura declarada ---------------------
+
+# Las candidatas a divisor de `px_to_cm`, todas geométricas: ninguna fija un
+# factor ajustado a este sujeto. Cada una devuelve píxeles por estatura.
+#   a  la anterior: altura cabeza→tobillos del cuadro de address
+#   b  suma de largos de segmento proyectados en el address
+#   c  máxima extensión vertical cabeza→tobillos dentro de la repetición
+#   d  máximo de la cadena de segmentos dentro de la repetición  ← la implementada
+#   e  ídem d, arrancando en el talón en vez del tobillo (informativa: en el
+#      mocap el talón lo CONSTRUYE `to_halpe26`, así que mide nuestra propia
+#      aproximación y no la anatomía)
+#   z  la escala exacta, que sólo existe porque hay verdad 3-D: la altura
+#      cabeza→tobillos del address en px dividida por lo que mide en metros.
+#      Es el piso: con ella, lo que queda es error de PROYECCIÓN, no de escala.
+SCALE_CANDIDATES = ("a_cabeza_tobillos_address", "b_cadena_address", "c_vertical_max_rep", "d_cadena_max_rep", "e_cadena_talon_max_rep", "z_escala_exacta")
+
+
+def _scale_divisors(kp: np.ndarray, fps: float, address: int, start: int, end: int, cociente: float) -> dict[str, float]:
+    """Los divisores de las candidatas, en px, para una toma ya analizada."""
+    from kinelab.metrics.core import STATURE_CHAIN, _link_point, stature_chain_px
+    from kinelab.perception.framing import _rolling_nanmedian, body_height_px
+
+    bh = body_height_px(kp, fps)
+    chain = stature_chain_px(kp, fps)
+    talon = ((H.LEFT_HEEL, H.RIGHT_HEEL), *STATURE_CHAIN)
+    pts = [_link_point(kp, j) for j in talon]
+    con_talon = np.zeros(kp.shape[0])
+    for a, b in zip(pts, pts[1:]):
+        d = b - a
+        con_talon += np.hypot(d[:, 0], d[:, 1])
+    con_talon = _rolling_nanmedian(con_talon, int(round(0.25 * fps)))
+    sl = slice(start, end + 1)
+    return {
+        "a_cabeza_tobillos_address": float(bh[address]),
+        "b_cadena_address": float(chain[address]),
+        "c_vertical_max_rep": float(np.nanmax(bh[sl])),
+        "d_cadena_max_rep": float(np.nanmax(chain[sl])),
+        "e_cadena_talon_max_rep": float(np.nanmax(con_talon[sl])),
+        "z_escala_exacta": float(bh[address]) / cociente,
+    }
+
+
+def scale_table(subject: str, view: str = "face_on", trials: list[str] | None = None) -> dict:
+    """El sesgo de las métricas en cm contra la verdad 3-D, por candidata de
+    escala, sobre TODOS los trials del sujeto que estén en `data/examples/`.
+
+    Un sujeto, N swings: sale una media con límites de acuerdo de **este**
+    golfista, no un MDC ni una referencia (ADR-009 nivel 1 mide la matemática
+    y la convención, no el estimador).
+    """
+    import tempfile
+
+    from kinelab.analysis import build_analysis, swing_signals
+    from kinelab.explore import prepare_take_from_pose
+    from kinelab.ingest.gate import CaptureJson
+    from kinelab.perception.gaps import interpolate_gaps
+    from kinelab.perception.posestore import load_pose
+    from sports import get_sport
+
+    trials = trials or sorted(p.stem for p in EXAMPLES.glob(f"{subject}_*.amc"))
+    if not trials:
+        raise ValueError(f"no hay ningún {subject}_NN.amc en {EXAMPLES}")
+    filas: list[dict] = []
+    with tempfile.TemporaryDirectory(prefix="kinelab-escala-") as tmp:
+        for trial in trials:
+            mp = build(trial, view)
+            take = Path(tmp) / trial
+            write_pose(mp, take)
+            prepare_take_from_pose(take / "pose.npz", take, view=view, note=fps_note(trial))
+            capture = CaptureJson.model_validate_json((take / "capture.json").read_text(encoding="utf-8"))
+            pose = load_pose(take)
+            analysis = build_analysis(take, capture, pose, get_sport("golf"), height_m=mp.height_m)
+            if not analysis["reps"]:
+                filas.append({"trial": trial, "error": "0 repeticiones"})
+                continue
+            rep, ev0 = analysis["reps"][0], analysis["events"][0]
+            ev = {k: (ev0[k] or {}).get("frame") for k in ("address", "top", "impact", "follow_end")}
+            kp = interpolate_gaps(pose.keypoints, 5)
+            P = mp.points_m
+            ank = (P[ev["address"], H.LEFT_ANKLE, 1] + P[ev["address"], H.RIGHT_ANKLE, 1]) / 2.0
+            aparente = float(P[ev["address"], H.HEAD, 1] - ank)
+            cociente = aparente / float(mp.height_m)
+            div = _scale_divisors(kp, CMU_FPS, ev["address"], rep["frame_start"], rep["frame_end"], cociente)
+            metricas = {}
+            for mid, (joints, axis, zero, at) in L1_DISPLACEMENTS.items():
+                if mid not in rep["metrics"] or rep["metrics"][mid]["value"] is None:
+                    continue
+                f0, f1 = ev[zero], ev[at]
+                signo = -1.0 if axis == 1 else 1.0  # y de imagen crece hacia abajo
+                eje_img = 0 if axis in (0, 2) else 1
+                d_px = float((kp[f1, list(joints)].mean(axis=0) - kp[f0, list(joints)].mean(axis=0))[eje_img] * signo)
+                pt3 = P[:, list(joints)].mean(axis=1)
+                metricas[mid] = {
+                    "d_px": round(d_px, 3),
+                    "verdad_3d_cm": round(100.0 * float(pt3[f1, axis] - pt3[f0, axis]), 3),
+                    "motor_cm": rep["metrics"][mid]["value"],
+                    "mdc": rep["metrics"][mid]["mdc"],
+                    "cm": {c: round(d_px / div[c] * mp.height_m * 100.0, 3) for c in SCALE_CANDIDATES},
+                }
+            filas.append({
+                "trial": trial, "cuadros": int(kp.shape[0]), "eventos": ev,
+                "repeticion": [rep["frame_start"], rep["frame_end"]],
+                "estatura_m": round(float(mp.height_m), 4),
+                "cabeza_tobillos_m_en_address": round(aparente, 4),
+                "aparente_sobre_estatura": round(cociente, 4),
+                "divisores_px": {k: round(v, 1) for k, v in div.items()},
+                "metricas": metricas,
+            })
+    ok = [f for f in filas if "error" not in f]
+    ids = sorted({m for f in ok for m in f["metricas"]})
+    resumen = {}
+    for c in SCALE_CANDIDATES:
+        por_metrica = {}
+        for mid in ids:
+            b = np.array([f["metricas"][mid]["cm"][c] - f["metricas"][mid]["verdad_3d_cm"] for f in ok if mid in f["metricas"]])
+            sd = float(b.std(ddof=1)) if b.size > 1 else float("nan")
+            por_metrica[mid] = {"n": int(b.size), "sesgo": round(float(b.mean()), 3), "loa": [round(float(b.mean()) - 1.96 * sd, 3), round(float(b.mean()) + 1.96 * sd, 3)]}
+        abs_medio = float(np.mean([abs(por_metrica[m]["sesgo"]) for m in ids]))
+        resumen[c] = {"por_metrica": por_metrica, "sesgo_abs_medio": round(abs_medio, 3), "sesgo_abs_max": round(max(abs(por_metrica[m]["sesgo"]) for m in ids), 3), "divisor_medio_px": round(float(np.mean([f["divisores_px"][c] for f in ok])), 1)}
+    base = resumen["a_cabeza_tobillos_address"]
+    for c in SCALE_CANDIDATES:
+        peor = max(abs(resumen[c]["por_metrica"][m]["sesgo"]) - abs(base["por_metrica"][m]["sesgo"]) for m in ids)
+        resumen[c]["empeora_mas_cm"] = round(peor, 3)
+        resumen[c]["cumple_criterio"] = bool(resumen[c]["sesgo_abs_medio"] < base["sesgo_abs_medio"] / 2 and peor <= 1.0)
+    coc = np.array([f["aparente_sobre_estatura"] for f in ok])
+    return {
+        "sujeto": subject, "vista": view, "n_trials": len(ok), "n_sujetos": 1,
+        "aviso": "Diez swings de UN solo sujeto (CMU 64). Sale una media con límites de acuerdo de este golfista; no sale ningún MDC, ninguna referencia y ningún ideal.",
+        "criterio": "la candidata entra si baja el |sesgo| medio a menos de la mitad del actual y no empeora ninguna métrica más de 1 cm (encargo 14)",
+        "aparente_sobre_estatura": {"media": round(float(coc.mean()), 4), "sd": round(float(coc.std(ddof=1)), 4), "min": round(float(coc.min()), 4), "max": round(float(coc.max()), 4)},
+        "trials": filas, "resumen": resumen,
+    }
+
+
+def print_scale_table(t: dict) -> None:
+    ids = sorted(t["resumen"]["a_cabeza_tobillos_address"]["por_metrica"])
+    print(f"\n  ESCALA · sujeto {t['sujeto']} · {t['vista']} · {t['n_trials']} trials — {t['aviso']}")
+    c = t["aparente_sobre_estatura"]
+    print(f"  cabeza→tobillos en address / estatura: media {c['media']:.4f} (sd {c['sd']:.4f}, {c['min']:.4f}–{c['max']:.4f}) → la escala vieja sobre-lee ×{1 / c['media']:.4f}")
+    print(f"  {'trial':<8}{'apar/est':>9}{'addr':>6}{'rep':>12}" + "".join(f"{k.split('_')[0]:>9}" for k in SCALE_CANDIDATES))
+    for f in t["trials"]:
+        if "error" in f:
+            print(f"  {f['trial']:<8}{f['error']}")
+            continue
+        print(f"  {f['trial']:<8}{f['aparente_sobre_estatura']:>9.4f}{f['eventos']['address']:>6}{str(f['repeticion']):>12}" + "".join(f"{f['divisores_px'][k]:>9.0f}" for k in SCALE_CANDIDATES))
+    print(f"\n  sesgo medio [límites de acuerdo], en cm, contra la verdad 3-D en los cuadros del motor:")
+    print(f"  {'métrica':<24}" + "".join(f"{k:>26}" for k in SCALE_CANDIDATES))
+    for mid in ids:
+        fila = f"  {mid:<24}"
+        for k in SCALE_CANDIDATES:
+            r = t["resumen"][k]["por_metrica"][mid]
+            fila += f"{r['sesgo']:>9.2f} [{r['loa'][0]:>6.2f},{r['loa'][1]:>6.2f}]"
+        print(fila)
+    for campo, etiqueta in (("sesgo_abs_medio", "|sesgo| medio"), ("sesgo_abs_max", "|sesgo| max"), ("empeora_mas_cm", "empeora más"), ("divisor_medio_px", "divisor medio px")):
+        print(f"  {etiqueta:<24}" + "".join(f"{t['resumen'][k][campo]:>26.3f}" for k in SCALE_CANDIDATES))
+    print(f"  {'cumple el criterio':<24}" + "".join(f"{('SÍ' if t['resumen'][k]['cumple_criterio'] else 'no'):>26}" for k in SCALE_CANDIDATES))
+    print(f"  criterio: {t['criterio']}")
+
+
 def write_trabajo(take_dir: Path, mp: MocapPose, view: str, etiqueta: str) -> Path:
     """El `trabajo.json` que hace de esta carpeta un **ejemplo** en la lista de
     la pantalla. La forma está documentada en el encabezado de
@@ -633,9 +793,11 @@ def main(argv: list[str] | None = None) -> int:
     import argparse
 
     ap = argparse.ArgumentParser(prog="python -m kinelab_truth.mocap", description="Un swing de mocap real (CMU) proyectado con la cámara virtual del arnés.")
-    ap.add_argument("trial", help="id del trial, p. ej. 64_01 (el ASF se busca al lado: 64.asf)")
+    ap.add_argument("trial", help="id del trial, p. ej. 64_01 (el ASF se busca al lado: 64.asf). Con --escala alcanza con el sujeto: 64")
     ap.add_argument("--vista", default="face_on", choices=("face_on", "down_the_line"))
-    ap.add_argument("--out", type=Path, required=True, help="carpeta de salida (la toma)")
+    ap.add_argument("--out", type=Path, default=None, help="carpeta de salida (la toma). Obligatoria salvo con --escala")
+    ap.add_argument("--escala", action="store_true", help="la tabla de escala: sesgo de las métricas en cm contra la verdad 3-D, por candidata de divisor, sobre TODOS los trials del sujeto")
+    ap.add_argument("--tabla", type=Path, default=None, help="con --escala, dónde escribir la tabla en JSON")
     ap.add_argument("--asf", type=Path, default=None)
     ap.add_argument("--amc", type=Path, default=None)
     ap.add_argument("--solo-pose", action="store_true", help="escribir pose.npz y parar (sin eventos ni overlay)")
@@ -643,6 +805,16 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--etiqueta", default=None, help="rótulo del trabajo.json del ejemplo; sin él no se escribe trabajo.json")
     ap.add_argument("--deporte", default="golf")
     args = ap.parse_args(argv)
+
+    if args.escala:
+        tabla = scale_table(args.trial.split("_")[0], args.vista)
+        print_scale_table(tabla)
+        if args.tabla:
+            args.tabla.write_text(json.dumps(tabla, ensure_ascii=False, indent=2), encoding="utf-8")
+            print(f"  {args.tabla}")
+        return 0
+    if args.out is None:
+        ap.error("--out es obligatoria (salvo con --escala)")
 
     mp = build(args.trial, args.vista, asf=args.asf, amc=args.amc)
     pose_path = write_pose(mp, args.out)
@@ -671,8 +843,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  altura declarada {tabla['altura_declarada_m']} m · cabeza-tobillo en address {tabla['cabeza_a_tobillo_m_en_address']} m")
         print(f"  {'métrica':<24}{'motor 2D':>10}{'verdad 3D':>11}{'sesgo':>8}   {'verdad 3D':>10}{'sesgo':>8}   {'MDC':>7}")
         print(f"  {'':<24}{'':>10}{'(cuadros del motor)':>19}   {'(cuadros 3D)':>18}")
+        # Una fila con `motor_2d` en `null` —una métrica que la vista no
+        # habilita, como el thrust desde `face_on`— sigue mostrando la verdad.
+        col = lambda v, w: f"{'—' if v is None else v:>{w}}"  # noqa: E731
         for f in tabla["filas"]:
-            print(f"  {f['metrica']:<24}{f['motor_2d']:>10}{f['verdad_3d_en_cuadros_del_motor']:>11}{f['sesgo_solo_medicion']:>8}   {f['verdad_3d_en_cuadros_3d']:>10}{f['sesgo_total']:>8}   {str(f['mdc']):>7}")
+            print(f"  {f['metrica']:<24}{col(f['motor_2d'], 10)}{col(f['verdad_3d_en_cuadros_del_motor'], 11)}{col(f['sesgo_solo_medicion'], 8)}   {col(f['verdad_3d_en_cuadros_3d'], 10)}{col(f['sesgo_total'], 8)}   {str(f['mdc']):>7}")
         print(f"  {args.out / 'nivel1-mocap.json'}")
     return 0
 

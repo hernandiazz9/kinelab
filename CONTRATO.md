@@ -415,7 +415,7 @@ Metric(
         kind="descriptive",               # descriptive | range
         provenance="fabricante",          # medido_aqui | pares | fabricante | estimacion
         source="Onform model card v2.0, abr 2026",
-        definition="desplazamiento lateral del centro de pelvis Halpe26 respecto del address, en el plano de imagen, normalizado por altura de cuerpo y convertido con altura declarada",
+        definition="desplazamiento lateral del centro de pelvis Halpe26 respecto del address, en el plano de imagen, convertido a cm con la escala de la repetición (§La escala) y la estatura declarada del atleta",
         range=None,
     ),
     mdc=None,        # se llena desde truth/; None → judgment_allowed = False
@@ -426,6 +426,66 @@ Metric(
 `fps_min` y `views` **se escriben desde la tabla del arnés**, no a mano. Una
 métrica cuyo barrido muestra que muere por debajo de cierto fps recibe ese
 número; una que colapsa desde una vista pierde esa vista.
+
+### La escala: de píxeles a centímetros
+
+Toda métrica en cm es un desplazamiento en píxeles dividido por **la estatura
+declarada del atleta medida en píxeles**, y multiplicado por esa estatura en
+metros. El divisor es lo que esta sección define, porque es un solo número que
+multiplica a siete métricas: si está mal por un factor, las siete devuelven
+números plausibles multiplicados por ese factor y nada los delata (cementerio 6
+de `HERENCIA.md`).
+
+**La escala es el máximo, dentro de la repetición, de la cadena de la estatura
+proyectada** (`kinelab/metrics/core.py`: `stature_chain_px`,
+`MetricContext.scale_px`):
+
+- **la cadena** es la suma de los largos **proyectados** de
+  tobillo → rodilla → cadera → hombro → cabeza, cada eslabón entre los puntos
+  medios de los dos lados (la coronilla no tiene par). Son los mismos centros
+  articulares de Halpe26 con los que el motor ya mide: ningún largo de segmento
+  sale de una tabla antropométrica ni de un factor ajustado a un deporte.
+- **el máximo** porque cada eslabón se acorta con la perspectiva y **nunca se
+  alarga**: la cadena es una cota inferior de lo que mediría el sujeto de pie y
+  paralelo al plano de imagen, y el cuadro en que más se acerca a esa cota es el
+  más extendido de la repetición.
+- antes del máximo, la cadena pasa por una **mediana móvil de 0,25 s**
+  (`SCALE_SMOOTH_S`, en segundos y no en cuadros). Un máximo crudo lo rompe un
+  solo cuadro con la cabeza en otro lado: medido sobre el mocap 64_01, una
+  cabeza saltada 200 px durante 1 a 15 cuadros infla el máximo un 6,6 % y achica
+  las siete métricas un 6,2 %; con la ventana, 0,0 %. Una racha mala tiene que
+  durar más de media ventana (0,125 s) para pasar.
+- **una escala por repetición**, no por cuadro: el tamaño del atleta no cambia
+  durante el swing; lo que cambia es su extensión aparente.
+- si la cadena no se puede medir en ningún cuadro de la repetición (faltan
+  rodillas o tobillos en todos), se cae a la altura cabeza→tobillos del cuadro
+  cero, que es la convención anterior: un número con su sesgo conocido antes que
+  un `null`.
+
+**Por qué no la altura cabeza→tobillos del address, que es lo que había.** Un
+golfista en address está agachado hacia la pelota, o sea **hacia la cámara** en
+`face_on`: el tronco se inclina sobre el eje óptico y en la imagen no se ve
+girar, se ve más corto. Medido sobre los **diez swings de mocap del sujeto 64 de
+CMU** (`data/examples/cmu-mocap/`, un solo sujeto — no es una tabla de
+referencia), la altura cabeza→tobillos del address mide **0,891 ± 0,006** de la
+estatura, así que la escala vieja sobre-leía **×1,123** toda métrica en cm.
+Sumar los largos de segmento **en el address** no arregla nada (mide 1533 px
+contra 1532: agacharse hacia la cámara engaña por igual a las dos); lo que lo
+arregla es mirar el cuadro extendido.
+
+| candidata a divisor | px (media de 10) | \|sesgo\| medio contra la verdad 3-D |
+|---|---|---|
+| cabeza→tobillos en el address (la anterior) | 1532,5 | 1,035 cm |
+| cadena en el address | 1533,1 | 1,032 cm |
+| máxima extensión vertical de la repetición | 1584,1 | 0,777 cm |
+| **máximo de la cadena en la repetición** | **1648,4** | **0,493 cm** |
+| la escala exacta (sólo existe con verdad 3-D) | 1720,6 | 0,399 cm |
+
+La última fila es el piso: con la escala exacta lo que queda es error de
+**proyección**, que ninguna convención de escala puede tocar. Queda un
+**+4,4 % residual**, y es geométrico: la cadena arranca en el tobillo y la
+estatura declarada arranca en el piso. Se reproduce con
+`cd truth && .venv/bin/python -m kinelab_truth.mocap 64 --escala`.
 
 ### Niveles
 
@@ -469,6 +529,32 @@ homografía.
   `calibrated: true`. Un archivo 1.0.0 sigue cargando sin cambios.
 - `registry_version` aparte, y `metric_version` por métrica. Con un solo
   número, mejorar una métrica invalida el historial del atleta.
+- **Cambiar la convención de escala (§La escala) es `metric_version` minor en
+  las siete métricas en cm** — `1.0.0 → 1.1.0` — y `registry_version` minor
+  (`0.1.0 → 0.2.0`). `schema_version` de `analysis.json` **no** se toca: no se
+  renombró ningún campo ni cambió ninguna unidad (siguen en cm); lo que cambió
+  es el valor. Por qué minor y no major, con los tres números:
+  1. **Qué se mide no cambió.** Los mismos dos keypoints, los mismos dos
+     eventos, el mismo eje, la misma unidad. Lo que cambió es el divisor, que
+     es del motor y no de la métrica: la misma corrección les entra a las siete
+     a la vez.
+  2. **El movimiento queda por debajo del MDC de cada métrica.** Medido: sobre
+     los diez trials de mocap el cambio más grande es 1,45 cm
+     (`pelvis_sway_top_cm`) contra un MDC de 2,87; sobre los dos clips reales
+     del S22, 1,7 cm (`pelvis_sway_impact_cm`) contra 2,42. Ningún valor
+     histórico cruza un umbral por esto — y hoy, además, ningún
+     `judgment_allowed` es verdadero (todo `sin_verificar`, ADR-016). El cambio
+     es proporcional (−7 % en el mocap, −20 % en los clips del S22), así que a
+     partir de desplazamientos de ~12 cm **sí** pasa el MDC: ahí el
+     `metric_version` es lo único que avisa, y por eso se bumpea igual.
+  3. **No hay historial que invalidar.** No existe ninguna sesión en
+     `data/sessions/`; los únicos `analysis.json` son de `data/exploracion/` y
+     de las carpetas `.kinelab`, que se rehacen con un comando. Y re-analizar
+     conserva el anterior con su `engine_version` (invariante 18).
+
+  Sería **major** si alguna de esas tres dejara de valer: un atleta con
+  historial y juicio habilitado, o un cambio que supere el MDC en el rango de
+  uso, o un cambio en qué se mide y no en cómo se escala.
 - `engine_version` en `provenance` y en `header`.
 - Re-analizar conserva el `analysis.json` anterior renombrado con su
   `engine_version`. Comparar dos versiones del motor sobre la misma sesión
