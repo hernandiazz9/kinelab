@@ -66,6 +66,11 @@ ejemplos, porque los trabajos viejos tienen el top y la escala anteriores.
   de `vid1` pesa **245 MB** contra 93 MB del original, o sea ~115 Mb/s contra
   43. La pérdida de nitidez **no puede venir de falta de bitrate**; quedan el
   re-encode generacional y el obturador. El 20 lo separa igual.
+- 2026-09-15 · Ángulos en 3D: **sí, como referencia del mocap, nunca como
+  métrica del producto.** `CONTRATO.md` §Niveles deja los ángulos absolutos
+  en nivel 3 porque una cámara sola no los puede medir; mostrar el ángulo
+  verdadero y el proyectado lado a lado no rompe esa regla, la demuestra.
+  Nada de esto entra al registro ni a `analysis.json` de un video. Encargo 23.
 - 2026-09-15 · Anotado, no cerrado: el +4,4 % residual de la escala (cadena
   desde el tobillo, estatura desde el piso). Se cierra sólo con un punto de
   contacto con el suelo validado contra una verdad que no sea nuestro propio
@@ -110,6 +115,8 @@ ejemplos, porque los trabajos viejos tienen el top y la escala anteriores.
 - [hecho] 11 diagnostico-vid123 — `6693c84`, `345b340`. Tres swings UHD 60
   por WhatsApp documento; `vid1` con contacto real (impacto 741→742
   verificado contra la pelota); gate: rechazo por fps solamente.
+- [hecho] 19 visor-3d-del-mocap — `1240ebb`, `59f728e`, `77cb217`. El swing
+  del mocap gira en la pantalla y el colapso de la línea de caderas se ve.
 - [hecho] 12 captura-docs — `9f44eb5`…`840fc86`. Guía reescrita; 2,4× no 3,4×.
 - [hecho] 13 arnes-ganancia-subcuadro-encuadre — `4342073`, `5373b2e`. La
   ganancia muere; sub-cuadro MDC 2,0–2,9 ms; encuadre 717 px propuesto.
@@ -129,6 +136,10 @@ ejemplos, porque los trabajos viejos tienen el top y la escala anteriores.
   las manos (obturador contra nuestra recompresión) antes de tocar nada; el
   arreglo del overlay sólo si es nuestro y sólo cuando el 16 libere
   `explore.py`. Pedido de Hernán. Prompt escrito.
+- [en curso] 23 angulos-en-3d — los ángulos verdaderos en el visor 3D del
+  mocap, y el valor proyectado al lado: la primera medición propia de cuánto
+  se equivoca un ángulo visto desde una cámara, sobre movimiento humano real.
+  No entra al registro: es referencia, como la verdad 3D del arnés.
 - [en curso] 22 github-y-demo-estatica — repo privado en GitHub, exportador
   de demo (recorte al sujeto, video liviano, JPEG, transformación afín
   declarada) y modo estático del front para desplegar en Vercel. El motor no
