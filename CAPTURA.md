@@ -48,7 +48,10 @@ Por eso:
 ## Configuración del teléfono (una vez; después no se toca)
 
 Para iPhone 17 Pro / 18 Pro. Otros modelos: el cronómetro decide qué modos
-sirven.
+sirven. **El teléfono que hay es un Galaxy S22 Ultra y su configuración es
+otra** —ningún modo *Video* suyo llega a los 100 fps de golf, así que el modo
+por defecto ahí es *Slow motion* FHD 240 con el cronómetro en el cuadro—: la
+hoja operativa de ese teléfono es `docs/filmacion-s22.md`.
 
 | Ajuste | Valor | Por qué |
 |---|---|---|
@@ -110,6 +113,22 @@ Más fps con la muñeca borrosa es peor que menos fps con la muñeca nítida.
   es **acercar el trípode todo lo que permita tener los pies y el palo del top
   adentro del cuadro**.
 
+  **La serie medida, en orden de aparición** — seis clips reales, todos del
+  mismo teléfono, todos `face_on`:
+
+  | clip | modo | cuerpo | % del alto | informe |
+  |---|---|---|---|---|
+  | `vid1` · `vid2` · `vid3` | Video UHD 60 | — | **28,2 / 28,7 / 29,5 %** | 11 |
+  | `20260907_170638` | Video FHD 30 | — | **41,9 %** | 11 |
+  | `Cortado-lenta` | Slow motion FHD 240 | 414 px | **21,6 %** — el peor | 24 |
+  | `cortado3-lento` | Slow motion FHD 240 | **691 px** | **36,0 %** | 26 |
+
+  El quinto es el peor de la serie y es justamente el que trajo la primera tasa
+  de captura medida: el cronómetro se resolvió y el encuadre se perdió. El
+  sexto, filmado una hora después en otro lugar, **recupera 14,4 puntos sin
+  cambiar de modo** — 691 px de cuerpo contra 414. La regla de campo funciona
+  cuando se aplica; lo que falta no es una lente, es el metro de trípode.
+
   **El umbral del gate no está fijado, y no se fija a ojo.** Lo que el motor
   mide es `body_height_px` —altura del cuerpo en píxeles—, no la fracción del
   cuadro; el número que decide sale del barrido de tamaño de sujeto del arnés
@@ -126,7 +145,12 @@ Más fps con la muñeca borrosa es peor que menos fps con la muñeca nítida.
     aparente de columna. Desde acá la columna "parece" inclinada por
     combinación de giro y side bend, no por flexión — por eso las métricas
     declaran vista.
-- Fondo simple, sin otras personas en cuadro. Una persona.
+- Fondo simple, sin otras personas en cuadro. Una persona. **Y nada más:**
+  medido en `Cortado-lenta.mp4`, un carrito de golf parado a la derecha se
+  detecta como persona en **8 de 598 cuadros** (0,0134 de la señal de
+  multi-sujeto, contra un límite de 0,10). No rompió nada —el seguidor nunca lo
+  siguió— pero es margen de `single_subject` gastado de gratis, y en un clip
+  peor es el que elige el sujeto equivocado.
 - Cuerpo entero, incluidos pies y palo en el top.
 
 ---
@@ -151,14 +175,17 @@ antes de confiar**):
 
 Los dos gestos más naturales son los dos peores.
 
-**Medido acá, sobre el Galaxy S22 Ultra** (tres clips de Video UHD 60, informe
-del 11). El teléfono que hay no es un iPhone y no tiene AirDrop:
+**Medido acá, sobre el Galaxy S22 Ultra** (las tres primeras filas, en los tres
+clips de Video UHD 60 del informe del 11; la cuarta, en los tres clips de Slow
+motion de los informes del 24 y del 26). El teléfono que hay no es un iPhone y
+no tiene AirDrop:
 
 | Camino | Qué llega | Procedencia |
 |---|---|---|
 | **Cable desde `DCIM/Camera`** | intacto: es una copia de archivo. **Es el camino de referencia** de este teléfono, y el original FHD 30 que llegó así es contra el que se comparó lo demás | informe del 03 |
 | **WhatsApp como documento** | **intacto**: HEVC `hvc1` a 43–47 Mb/s, el `udta` de Samsung entero (1,02–1,10 MB) y el mismo orden de hijos del `moov` que un original por cable. WhatsApp en modo documento **no toca el archivo** | medido, informe del 11 |
 | **WhatsApp como video** | recomprimido: H.264 de pocos Mb/s, sin `udta`, resolución bajada | **no medido acá**: es el comportamiento conocido del envío como video, `sin_verificar` |
+| **Recorte hecho en la Mac** (QuickTime / Fotos) | **los cuadros parecen pasar sin recodificar** —los PTS son los del original, y los tres clips lentos comparten el mismo patrón de deltas hasta el décimo decimal (ratio 1,0027063599, los mismos 10 deltas distintos)— **pero se lleva todo lo demás**: el `udta` de Samsung de ~1 MB queda en 185 B (con él, `com.android.capture.fps` y las `com.samsung.*`), el handler pasa a `Core Media Video`, y un `elst` de QuickTime **esconde los primeros cuadros**: 14 de 612, 26 de 318, 4 de 2981 en los tres clips medidos | medido, informes del 24 y del 26 |
 
 Que el modo documento salga limpio **no lo convierte en el camino de
 producción**: es un camino distinto, con su propio `id` en
@@ -166,6 +193,12 @@ producción**: es un camino distinto, con su propio `id` en
 sigue sin cronómetro como cualquier otro. El cable sigue siendo la referencia
 porque no depende de que una app de terceros no cambie de criterio entre
 versiones.
+
+**Y el recorte en la Mac tampoco es un camino de producción, aunque hoy sea el
+único calibrado.** Los tres clips lentos que existen llegaron recortados, así
+que el cronómetro que se pudo leer calibró ese recorte y no el archivo del
+teléfono: de ahí el `-recorte-mac` en el id del camino. Se recorta **después**
+de ingestar el original, nunca antes.
 
 Camino de auditoría, no de uso diario: `libimobiledevice` + `ifuse` + `rsync -a`
 sobre `DCIM`. No probado en esta Mac.
@@ -188,6 +221,51 @@ Eso resuelve tres cosas de una vez: si el camino conserva los cuadros, si el
 teléfono entregó de verdad lo que dice (hay reportes de 240 nominales grabando
 114–227 reales), y cuál es el factor de estiramiento si el archivo viene
 retimeado.
+
+### El método preferido: el cronómetro DENTRO del cuadro del gesto
+
+La toma aparte de los cuatro pasos de arriba tiene un supuesto escondido: que
+el clip del cronómetro y el clip del swing salieron del **mismo** modo y del
+mismo camino. Nadie lo verifica, y el archivo no puede decirlo (§Por qué el
+archivo no puede decir su propio fps).
+
+**Poner el cronómetro andando dentro del mismo cuadro que el gesto lo elimina:
+el clip se calibra a sí mismo, porque el cronómetro y el gesto son el mismo
+archivo.** Es el método por defecto en cualquier modo retimeado (`slomo`), y
+la primera —y hasta hoy única— tasa de captura medida del proyecto salió así.
+
+**Lo medido** (encargo 24, informe `docs/informes/2026-09-15-24-cronometro-y-swing-lento.md`;
+clip `Cortado-lenta.mp4`, Galaxy S22 Ultra en *Slow motion* FHD, camino
+`s22ultra-slomo-fhd240-recorte-mac`):
+
+| | valor | cómo |
+|---|---|---|
+| `fps_real` (captura) | **240,15 fps ± 0,60** (1 σ) | ajuste por mínimos cuadrados sobre 39 lecturas del cronómetro; residuo rms 0,011 s |
+| `fps_playback` (reproducción) | **30,0169 fps** | span de PTS, 598 cuadros en 19,8888 s |
+| `stretch_factor` | **8,0005** | cociente de los dos: el slow motion está horneado ×8 |
+| `vfr_ratio` | **1,0027** (CFR) | deltas de PTS |
+| uniformidad | los tres tercios dan 238,38 / 239,66 / 242,73 fps, cada uno dentro de su propio 1 σ | y el residuo máximo de la recta acota a **1,3 cuadros de 598** cualquier tramo que hubiera sido capturado a velocidad normal |
+
+Procedencia: `medido_aqui`. Es el único número del repo que habilita juicio
+(ADR-016), y por eso está clavado en un test
+(`tests/test_capture_paths.py::test_repo_has_the_calibrated_slomo_path_of_the_s22`).
+
+**Tres cosas que hay que cuidar al filmarlo así**, las tres medidas en ese
+mismo clip y escritas en `docs/filmacion-s22.md`:
+
+- **El cronómetro tiene que estar ANDANDO.** El segundo clip del mismo día
+  (`cartado2-lenta.mp4`, 292 cuadros) llegó con **00:00.00 en los 292 cuadros**:
+  el cronómetro estaba reseteado y detenido, y no se pudo medir nada con él
+  (encargo 26). Es el modo de falla más barato de cometer y el más caro de
+  descubrir, porque el archivo se ve igual de bien.
+- **A la distancia del golfista, plano y encarado, al brillo máximo.** En el
+  clip que sí se pudo leer, el cronómetro estaba a ~20 cm del lente, la cámara
+  enfocaba al golfista, los dígitos salieron de 35 px, desenfocados y girados
+  23°, y hubo que alinear cuadro por cuadro para leerlos.
+- **El refresco del cronómetro es el piso de ruido.** El de ese clip refrescaba
+  **~15 veces por segundo**, no 100: cada meseta dura 10–22 cuadros y el valor
+  salta 6 o 7 centésimas. Ahí está todo el ruido que quedó (2,7 cuadros de rms).
+  Un cronómetro que refresque más rápido aprieta la medición.
 
 ---
 
@@ -247,7 +325,7 @@ pero se reportan todos.
 | `vfr_ratio_le_1_10` | `delta_max / delta_min ≤ 1,10`, **efectivo** | "El video tiene tasa variable. Volvé a exportarlo desde el original." |
 | `fps_matches_path` | `abs(fps_playback − camino.fps_playback) / camino.fps_playback ≤ 0,02`, con el `fps_playback` **efectivo**; **`null` en un camino declarado**: no hay reproducción medida contra la que comparar | "El clip reproduce a N fps y el camino declara M. Algo lo recomprimió, o vino por otro camino." |
 | `fps_min_for_gesture` | `fps_real ≥ sports.<g>.fps_min` (golf: 100). En un camino declarado el `fps_real` es el **asumido**, y el chequeo lo dice pase o falle | "A esta tasa no se pueden medir los tiempos del swing." |
-| `duration_plausible` | 3 s ≤ duración ≤ 180 s | |
+| `duration_plausible` | 3 s ≤ duración **real** ≤ 180 s. **En un modo estirado, la duración real es la de reproducción dividida por el `stretch_factor`**: con el ×8 del S22, 3 s reales son 24 s de grabación (ver abajo) | "La toma dura N s reales; se esperan entre 3 y 180." |
 | `rotation_normalized` | rotación aplicada en `master.mp4`; ancho/alto reales | |
 | `body_height_frac` (Fase 1) | `body_height_px / height ≥ umbral medido` | "El jugador ocupa X% del cuadro. Acercá la cámara." |
 | `detection_rate` (Fase 1) | `≥ 0,90` | "Se perdió al jugador en el N% de los cuadros." |
@@ -263,6 +341,17 @@ primer delta de 0.201 s (arranque de la cámara); bruto 6.044"* —, y
 
 Un `reject` no borra nada: el clip queda en disco con su `capture.json` y sus
 razones, para poder corregir y re-ingestar.
+
+**`duration_plausible` en cámara lenta: el umbral no se movió, y no se mueve.**
+El primer clip con tasa calibrada (`Cortado-lenta.mp4`, encargo 24) pasó 8 de 9
+chequeos y se rechazó por éste: 598 cuadros a 240,15 fps son **2,49 s reales**
+contra los 3 que pide la regla. Con `stretch_factor` 8, llegar a 3 s reales
+pide **≥ 721 cuadros, o sea ≥ 24 s de reproducción**. La salida fue **filmar
+más largo, no bajar el número**: `docs/filmacion-s22.md` pide 25 s por toma, y
+el clip siguiente del mismo modo y el mismo camino (`cortado3-lento.mp4`, 2977
+cuadros, **12,40 s reales**) pasó **9 de 9** con `verdict: ok`. Bajar el mínimo
+habría dado un número tan de ojo como el viejo; filmar diez segundos más costó
+diez segundos.
 
 ---
 
@@ -312,25 +401,72 @@ distancias distintas.)
 
 ### Con el Galaxy S22 Ultra, que es el teléfono que hay
 
-- **Ningún modo *Video* del S22 Ultra llega a 100 fps.** El tope de Video es
-  60: FHD 60 y UHD 60 (declarado por la lista de modos del teléfono; medido
-  60,026 fps de reproducción en los tres clips UHD del 11 y 29,998 en el FHD
-  del 03). Golf pide `fps_min` 100, así que **todo lo que se filme en Video se
-  rechaza**, con el camino calibrado o declarado: declarar no ablanda ningún
-  umbral.
-- **El único modo que puede pasar de 100 fps es Slow motion FHD 240**, que en
-  Android llega con la ralentización horneada (ADR-003) y que ADR-016 rechaza
-  sin calibrar. De las dos cosas juntas sale la única conclusión operativa que
-  hay hoy: **el cronómetro filmado en Slow motion FHD 240 es lo único que puede
-  producir un clip de este teléfono que pase el gate.** No es un trámite
-  pendiente; es la llave. La alternativa —mover el `fps_min` de golf— es una
-  decisión escrita, no un ajuste.
-- Cuánto mide el delta de arranque en Slow motion FHD 240, y si el archivo es
-  uniforme por tramos. Medido en los otros dos modos: **0,2015 s** en FHD 30
+**Contestado, y por eso ya no está en esta lista** (encargos 24 y 26):
+
+- *Ningún modo* Video *del S22 llega a 100 fps, y Slow motion FHD 240 era la
+  única llave.* Sigue siendo verdad y sigue escrito arriba (§Configuración,
+  §Calibración); dejó de ser una pregunta el 15/9. El cronómetro se filmó,
+  **Slow motion FHD 240 entrega 240,15 fps ± 0,60 de captura, uniforme,
+  estirados ×8,0005**, y el camino `s22ultra-slomo-fhd240-recorte-mac` es el
+  primer camino calibrado del repo (§Calibración con cronómetro).
+- *Si el archivo es uniforme por tramos.* **Lo es**: los tres tercios caen
+  dentro de su propio 1 σ y el residuo máximo de la recta acota a 1,3 cuadros
+  de 598 cualquier tramo capturado a velocidad normal. El modo *Slow motion*
+  (que no es *Super slow motion*) no mezcla velocidades.
+- *Si un clip de este teléfono puede pasar el gate entero.* **Puede.** Medido
+  el 15/9 sobre `cortado3-lento.mp4` (2977 cuadros, 12,40 s reales, mismo modo
+  y mismo camino): **9 de 9 chequeos, `verdict: ok`**, con
+  `fps_provenance: medido_aqui` — el primer `capture.json` del proyecto que
+  pasa. Lo único que había separado al clip anterior del gate era la duración:
+  2,49 s reales contra los 3 que pide `duration_plausible`. **No se movió
+  ningún umbral; se filmó más largo.** En ×8, 3 s reales son 24 s de
+  grabación, y de ahí sale el mínimo de 25 s de `docs/filmacion-s22.md`.
+
+  **Con una advertencia que conviene no perder: ese clip no trae cronómetro
+  propio.** Pasó con la calibración del otro, y lo que el gate verifica de
+  verdad es la **reproducción** (`fps_matches_path`: 30,0169 medidos contra
+  30,0169 del camino, y los tres clips comparten el patrón de deltas hasta el
+  décimo decimal). La **captura** no se verifica por clip: se hereda del camino
+  que el usuario declaró. Es exactamente el supuesto que ADR-016 pide dejar
+  escrito, y la única forma de eliminarlo es la de arriba — el cronómetro
+  dentro del cuadro, en cada toma.
+
+**Lo que sigue abierto:**
+
+- **La tasa de captura sigue medida UNA sola vez, en UN solo clip.** El segundo
+  clip lento del mismo día (`cartado2-lenta.mp4`) iba a ser la primera
+  verificación independiente y **no pudo serlo: su cronómetro está detenido en
+  00:00.00 en los 292 cuadros** (encargo 26). Lo que ese clip sí confirma es la
+  tasa de **reproducción** —30,016952 contra los 30,0169 del camino, y el mismo
+  patrón de deltas de PTS hasta el décimo decimal— pero la reproducción no es lo
+  que el cronómetro mide. Hasta que haya un segundo clip con el cronómetro
+  andando, los 240,15 fps son n = 1: la mejor medición del proyecto y, al mismo
+  tiempo, la que menos veces se repitió.
+- **El archivo ORIGINAL sin recortar**, de `DCIM/Camera`, del mismo modo y con
+  el mismo cronómetro. Los tres clips lentos que hay son **recortes hechos en
+  la Mac**, no lo que sale del teléfono: `udta` de Samsung de 1 MB → 185 B,
+  handler `Core Media Video`, y un `elst` que esconde cuadros (14 en uno, 26 en
+  otro, 4 en el tercero). El camino calibrado de hoy calibra ese recorte; el
+  camino del teléfono crudo sigue sin calibrar. Con el original se puede además
+  comparar los dos y ver si el recorte cambió algo.
+- **Cuánto mide el delta de arranque en Slow motion FHD 240.** Sigue sin
+  medirse, y por la misma razón: el recorte se lleva los primeros cuadros y con
+  ellos el arranque de la cámara (el primer delta de los tres clips es
+  0,033333 s, normal). Medido en los otros dos modos: **0,2015 s** en FHD 30
   (informe del 03) y **0,073–0,110 s** en UHD 60 (informe del 11); en los dos,
-  el primero es el único delta fuera de lugar.
-- Si el S22 cambia campo de visión o estabilización entre modos: si lo hace, la
-  calibración de un modo no es transferible a otro.
+  el primero es el único delta fuera de lugar. Lo contesta el original.
+- **Los cronómetros de *Video* FHD 60 y FHD 30.** Sus dos caminos
+  (`s22ultra-video-fhd60-cable`, `s22ultra-video-fhd30-cable`) siguen
+  declarados, con `fps_real` asumido y procedencia `sin_verificar`. No son
+  urgentes —ninguno de los dos llega a los 100 fps que pide golf, así que un
+  clip suyo se rechaza igual— pero mientras no se filmen, todo lo que se mida
+  desde ellos es descriptivo y nunca juicio.
+- **Si el S22 cambia campo de visión o estabilización entre modos**: si lo
+  hace, la calibración de un modo no es transferible a otro.
+- **La pista de audio de los tres clips lentos va a 12.000 Hz** (48.000/4), no
+  a 48.000/8 como haría esperar un estiramiento ×8 parejo. No contradice nada
+  de lo medido —el cronómetro mide el video— pero es una rareza del contenedor
+  sin explicar (encargo 24).
 
 ### Con el iPhone, si alguna vez hay uno
 

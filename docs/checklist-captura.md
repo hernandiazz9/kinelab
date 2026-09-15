@@ -6,9 +6,10 @@ seguir. Lo que no se marcó, no se filmó.
 
 **Esta hoja es del protocolo iPhone.** El teléfono que hay hoy es un Galaxy
 S22 Ultra, y su guía —en castellano llano, para quien filma— es
-`docs/filmacion-s22.md`. Con ese teléfono, además, **ningún modo Video llega a
-los 100 fps que pide golf**: la única llave es el cronómetro en Slow motion
-FHD 240 (`CAPTURA.md` §Lo que queda por verificar).
+`docs/filmacion-s22.md`. **Con ese teléfono esta hoja no se usa**: ningún modo
+Video suyo llega a los 100 fps que pide golf, y el modo que sirve es *Slow
+motion* FHD 240, ya calibrado con cronómetro el 15/9 en **240,15 fps ± 0,60**
+(`CAPTURA.md` §Calibración con cronómetro).
 
 ---
 
@@ -44,9 +45,19 @@ modos sirven.
 Por **cada** combinación de modo y camino de transferencia que se vaya a usar.
 Con el protocolo por defecto es una sola: Video 1080p120 + AirDrop.
 
-- [ ] Cronómetro llenando el cuadro, en marcha, milésimas legibles.
-- [ ] Filmar **10 s** en el modo a calibrar.
-- [ ] Transferir por el camino a calibrar (sección E).
+- [ ] Cronómetro llenando el cuadro, **en marcha** (confirmar en pantalla que
+      los números corren antes de apretar grabar: un cronómetro detenido no
+      mide nada, y ya pasó — `cartado2-lenta.mp4`, 00:00.00 en los 292
+      cuadros), milésimas legibles.
+- [ ] Filmar **10 s** en el modo a calibrar. **En un modo estirado, 10 s de
+      reproducción no son 10 s reales**: en un ×8 son 1,25 s. Filmar el tiempo
+      de reproducción que haga falta para tener ≥ 3 s reales.
+- [ ] **Mejor todavía: el cronómetro DENTRO del cuadro del gesto**, en cada
+      toma, y el clip se calibra a sí mismo (`CAPTURA.md` §Calibración con
+      cronómetro). Es el método preferido en cualquier modo retimeado.
+- [ ] Transferir por el camino a calibrar (sección E), **sin recortar**: un
+      recorte en la Mac se lleva las etiquetas del fabricante y esconde los
+      primeros cuadros detrás de un `elst`.
 - [ ] Anotar los segundos entre la **primera** y la **última** lectura del
       cronómetro que se ven nítidas en el clip: `______ s`.
 - [ ] Correr:
@@ -68,15 +79,18 @@ Con el protocolo por defecto es una sola: Video 1080p120 + AirDrop.
 - [ ] El trípode, **lo más cerca que permita tener los pies y el palo del top
       adentro del cuadro**. Esa es la regla operativa; el 80–90 % del alto es
       el **objetivo** y en vertical con la lente principal no se alcanza a una
-      distancia usable (`CAPTURA.md` §Encuadre). Los cuatro clips reales
-      salieron al 28–42 % y hace falta más.
+      distancia usable (`CAPTURA.md` §Encuadre). Los seis clips reales medidos
+      salieron al **21,6–41,9 %** del alto y hace falta más; el que mejor
+      aplicó la regla ganó 14 puntos sin cambiar de lente ni de modo.
 - [ ] Anotar cuánto ocupó el cuerpo, que lo dice la exploración: ______ %.
       **No hay umbral fijado todavía**: sale del barrido de tamaño del arnés.
 - [ ] Cámara a altura de **cintura a pecho**, horizontal.
 - [ ] **`face_on`**: cámara perpendicular a la línea de tiro, mirando al pecho.
 - [ ] **`down_the_line`**: cámara detrás, sobre la línea de tiro, a la
       distancia que fija la primera casilla (antes decía ~3,5 m).
-- [ ] Una sola persona en cuadro. Nadie cruza por detrás.
+- [ ] Una sola persona en cuadro. Nadie cruza por detrás. **Y nada con forma
+      de persona**: un carrito de golf parado a la derecha se detectó como
+      persona en 8 de 598 cuadros (informe del 24).
 - [ ] El trípode **no se toca** entre swings de la misma vista.
 
 ## E. Filmar
@@ -89,7 +103,10 @@ Una vista = una sesión = un clip con N swings.
 - [ ] **Antes de cada swing, 2–3 s quieto en address.** El motor define el
       address como el último cuadro de una ventana estable; sin ventana no
       hay cero para sway, lift ni cabeza.
-- [ ] Entre 3 s y 180 s por clip. Más largo, se rechaza; cortar en dos clips.
+- [ ] Entre 3 s y 180 s **reales** por clip. Más largo, se rechaza; cortar en
+      dos clips. **En cámara lenta la cuenta es la de reproducción dividida por
+      el factor de estiramiento**: con el ×8 del S22 hacen falta ≥ 24 s de
+      grabación para 3 s reales, y la guía de ese teléfono pide 25.
 - [ ] Vista `face_on`: ____ swings · Vista `down_the_line`: ____ swings.
 - [ ] Clip **deliberadamente malo** para probar el gate: uno de los swings
       exportado desde Fotos con File → Export → Export 1 Video.
