@@ -79,6 +79,13 @@ ejemplos, porque los trabajos viejos tienen el top y la escala anteriores.
   geometría de cámara (distancia, altura, azimut) con los once ángulos, que
   es lo que convertiría la tabla de un sujeto en una regla, y el `crf` del
   exportador, elegido a ojo y nunca medido.
+- 2026-09-15 · **Publicar es un acto deliberado por trabajo, reversible, y
+  los datos publicados no van a git.** Subir un video al análisis local no lo
+  manda a internet. El sitio se despliega desde el disco con el CLI de
+  Vercel; en el repo queda el código y `data/publicados.json`, el registro de
+  qué salió afuera. Motivo: un entrenador que publique veinte swings metería
+  300 MB en una historia de git que no se borra, y los videos son de
+  personas. Encargo 25.
 - 2026-09-15 · Anotado, no cerrado: el +4,4 % residual de la escala (cadena
   desde el tobillo, estatura desde el piso). Se cierra sólo con un punto de
   contacto con el suelo validado contra una verdad que no sea nuestro propio
@@ -174,6 +181,10 @@ ejemplos, porque los trabajos viejos tienen el top y la escala anteriores.
   (se lee 00:05.27 en el primer cuadro). Calibrar el camino, pasar el gate
   por primera vez y ver si alguna métrica alcanza `judgment_allowed: true`.
   Es el desbloqueo de la Fase 0.
+- [en curso] 25 publicar-un-trabajo — botón «publicar» por trabajo en la
+  pantalla, con confirmación y con «quitar de internet»; los datos publicados
+  salen de git y el sitio se despliega desde el disco. Publicar es deliberado
+  y reversible, nunca un efecto de subir un video.
 - [pendiente] 21 visor-desde-datos — el esqueleto dibujado en canvas desde
   `pose.npz` sobre el video, con capas conmutables (el switch que pidió
   Hernán) y sin recompresión. Cierra la desviación de la invariante 10 y
