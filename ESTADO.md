@@ -3,6 +3,113 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 15 de septiembre de 2026 — encargo 12: lo medido entra a los documentos de captura
+
+Prompt: `docs/prompts/12-captura-docs.md`. Informe:
+`docs/informes/2026-09-15-12-captura-docs.md`. Encargo de documentos: el único
+código que cambió es una fecha en un test. Corrió en paralelo con el 13
+(`truth/` salvo `mocap.py`, `sports/golf/mdc.yaml`, `sports/golf/metrics.py`),
+el 14 (`truth/kinelab_truth/mocap.py`, `kinelab/metrics/core.py`, `CONTRATO.md`,
+`data/examples/`) y el 15 (`sports/golf/events.py`, `kinelab/events/`,
+`tests/test_fase2.py`, `DECISIONES.md`), que al cerrar esta sesión todavía
+tenían trabajo sin commitear en el árbol.
+
+### Qué existe ahora
+
+- **`CAPTURA.md` con lo del 07 y lo del 11 adentro**, en cuatro secciones:
+  - **§Presupuesto de datos** tiene columna `Procedencia` y dos filas medidas:
+    **UHD 60 HEVC del S22 — desaconsejado**, 165 MB por 30 s (~3,3 GB la sesión
+    de 20 clips), y Video FHD 30 H.264, 68 MB (~1,4 GB). Debajo, la subsección
+    «UHD 60 está desaconsejado, y está medido por qué», con los tres números:
+    no agrega precisión (el recorte entra a `rtmpose-m` a 192×256 y el bbox ya
+    se reducía 5,24× en FHD, 5,7–6,0× en UHD), cuesta 2,15× por cuadro y 4,29×
+    por segundo de movimiento real, y cuesta **2,4×** de disco.
+  - **§Encuadre**: el 80–90 % queda como **objetivo**, con la nota medida del
+    07 —3078 px de focal para el 80 % a 3 m, ~2,1× la lente principal de un
+    celular; con esa lente habría que estar a ~0,8 m— y los cuatro valores
+    reales del 11: **28,2 / 28,7 / 29,5 %** en UHD y **41,9 %** en FHD. La
+    regla operativa es acercar el trípode todo lo que permita tener pies y palo
+    del top adentro. **Ningún umbral fijado**: el número sale del barrido de
+    tamaño de sujeto del arnés (encargo 13), y lo que el motor mide es
+    `body_height_px`, no la fracción del cuadro.
+  - **§Transferencia**: el encabezado ahora dice un camino de referencia **por
+    dispositivo** (iPhone → AirDrop; S22 → cable desde `DCIM/Camera`); la fila
+    de la tabla de terceros pasa a «WhatsApp **como video**»; y hay una tabla
+    nueva medida sobre el S22 con tres filas y su procedencia — cable
+    (referencia), **WhatsApp como documento: intacto** (HEVC a 43–47 Mb/s,
+    `udta` de 1,02–1,10 MB, mismo orden de hijos del `moov`), WhatsApp como
+    video: recomprimido, **no medido acá**.
+  - **§Lo que queda por verificar** se parte en dos: «Con el Galaxy S22 Ultra,
+    que es el teléfono que hay» y «Con el iPhone, si alguna vez hay uno». El
+    bloque nuevo deja escrito que **ningún modo Video del S22 llega a 100 fps**
+    (tope 60, medido 60,026 en UHD y 29,998 en FHD) y que **el cronómetro en
+    Slow motion FHD 240 es lo único que puede dar un clip que pase el gate**.
+- **`docs/filmacion-s22.md` reescrita entera.** El cronómetro en Cámara lenta
+  FHD 240 es el paso 1 con su lista (10–15 s, sin editar ni recortar en
+  Galería, archivo entero, por el mismo camino que después van los swings) y el
+  de Video FHD 60 el paso 2. FHD 60 y no 4K, con el porqué en una línea.
+  Encuadre sin metros: «lo más cerca que permita tener los pies y el palo en el
+  top adentro», con el dato de que los tres clips salieron al 28 %. Sección
+  nueva de transferencia: cable primero, **WhatsApp como documento sí**,
+  **como video nunca**.
+- **`docs/checklist-captura.md`** sincronizado con `CAPTURA.md` en los tres
+  puntos donde había quedado contradiciéndolo (encuadre, WhatsApp, el `~3,5 m`
+  fijo) y con una cabecera que aclara que es la hoja del protocolo **iPhone** y
+  que la del S22 es `docs/filmacion-s22.md`.
+- **El test que caducaba por fecha, arreglado.**
+  `tests/test_service.py::test_datos_lista_un_ejemplo_de_otro_proceso` escribe
+  la fecha del ejemplo como `now + 1 min` en vez de
+  `"2026-09-14T12:00:00+00:00"`.
+
+### Medido
+
+- **`tests/test_service.py`: 55 en verde** (23,0 s). Antes: 54 verdes, 1 rojo,
+  reproducido primero en rojo. **Motor entero: 264 en verde** (40,6 s). **Arnés:
+  13 en verde.** Los dos últimos números incluyen el trabajo sin commitear de
+  las sesiones 13, 14 y 15; el único archivo de código que toqué es el test, y
+  nadie más lo tocó.
+- **Los tamaños del presupuesto, medidos acá con `ffprobe`**: `vid1.mp4` (UHD 60
+  HEVC) 43,9 Mb/s de contenedor → 165 MB por 30 s; `20260907_170638.mp4`
+  (FHD 30 H.264) 18,2 Mb/s → 68 MB.
+- **El 3,4× de disco del informe del 11 no se reproduce: son 2,4×**
+  (97.860.899 B / 17,852 s contra 20.455.993 B / 9,002 s = 2,41×; por tasa de
+  video sola, 43,10 contra 17,42 Mb/s = 2,47×). `CAPTURA.md` lleva 2,4× con la
+  aclaración de que no es una comparación a igualdad de todo —HEVC a 60 contra
+  H.264 a 30— y una línea diciendo que el 11 había reportado 3,4×. **El resto
+  de los números del 11 y del 07 se reprodujo sin cambio.**
+
+### Qué falta o no se probó
+
+- **La decisión del fps sigue abierta y no era de este encargo.** Los documentos
+  dicen el hecho (ningún modo Video del S22 llega a 100; Slow motion FHD 240 es
+  la única llave) y no deciden nada: no se tocó `sports/golf/` ni ningún umbral.
+- **Tres lugares fuera de los cuatro archivos asignados siguen citando el
+  80–90 % o los 3,5 m sin la nota medida**, y no se tocaron por la regla de
+  sesiones en paralelo: `DECISIONES.md:42` (ADR-002, lo toca el 15),
+  `ARRANQUE.md:80`, y `truth/kinelab_truth/harness.py:32` (lo toca el 13).
+- **El checklist sigue siendo el del iPhone** —1080p120 + AirDrop, que en esta
+  Mac no existe—; sólo se le sincronizaron las tres contradicciones y se le puso
+  la cabecera que manda a la guía del S22. Reescribirlo depende de en qué modo
+  se termine filmando, que depende del cronómetro de 240.
+- El camino de menú de WhatsApp («Adjuntar → Documento») no se verificó en un
+  teléfono: lo dijo Hernán y lo confirmó la medición del archivo.
+- El front no se abrió ni se tocó `web/` ni `service/` (regla de trabajo).
+
+### Desviaciones
+
+- Ninguna del contrato: no se tocó `CONTRATO.md` ni ningún schema.
+- Del prompt, una de alcance, hacia arriba: se arreglaron tres contradicciones
+  que el prompt no pedía pero que la relectura de punta a punta dejó a la vista,
+  todas dentro de los cuatro archivos asignados — el `~3,5 m` fijo de
+  `down_the_line` (que choca con la regla nueva de acercar el trípode), el
+  encabezado de §Transferencia que decía «un solo camino: AirDrop del iPhone»
+  justo arriba de la tabla del S22, y el «Nunca: … WhatsApp» del checklist sin
+  distinguir los dos modos.
+- Del informe del 11, una corrección numérica: **3,4× → 2,4× de disco**, con la
+  cuenta escrita en el informe de esta sesión. Los informes ajenos no se tocan.
+
+---
+
 ## 15 de septiembre de 2026 — encargo 11: los tres clips nuevos son swings, no cronómetro
 
 Prompt: `docs/prompts/11-diagnostico-vid123.md`. Informe:
