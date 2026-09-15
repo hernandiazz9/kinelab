@@ -36,8 +36,8 @@
   "video": "cmu-64_01-face_on",
   "altura_m": 1.6405,
   "vista": "face_on",
-  "creado": "2026-09-15T12:00:33+00:00",
-  "terminado": "2026-09-15T12:00:33+00:00",
+  "creado": "2026-09-15T14:54:15+00:00",
+  "terminado": "2026-09-15T14:54:15+00:00",
   "segundos": null,
   "archivos": {
     "analysis.json": "/demo/ejemplo-cmu-64_01-face_on/analysis.json",

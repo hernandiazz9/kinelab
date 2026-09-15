@@ -1,6 +1,6 @@
 {
   "schema": "kinelab.transformacion/1.0.0",
-  "generado": "2026-09-15T13:56:13+00:00",
+  "generado": "2026-09-15T15:04:30+00:00",
   "trabajo": "ejemplo-cmu-64_01-down_the_line",
   "reference_frame_origen": "image_px",
   "reference_frame_destino": "demo_px",

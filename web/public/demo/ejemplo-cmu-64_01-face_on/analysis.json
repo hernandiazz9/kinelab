@@ -3,9 +3,9 @@
     "schema_version": "1.2.0",
     "engine_version": "0.0.1",
     "registry_version": "0.1.0",
-    "generated_at": "2026-09-15T12:00:34+00:00",
+    "generated_at": "2026-09-15T14:54:16+00:00",
     "source": {
-      "pose_sha256": "e4080be1be3ae3c1659ffc5d6a1401f3ee6d854bdbac78168bf2b589e1aaed74",
+      "pose_sha256": "8f0fd8cbcfea59c36aba1e880b96a2e9f5cc785cdafaa05b2ed0451a67627482",
       "master_sha256": null,
       "capture_path_id": "desconocido-video",
       "fps_real": 120.0,
