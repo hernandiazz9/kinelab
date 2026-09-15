@@ -691,7 +691,12 @@ def test_datos_analysis_trae_las_metricas_con_su_razon(client_datos_swing, clips
     assert analysis["header"]["source"]["fps_provenance"] == "sin_verificar"
     assert analysis["warnings"][0].startswith("EXPLORACIÓN")
     metricas = analysis["reps"][0]["metrics"]
-    assert len(metricas) == 12
+    # Contra el registro, no contra un número escrito acá: lo que se afirma es
+    # que están TODAS, y una métrica nueva en `sports/golf/` no tiene que poner
+    # rojo un test de `service/`.
+    from sports.golf.metrics import REGISTRY
+
+    assert set(metricas) == set(REGISTRY.ids()), "cada métrica del registro, con valor o con razón"
     for id_, m in metricas.items():
         assert set(m) >= {"value", "unit", "view", "mdc", "level", "fps_min", "fps_provenance", "judgment_allowed", "null_reason"}, id_
         assert (m["value"] is None) == (m["null_reason"] is not None), f"{id_}: o hay número, o hay razón"
