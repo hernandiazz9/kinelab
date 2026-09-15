@@ -248,6 +248,17 @@ una (`diff` limpio).
 - **No se tocó `sports/golf/`** ni ningún umbral. El `body_height_frac` sigue
   sin umbral fijado: ahora hay seis puntos de encuadre para cuando el arnés
   decida.
+- **Un tropiezo de proceso, el mismo que anotó el 25.** El commit `eed337c`
+  —mis tres documentos— se llevó además un `git mv` de la sesión de `truth/`
+  (`test_gain_subframe.py → test_subframe_encuadre.py`, **0 líneas**, sólo el
+  renombre) que estaba **staged** en el índice cuando commiteé. `git add` con
+  rutas explícitas no lo agregó: ya estaba ahí, y el índice de git es uno solo.
+  El árbol quedó bien y el contenido de ese archivo sigue sin commitear, en
+  manos de su sesión; lo que quedó mal es en qué commit figura el renombre. **No
+  se corrigió**, por la razón del 25: reescribir un commit mientras otra sesión
+  puede estar trabajando ahí es peor que la molestia. La lección, ya por
+  segunda vez: antes de commitear no alcanza `git status`, hay que mirar
+  `git diff --cached --name-only`.
 
 ## Para que pruebe Hernán
 

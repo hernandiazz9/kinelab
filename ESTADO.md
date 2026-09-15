@@ -120,6 +120,21 @@ y `sports/golf/events.py`. El único archivo de código que toqué es
 - **Del prompt, una de archivos**: se tocó `docs/checklist-captura.md`, que el
   prompt daba como opcional («si hace falta»). Hizo falta: tres de sus casillas
   quedaban contradiciendo lo nuevo.
+- **De proceso, y es la misma trampa que anotó el 25: el commit `eed337c` se
+  llevó un `git mv` de otra sesión.** Además de mis tres documentos, ese commit
+  contiene el renombre `truth/tests/test_gain_subframe.py →
+  test_subframe_encuadre.py` (**0 líneas**: sólo el renombre), que la sesión de
+  `truth/` tenía **staged** en el índice cuando yo commiteé los míos. `git add`
+  de rutas explícitas no lo agregó — ya estaba en el índice, y el índice es uno
+  solo. El árbol quedó bien (el contenido de ese archivo sigue sin commitear, en
+  manos de su sesión), pero el renombre figura en el commit equivocado.
+  **No se corrigió**, por la misma razón que dio el 25: reescribir un commit
+  mientras otra sesión puede estar trabajando sobre esos archivos es peor que la
+  molestia.
+
+  Para el que venga, y ya van dos: antes de commitear, `git status` no alcanza
+  — hay que mirar **qué hay staged que no es tuyo** (`git diff --cached --name-only`)
+  y, si hay algo, esperarlo o avisarle a la otra sesión.
 
 ---
 
