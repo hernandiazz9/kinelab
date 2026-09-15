@@ -46,11 +46,42 @@ from types import SimpleNamespace
 
 import numpy as np
 
-from kinelab.perception.keypoints import H, HALPE26_NAMES, J
+from kinelab.perception.keypoints import H, HALPE26_LIMBS, HALPE26_NAMES, J
 
 INCH_M = 0.0254
 CMU_FPS = 120.0  # tasa de captura del sistema Vicon de CMU, declarada por ellos (no medida acá)
 EXAMPLES = Path(__file__).resolve().parents[2] / "data" / "examples" / "cmu-mocap"
+
+POSE3D_JSON = "pose3d.json"
+POSE3D_SCHEMA = "kinelab.pose3d/1.0.0"
+# Milímetros. A 3 m con la focal del protocolo (~3078 px), medio milímetro es
+# medio píxel: el redondeo entra en la tolerancia de 1 px del test de ida y
+# vuelta y el archivo pesa la mitad que con seis decimales.
+POSE3D_DECIMALS = 3
+
+# El marco va como DATO adentro del archivo, no como comentario en el código
+# (CONTEXTO.md §Sistemas de coordenadas). Es el mismo marco del arnés (`chain.py`).
+HARNESS_FRAME = {
+    "id": "harness_world_m",
+    "unidades": "m",
+    "origen": "el punto medio entre los dos tobillos en el cuadro de referencia, bajado al suelo: y = 0 es el punto más bajo de todo el trial",
+    "ejes": {
+        "x": "hacia el objetivo (adonde va la pelota)",
+        "y": "hacia arriba",
+        "z": "hacia la pelota (sale del pecho del golfista en address)",
+    },
+    "mano": "derecha (z = x × y)",
+}
+
+# La receta para volver a proyectar los puntos 3-D desde afuera de Python. Es
+# palabra por palabra lo que hace `camera.Extrinsics.rt()` + `camera.project()`
+# con distorsión en cero, y un test la reconstruye a mano contra el `pose.npz`.
+PINHOLE_MODEL = (
+    "pinhole sin distorsión. f = normalizar(objetivo_m − posicion_m); "
+    "r = normalizar(f × (0,1,0)); d = f × r; R = [r; d; f] (filas). "
+    "p = R · (X − posicion_m); u = fx·p₀/p₂ + cx; v = fy·p₁/p₂ + cy. "
+    "v crece hacia ABAJO: es el marco image_px del `pose.npz`."
+)
 
 
 # --- ASF / AMC ---------------------------------------------------------------
@@ -381,6 +412,41 @@ def fit_intrinsics(points_m: np.ndarray, view: str, *, width: int, height: int, 
     return intr, extr, px, bh
 
 
+VIEWS = ("face_on", "down_the_line")
+
+
+def camera_record(points_m: np.ndarray, view: str, *, width: int = 1080, height: int = 1920, body_frac: float = 0.80, distance_m: float = 3.0, camera_height_m: float = 1.2) -> tuple[dict, np.ndarray]:
+    """La cámara virtual de una vista como **dato**: lo justo para volver a
+    proyectar los puntos 3-D desde afuera de Python, sin OpenCV y sin este
+    módulo. Devuelve el registro y la proyección.
+
+    Por eso van la posición y el objetivo en metros en vez de una matriz: la
+    matriz se arma con la receta de `modelo`, que es la misma de
+    `camera.Extrinsics.rt()`, y un test la reconstruye a mano y compara contra
+    el `pose.npz` dentro de 1 px. Si el visor y el arnés no coinciden, uno de
+    los dos miente."""
+    intr, extr, px, bh = fit_intrinsics(points_m, view, width=width, height=height, body_frac=body_frac, distance_m=distance_m, camera_height_m=camera_height_m)
+    rec = {
+        "vista": view,
+        "ancho": int(intr.width),
+        "alto": int(intr.height),
+        "fx": round(float(intr.fx), 6),
+        "fy": round(float(intr.fy), 6),
+        "cx": float(intr.cx),
+        "cy": float(intr.cy),
+        "dist": [float(d) for d in intr.dist],
+        "posicion_m": [round(float(v), 6) for v in extr.position],
+        "objetivo_m": [round(float(v), 6) for v in extr.target],
+        "distancia_m": float(distance_m),
+        "altura_camara_m": float(camera_height_m),
+        "cuerpo_px": round(float(bh), 1),
+        "cuerpo_frac_del_alto": round(float(bh) / float(intr.height), 4),
+        "procedencia": intr.provenance,
+        "modelo": PINHOLE_MODEL,
+    }
+    return rec, px
+
+
 # --- pose.npz ----------------------------------------------------------------
 
 
@@ -412,6 +478,11 @@ class MocapPose:
     height_m: float
     body_height_px: float
     ref_frame: int
+    # La cámara del protocolo de LAS DOS vistas, no sólo la de esta toma: los
+    # puntos 3-D son los mismos para las dos (`to_harness_frame` no mira la
+    # cámara), así que el visor puede llevar la cámara a cualquiera de las dos
+    # y comparar contra el overlay de esa vista.
+    cameras: dict[str, dict] = field(default_factory=dict)
 
 
 def build(trial: str, view: str, *, asf: Path | None = None, amc: Path | None = None, width: int = 1080, height: int = 1920, body_frac: float = 0.80, distance_m: float = 3.0, camera_height_m: float = 1.2) -> MocapPose:
@@ -425,7 +496,17 @@ def build(trial: str, view: str, *, asf: Path | None = None, amc: Path | None = 
     P = to_halpe26(pos, rot)
     ref = still_frame(P, CMU_FPS)
     Q, R = to_harness_frame(P, ref)
-    intr, extr, px, bh = fit_intrinsics(Q, view, width=width, height=height, body_frac=body_frac, distance_m=distance_m, camera_height_m=camera_height_m)
+    if view not in VIEWS:
+        raise ValueError(f"vista desconocida: {view}; hay {', '.join(VIEWS)}")
+    # Las dos cámaras, aunque esta toma use una: los puntos 3-D son los mismos
+    # para las dos y el visor tiene que poder ir a cualquiera de ellas.
+    cameras: dict[str, dict] = {}
+    proyecciones: dict[str, np.ndarray] = {}
+    for v in VIEWS:
+        cameras[v], proyecciones[v] = camera_record(Q, v, width=width, height=height, body_frac=body_frac, distance_m=distance_m, camera_height_m=camera_height_m)
+    px = proyecciones[view]
+    cam = cameras[view]
+    bh = cam["cuerpo_px"]
     stature = stature_m(skel)
     head_to_ankle = float(Q[ref, H.HEAD, 1] - (Q[ref, H.LEFT_ANKLE, 1] + Q[ref, H.RIGHT_ANKLE, 1]) / 2.0)
     provenance = {
@@ -445,7 +526,7 @@ def build(trial: str, view: str, *, asf: Path | None = None, amc: Path | None = 
         "checkpoint_sha256": None,
         "detector": None,
         "provider": "kinelab_truth.mocap (proyección geométrica; sin estimador de pose)",
-        "camera": {"id": intr.id, "provenance": "sin_verificar", "width": width, "height": height, "fx": round(intr.fx, 3), "fy": round(intr.fy, 3), "cx": intr.cx, "cy": intr.cy, "dist": list(intr.dist), "view": view, "distance_m": distance_m, "camera_height_m": camera_height_m, "body_frac_target": body_frac},
+        "camera": {"id": "mocap-virtual", "provenance": cam["procedencia"], "width": width, "height": height, "fx": round(cam["fx"], 3), "fy": round(cam["fy"], 3), "cx": cam["cx"], "cy": cam["cy"], "dist": list(cam["dist"]), "view": view, "distance_m": distance_m, "camera_height_m": camera_height_m, "body_frac_target": body_frac},
         "fps_real": CMU_FPS,
         "fps_note": "120 fps exacto por construcción (mocap CMU): es la tasa del sistema Vicon declarada por CMU, no una medición de esta Mac.",
         "frames": int(px.shape[0]),
@@ -460,7 +541,7 @@ def build(trial: str, view: str, *, asf: Path | None = None, amc: Path | None = 
         "no_es_video": "mocap CMU proyectado con la cámara virtual del arnés: no hay video, no hay estimador y no hay palo. No es una referencia ni un ideal.",
         "run_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
     }
-    return MocapPose(keypoints_px=px.astype(np.float32), points_m=Q, rotation_to_harness=R, provenance=provenance, height_m=stature, body_height_px=bh, ref_frame=ref)
+    return MocapPose(keypoints_px=px.astype(np.float32), points_m=Q, rotation_to_harness=R, provenance=provenance, height_m=stature, body_height_px=bh, ref_frame=ref, cameras=cameras)
 
 
 def write_pose(mp: MocapPose, take_dir: Path) -> Path:
@@ -486,6 +567,148 @@ def write_pose(mp: MocapPose, take_dir: Path) -> Path:
     prov = {**mp.provenance, "plausibility_counts": counts, "camera_motion_px": 0.0, "framing": report.__dict__}
     take_dir.mkdir(parents=True, exist_ok=True)
     return save_pose(take_dir, PoseData(px, scores, bbox, np.arange(T) / CMU_FPS, mask, prov), overwrite=True)
+
+
+# --- pose3d.json: el swing en 3-D, para mirarlo desde donde uno quiera --------
+
+
+def rotulos(trial: str) -> dict[str, str]:
+    """Las frases que la pantalla muestra al lado del swing 3-D.
+
+    Las escribe quien produjo el dato, no la pantalla: la misma regla que
+    `nota_fuente` (informe del 07, "ninguna frase de aviso se compone en la
+    pantalla"). Redacción para un entrenador, no para un ingeniero."""
+    return {
+        "fuente": f"Swing de laboratorio del sujeto 64 de la base de mocap de CMU, toma {trial}, medido con marcadores ópticos: la posición de cada articulación en el espacio está medida, punto por punto.",
+        "no_es_video": "No es un video y no es un swing de Hernán. Es el único material con profundidad medida que hay en el proyecto, y está acá para mostrar qué se puede ver cuando la profundidad existe de verdad.",
+        "no_con_un_celular": "Esto no se puede hacer con un clip de celular: una cámara sola no mide profundidad. De un video sale dónde está cada punto EN LA IMAGEN, no en el espacio, y la profundidad que falta no se deduce, se inventa. Para ver así un swing propio harían falta dos cámaras sincronizadas y calibradas, o marcadores como los de acá.",
+        "para_que_sirve": "Girar la escena muestra por qué cada medición dice desde qué vista vale: hay ángulos desde los que una línea del cuerpo apunta a la cámara, y ahí en la imagen esa línea no mide casi nada.",
+        "descriptivo": "Números para mirar, no para juzgar: acá no se compara nada contra ningún rango (ADR-012).",
+    }
+
+
+def indicador_lineas() -> dict:
+    """Qué mide el indicador de líneas colapsadas, y con qué frases se lee.
+
+    El umbral es de lectura, no de medición: decide cuál de las dos frases se
+    muestra y nada más. Sale de lo medido en el encargo 13: desde
+    `down_the_line` la línea de caderas baja a 3,6 px de 15,2 cm reales, o sea
+    3 % de su largo; desde `face_on` se queda por encima del 90 %."""
+    return {
+        "que_mide": "cuánto mide una línea del cuerpo EN LA IMAGEN comparado con lo que mide de verdad, desde el ángulo y el cuadro que se están viendo",
+        "unidad": "fracción del largo real (0 a 1)",
+        "definicion": "largo proyectado en px × profundidad del punto medio ÷ (focal × largo real en m): es lo que mediría esa misma línea si estuviera de costado a la cámara, a la misma distancia. No depende de la focal ni del zoom, sólo del ángulo.",
+        "umbral_colapso_frac": 0.25,
+        "lineas": {"caderas": ["left_hip", "right_hip"], "hombros": ["left_shoulder", "right_shoulder"]},
+        "texto": "100 % es la línea de costado a la cámara; 0 % es la línea apuntando a la cámara.",
+        "texto_colapso": "Desde este ángulo esa línea casi no mide en la imagen: cualquier ángulo o velocidad que se saque de ella sale de la proyección y no del cuerpo. Por eso cada medición declara desde qué vistas vale.",
+        "medido": "Encargo 13, sobre el swing sintético del arnés: desde down_the_line la línea de caderas se proyecta en 3,6 px y su giro aparente da 11110 °/s contra 139,6 verdaderos, 80 veces más. Es la misma geometría que se ve girando este mocap, con otro cuerpo.",
+        "procedencia": "medido_aqui",
+    }
+
+
+def _json_legible(doc: dict) -> str:
+    """`json.dumps(indent=2)` pone cada número de una lista en su propia línea y
+    el encabezado se vuelve ilegible (los 26 nombres, 27 pares de huesos y cinco
+    coeficientes de distorsión son 300 líneas). Acá toda lista de escalares —o
+    de listas de escalares— va en una sola línea y el resto queda indentado."""
+    planas: dict[str, str] = {}
+
+    def escalares(v: list) -> bool:
+        return all(not isinstance(x, (list, dict)) for x in v)
+
+    def marcar(v):
+        if isinstance(v, dict):
+            return {k: marcar(x) for k, x in v.items()}
+        if isinstance(v, list):
+            if escalares(v) or all(isinstance(x, list) and escalares(x) for x in v):
+                clave = f"@@lista-{len(planas)}@@"
+                planas[clave] = json.dumps(v, ensure_ascii=False)
+                return clave
+            return [marcar(x) for x in v]
+        return v
+
+    text = json.dumps(marcar(doc), ensure_ascii=False, indent=2)
+    for clave, plano in planas.items():
+        text = text.replace(f'"{clave}"', plano)
+    if "@@lista-" in text:
+        raise ValueError("el marcador de lista colisiona con el contenido del archivo")
+    return text
+
+
+def _n(v: float) -> str:
+    """Un número del archivo: `POSE3D_DECIMALS` decimales y sin `-0.000`."""
+    s = f"{v:.{POSE3D_DECIMALS}f}"
+    return s.lstrip("-") if float(s) == 0.0 else s
+
+
+def pose3d_doc(mp: MocapPose, *, events: dict[str, int] | None = None) -> dict:
+    """El contenido de `pose3d.json` **sin** los puntos: todo lo que hay que
+    saber para leerlos. Aparte para poder mirarlo en un test sin los 250 KB."""
+    P = mp.points_m
+    if not np.isfinite(P).all():
+        raise ValueError("hay puntos no finitos en el 3-D: `NaN` no es JSON (CONTRATO.md §Frontera) y acá significa que el mapeo se rompió")
+    prov = mp.provenance
+    t3 = events_3d(P)
+    bajo = np.unravel_index(int(np.argmin(P[..., 1])), P[..., 1].shape)
+    pies = (H.LEFT_HEEL, H.RIGHT_HEEL, H.LEFT_BIG_TOE, H.RIGHT_BIG_TOE, H.LEFT_SMALL_TOE, H.RIGHT_SMALL_TOE)
+    return {
+        "schema": POSE3D_SCHEMA,
+        "que_es": "los 26 puntos Halpe26 de un swing de mocap, en METROS y en 3-D, cuadro por cuadro. Es lo que la cámara virtual del arnés proyecta para armar el `pose.npz` de este mismo trabajo: los mismos puntos, antes de perder la profundidad.",
+        "marco": HARNESS_FRAME,
+        # Dónde cae ese cero en ESTE trial, medido: el esqueleto de CMU no apoya
+        # la planta del pie, así que en el cuadro de referencia los pies quedan
+        # por encima del cero y la grilla del visor no es un piso anatómico.
+        "suelo": {
+            "punto_mas_bajo": {"nombre": HALPE26_NAMES[bajo[1]], "cuadro": int(bajo[0])},
+            "pies_sobre_el_cero_en_el_cuadro_de_referencia_m": round(float(P[mp.ref_frame, list(pies), 1].min()), 3),
+            "tobillo_sobre_el_cero_en_el_cuadro_de_referencia_m": round(float(P[mp.ref_frame, [H.LEFT_ANKLE, H.RIGHT_ANKLE], 1].mean()), 3),
+            "nota": "y = 0 es el punto más bajo de todo el trial, que no cae en el cuadro de referencia. El esqueleto de CMU no apoya la planta: el tobillo queda a ~15 cm de ese cero. La grilla del visor dibuja ese cero, no un piso anatómico, y por eso los pies del address quedan un poco por encima.",
+            "procedencia": "medido_aqui",
+        },
+        "decimales": POSE3D_DECIMALS,
+        "fps": float(prov["fps_real"]),
+        "fps_nota": prov["fps_note"],
+        "frames": int(prov["frames"]),
+        "trial": prov["trial"],
+        "sujeto": prov["subject"],
+        "vista_del_trabajo": prov["camera"]["view"],
+        "estatura_m": prov["stature_m"],
+        "estatura_nota": prov["stature_note"],
+        "cuadro_de_referencia": int(mp.ref_frame),
+        "nombres": list(HALPE26_NAMES),
+        "huesos": [[int(a), int(b)] for a, b in HALPE26_LIMBS],
+        "puntos_construidos": APPROX_NOTES,
+        "eventos": dict(events) if events else None,
+        "eventos_nota": "los cuadros que detectó el motor sobre la proyección 2-D de esta vista: los mismos que muestra el reproductor. `null` cuando no se corrió el análisis.",
+        "eventos_3d": t3,
+        "eventos_3d_nota": "leídos sobre las curvas 3-D con el criterio de `events_3d`: es la verdad contra la que se compara el motor, no lo que el motor detectó. `top_far` es el análogo del cambio de sentido que usa el motor (ADR-017) y `top_height` es el cuadro en que las manos dejan de subir.",
+        "camaras": mp.cameras,
+        "camaras_nota": "la cámara del protocolo de las dos vistas. Los puntos 3-D son los mismos para las dos; lo único que cambia es desde dónde se mira. Proyectando con cualquiera de las dos se reproduce el `pose.npz` de esa vista dentro de 1 px (test `test_pose3d.py`).",
+        "indicador": indicador_lineas(),
+        "rotulos": rotulos(prov["trial"]),
+        "atribucion": prov["attribution"],
+        "licencia": "ver data/examples/cmu-mocap/ATRIBUCION.md",
+        "run_at": prov["run_at"],
+    }
+
+
+def write_pose3d(mp: MocapPose, take_dir: Path, *, events: dict[str, int] | None = None) -> Path:
+    """`pose3d.json`: el mismo swing que el `pose.npz`, con la profundidad
+    adentro. Lo lee el visor 3-D de la pantalla (`web/src/components/Visor3D.tsx`).
+
+    Los puntos se escriben con una línea por cuadro: con `indent` serían 35.000
+    líneas y compacto entero sería una sola. El encabezado va indentado, que es
+    lo que alguien va a leer a ojo."""
+    doc = pose3d_doc(mp, events=events)
+    marca = "@@PUNTOS@@"
+    doc["puntos"] = marca
+    filas = ",\n    ".join("[" + ",".join("[" + ",".join(_n(float(v)) for v in pt) + "]" for pt in frame) + "]" for frame in mp.points_m)
+    text = _json_legible(doc).replace(f'"{marca}"', f"[\n    {filas}\n  ]")
+    take_dir.mkdir(parents=True, exist_ok=True)
+    path = take_dir / POSE3D_JSON
+    path.write_text(text + "\n", encoding="utf-8")
+    return path
 
 
 # --- nivel 1: la métrica 2-D contra la verdad 3-D ----------------------------
@@ -822,6 +1045,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  {mp.provenance['frames']} cuadros a {CMU_FPS:g} fps · estatura {mp.height_m:.3f} m · cuerpo {mp.body_height_px:.0f} px ({mp.body_height_px / mp.provenance['frame_size'][1] * 100:.1f} % del alto)")
     print(f"  cámara {args.vista} · f {mp.provenance['camera']['fx']:.1f} px · cuadro de referencia {mp.ref_frame}")
     if args.solo_pose:
+        print(f"  {write_pose3d(mp, args.out)}")
         return 0
 
     from kinelab.explore import explore
@@ -830,7 +1054,10 @@ def main(argv: list[str] | None = None) -> int:
     r = explore(None, args.out, get_sport(args.deporte), height_m=mp.height_m, view=args.vista, pose_npz=pose_path, nota_fuente=fps_note(args.trial), banner=banner_text(args.trial))
     print(f"  eventos {r['eventos_frame']} · {r['eventos_t_s']}")
     print(f"  duraciones {r['duraciones']}")
-    for f in r["archivos"]:
+    # El 3-D va con los cuadros de evento que detectó el motor: son los mismos
+    # que muestra el reproductor, así el visor y el video van al mismo cuadro.
+    p3 = write_pose3d(mp, args.out, events=r["eventos_frame"])
+    for f in [*r["archivos"], str(p3)]:
         print(f"  {f}")
     if args.etiqueta:
         print(f"  {write_trabajo(args.out, mp, args.vista, args.etiqueta)}")

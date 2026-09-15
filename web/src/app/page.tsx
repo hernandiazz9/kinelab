@@ -20,6 +20,7 @@ import Reproductor, { COLOR_EVENTO, type ReproductorHandle } from "@/components/
 import Subida from "@/components/Subida";
 import TablaCuadros from "@/components/TablaCuadros";
 import TablaEventos from "@/components/TablaEventos";
+import Visor3D from "@/components/Visor3D";
 import {
   CAMINO_DESCONOCIDO,
   ETAPA,
@@ -308,6 +309,14 @@ function Resultado({
               </figure>
             );
           })}
+        </section>
+      )}
+
+      {/* El swing en 3-D: sólo si el trabajo lo tiene, o sea sólo si su
+          movimiento está medido en 3-D. De un video no sale (ADR-010). */}
+      {archivoUrl(trabajo, "pose3d.json") && (
+        <section>
+          <Visor3D key={archivoUrl(trabajo, "pose3d.json")!} url={archivoUrl(trabajo, "pose3d.json")!} />
         </section>
       )}
 

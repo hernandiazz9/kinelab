@@ -259,6 +259,11 @@ ARCHIVOS: dict[str, str] = {
     "datos-eventos.json": "application/json",
     "analysis.json": "application/json",
     "capture.json": "application/json",
+    # Sólo lo tiene un trabajo cuyo movimiento está medido en 3-D (hoy: el
+    # ejemplo de mocap, que lo escribe `kinelab_truth.mocap`). De un video no
+    # sale: una cámara sola no mide profundidad. El visor 3-D de la pantalla
+    # aparece únicamente cuando este archivo existe.
+    "pose3d.json": "application/json",
 }
 
 
