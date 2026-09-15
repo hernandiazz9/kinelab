@@ -16,6 +16,16 @@ en `service/static/index.html`.
   contenido de `datos-eventos.json` y las URLs de sus archivos.
 - `GET /api/datos/{id}/archivos/{nombre}` sirve `overlay.mp4` (con `Range`/206:
   lo hace solo el `FileResponse` de Starlette 1.6), las fotos, el CSV y los JSON.
+- `POST /api/datos/{id}/publicar` publica ESE trabajo a internet, y su `DELETE`
+  lo saca. Los dos corren `kinelab.tools.publicar` en un hilo (exportar,
+  construir el sitio y desplegarlo tardan) y devuelven 202 con el paso en el que
+  van. Uno por vez: el segundo pedido es un 409.
+- `GET /api/publicacion` qué está publicado, con qué enlace, y en qué paso va lo
+  que esté corriendo. Es lo que sondea la lista de trabajos.
+
+**Publicar es deliberado.** Subir un video no publica nada: `PUT /api/datos` no
+llama a la publicación por ningún camino. Que un trabajo salga a internet pide
+un pedido explícito para ese id, y es reversible con el `DELETE`.
 
 El archivo viaja como cuerpo crudo de un PUT (no multipart): así no hace falta
 ninguna dependencia fuera de FastAPI. Se escribe por chunks a `data/incoming/`
@@ -42,7 +52,9 @@ from kinelab.ingest.capture_paths import GENERIC_VIDEO_ID, CapturePaths, load_ca
 from kinelab.ingest.gate import CaptureJson, slomo_declared_reason
 from kinelab.ingest.session import validate_slug
 from kinelab.tools.fps_truth import FfprobeError, analyze
-from service.exploracion import ARCHIVOS, Exploracion
+from kinelab.tools.publicar import Ejecutor
+from service.exploracion import ARCHIVOS, JOB_ID, Exploracion
+from service.publicacion import PUBLICAR, QUITAR, Publicaciones
 from sports import get_sport
 
 STATIC = Path(__file__).resolve().parent / "static"
@@ -109,22 +121,40 @@ def _session_row(data_dir: Path, capture_json: Path) -> dict[str, Any]:
     return row
 
 
-def create_app(data_dir: Path | None = None, sport_id: str = "golf", estimator: Any | None = None) -> FastAPI:
-    """`estimator`: sólo para tests, un estimador falso para la cola de exploración."""
+def create_app(
+    data_dir: Path | None = None,
+    sport_id: str = "golf",
+    estimator: Any | None = None,
+    repo: Path | None = None,
+    ejecutar_publicacion: Ejecutor | None = None,
+) -> FastAPI:
+    """`estimator` y `ejecutar_publicacion`: sólo para tests (un estimador falso
+    para la cola de exploración, y un ejecutor de comandos falso para la de
+    publicación, que si no construiría el sitio y hablaría con internet).
+
+    `repo` es la raíz del repo: de ahí salen `web/` y `web/public/demo/`. Por
+    defecto, la carpeta que contiene a `data/`, para que un `--data` en otro lado
+    no publique con los archivos de éste.
+    """
     data = (data_dir or default_data_dir()).resolve()
+    raiz = (repo or (data_dir.parent if data_dir is not None else REPO)).resolve()
     sport = get_sport(sport_id)
     incoming = data / "incoming"
     exploracion = Exploracion(data, sport, estimator=estimator)
+    publicacion = Publicaciones(raiz, data, ejecutar=ejecutar_publicacion)
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
         yield
         exploracion.close()
+        publicacion.close()
 
     app = FastAPI(title="kinelab · servicio local", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
     app.state.data_dir = data
+    app.state.repo = raiz
     app.state.sport = sport
     app.state.exploracion = exploracion
+    app.state.publicacion = publicacion
 
     def capture_paths() -> CapturePaths:
         f = data / "capture-paths.yaml"
@@ -265,6 +295,17 @@ def create_app(data_dir: Path | None = None, sport_id: str = "golf", estimator: 
         exploracion.submit(job, upload)
         return job.to_dict()
 
+    def con_publicado(fila: dict[str, Any], publicados: dict[str, dict[str, Any]]) -> dict[str, Any]:
+        """La fila de un trabajo más si está publicado y con qué enlace.
+
+        Sale del registro de `data/publicados.json`, no de la memoria del
+        proceso: el que publica es el comando y el registro es la verdad de qué
+        se mandó afuera. Los tres campos van siempre, aunque sean `null`
+        (CONTRATO.md §Frontera: un campo esperado no se omite).
+        """
+        p = publicados.get(fila["id"])
+        return {**fila, "publicado": p is not None, "publicado_url": (p or {}).get("url"), "publicado_en": (p or {}).get("publicado_en")}
+
     @app.get("/api/datos")
     async def datos_list() -> list[dict[str, Any]]:
         """Los trabajos que hay en disco, del más nuevo al más viejo.
@@ -273,11 +314,15 @@ def create_app(data_dir: Path | None = None, sport_id: str = "golf", estimator: 
         anteriores y las carpetas de ejemplo que deje otro proceso aparecen sin
         reiniciar el servidor, y uno borrado del disco desaparece.
         """
-        return [t.fila() for t in await run_in_threadpool(exploracion.listar)]
+        filas, publicados = await run_in_threadpool(_listar_con_publicados)
+        return [con_publicado(f.fila(), publicados) for f in filas]
+
+    def _listar_con_publicados():
+        return exploracion.listar(), publicacion.publicados()
 
     @app.get("/api/datos/{job_id}")
     async def datos_get(job_id: str) -> dict[str, Any]:
-        return trabajo_or_404(job_id).to_dict()
+        return con_publicado(trabajo_or_404(job_id).to_dict(), await run_in_threadpool(publicacion.publicados))
 
     @app.get("/api/datos/{job_id}/archivos/{nombre}")
     async def datos_archivo(job_id: str, nombre: str, descargar: bool = Query(False)) -> FileResponse:
@@ -290,6 +335,46 @@ def create_app(data_dir: Path | None = None, sport_id: str = "golf", estimator: 
             raise HTTPException(404, f"'{nombre}' todavía no existe para este trabajo (estado: {job.estado}).")
         # `filename` pone Content-Disposition: attachment → el navegador descarga en vez de mostrar.
         return FileResponse(path, media_type=media, filename=f"{Path(job.video).stem}-{nombre}" if descargar else None)
+
+    # --- publicar a internet: deliberado, uno por uno, reversible ---------------------
+
+    def _encolar(accion: str, job_id: str, job_dir: Path | None = None) -> dict[str, Any]:
+        try:
+            return publicacion.encolar(accion, job_id, job_dir).to_dict()
+        except RuntimeError as e:
+            # 409 y no 400: el pedido está bien, lo que no se puede es ahora.
+            raise HTTPException(409, str(e)) from e
+
+    @app.post("/api/datos/{job_id}/publicar", status_code=202)
+    async def datos_publicar(job_id: str) -> dict[str, Any]:
+        """Publica ESE trabajo a internet. 202 con el paso en el que va.
+
+        Tarda: exporta el trabajo, reconstruye el sitio entero y lo despliega. Por
+        eso corre en un hilo y la pantalla sondea `GET /api/publicacion`.
+        """
+        job = trabajo_or_404(job_id)
+        if job.estado != "listo":
+            raise HTTPException(409, f"El trabajo '{job_id}' está en estado '{job.estado}': no hay nada terminado que publicar.")
+        return _encolar(PUBLICAR, job.id, job.dir)
+
+    @app.delete("/api/datos/{job_id}/publicar", status_code=202)
+    async def datos_despublicar(job_id: str) -> dict[str, Any]:
+        """Saca ese trabajo de internet. El trabajo sigue en disco: lo que se va
+        son los datos publicados.
+
+        No pide que el trabajo siga en `data/exploracion/`: se puede despublicar
+        algo que ya se borró de la máquina, que es justamente cuando más hace falta.
+        Por eso el id se valida acá y no sale de `exploracion.get`: es el nombre de
+        una carpeta dentro de `web/public/demo/` y no se puede salir de ella.
+        """
+        if not JOB_ID.match(job_id) or not publicacion.esta_publicado(job_id):
+            raise HTTPException(404, f"El trabajo '{job_id}' no está publicado.")
+        return _encolar(QUITAR, job_id)
+
+    @app.get("/api/publicacion")
+    async def publicacion_estado() -> dict[str, Any]:
+        """Qué está publicado, con qué enlace, y en qué paso va lo que corre."""
+        return await run_in_threadpool(publicacion.estado)
 
     return app
 

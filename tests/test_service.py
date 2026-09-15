@@ -718,3 +718,176 @@ def test_datos_el_id_es_la_carpeta_y_no_se_sale_de_ella(client_datos, data_dir):
     assert client_datos.get("/api/datos/ejemplo-cmu-64_01-face_on").json()["id"] == "ejemplo-cmu-64_01-face_on"
     for malo in ["..", "..%2F..%2Fcapture-paths.yaml", ".oculto", "con/barra", "a" * 65]:
         assert client_datos.get(f"/api/datos/{malo}").status_code == 404, malo
+
+
+# --- publicar a internet desde la pantalla ----------------------------------------
+#
+# Con el comando simulado: el ejecutor inyectado no construye el sitio ni habla
+# con internet, igual que en `tests/test_publicar.py`. Lo que se prueba acá es el
+# endpoint — que corre en un hilo, que la fila cambia de estado, y los 404/409.
+
+
+@pytest.fixture
+def repo_web(data_dir: Path) -> Path:
+    """La raíz del repo de mentira: `data_dir` es `<repo>/data`, así que el repo es
+    su padre. `create_app` lo deduce igual, pero acá hace falta el `web/`."""
+    repo = data_dir.parent
+    (repo / "web").mkdir(exist_ok=True)
+    (repo / "web" / "package.json").write_text('{"name": "web"}', encoding="utf-8")
+    return repo
+
+
+class _EjecutorFalso:
+    """Corre nada; deja el `web/out/` que `construir()` comprueba, y una URL de
+    deploy. `frenar` deja mirar la publicación a mitad de camino."""
+
+    def __init__(self, repo: Path) -> None:
+        import threading
+
+        self.repo = repo
+        self.cmds: list[list[str]] = []
+        self.empezo = threading.Event()
+        self.seguir = threading.Event()
+        self.seguir.set()
+
+    def __call__(self, cmd, cwd, env):
+        from kinelab.tools.publicar import Corrida
+
+        self.cmds.append(list(cmd))
+        self.empezo.set()
+        self.seguir.wait(timeout=60)
+        if cmd[-1] == "build":
+            out = self.repo / "web" / "out"
+            out.mkdir(parents=True, exist_ok=True)
+            (out / "index.html").write_text("<html/>", encoding="utf-8")
+            return Corrida(cmd=cmd, codigo=0, salida="", error="")
+        if "deploy" in cmd:
+            return Corrida(cmd=cmd, codigo=0, salida="https://kinelab-abc.vercel.app\n", error="")
+        return Corrida(cmd=cmd, codigo=0, salida="", error="")
+
+    def frenar(self) -> None:
+        self.seguir.clear()
+
+
+@pytest.fixture
+def client_publicar(data_dir: Path, repo_web: Path):
+    """El cliente con la cola de exploración y la de publicación, las dos falsas."""
+    from tests.test_perception import FakeEstimator
+
+    ej = _EjecutorFalso(repo_web)
+    with TestClient(create_app(data_dir=data_dir, estimator=FakeEstimator(True), ejecutar_publicacion=ej)) as c:
+        yield c, ej
+
+
+def _trabajo_publicable(data_dir: Path, job_id: str = "a" * 32):
+    """Un trabajo listo en disco, con lo que el exportador necesita. El video y la
+    pose los arma `tests/test_exportar_demo`: el mismo trabajo sintético."""
+    from tests.test_exportar_demo import _trabajo
+
+    d = _trabajo(data_dir / "fuente")
+    destino = data_dir / "exploracion" / job_id
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(d, destino)
+    return destino
+
+
+def _esperar_publicacion(client, timeout_s: float = 180.0) -> dict:
+    import time
+
+    t0 = time.monotonic()
+    while True:
+        e = client.get("/api/publicacion").json()
+        if e["corriendo"] is None and e["ultima"] is not None:
+            return e
+        assert time.monotonic() - t0 < timeout_s, f"la publicación no terminó: {e}"
+        time.sleep(0.05)
+
+
+@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="hace falta ffmpeg")
+def test_publicar_desde_la_pantalla_y_despues_quitar(client_publicar, data_dir):
+    client, ej = client_publicar
+    _trabajo_publicable(data_dir)
+    job_id = "a" * 32
+
+    fila = [f for f in client.get("/api/datos").json() if f["id"] == job_id][0]
+    assert fila["publicado"] is False and fila["publicado_url"] is None, "subir un video no publica nada"
+    assert client.get("/api/publicacion").json()["publicados"] == {}
+
+    r = client.post(f"/api/datos/{job_id}/publicar")
+    assert r.status_code == 202, r.text
+    assert r.json()["accion"] == "publicar" and r.json()["estado"] == "corriendo"
+    e = _esperar_publicacion(client)
+    assert e["ultima"]["estado"] == "listo", e["ultima"]["error"]
+    assert e["publicados"][job_id]["url"].endswith(f"?trabajo={job_id}")
+    assert any("deploy" in " ".join(c) for c in ej.cmds), "publicar de verdad despliega"
+
+    fila = [f for f in client.get("/api/datos").json() if f["id"] == job_id][0]
+    assert fila["publicado"] is True and fila["publicado_url"].endswith(f"?trabajo={job_id}")
+    assert fila["publicado_en"], "la fila dice desde cuándo está afuera"
+    assert client.get(f"/api/datos/{job_id}").json()["publicado"] is True
+    assert (data_dir.parent / "web" / "public" / "demo" / job_id / "video.mp4").is_file()
+
+    r = client.delete(f"/api/datos/{job_id}/publicar")
+    assert r.status_code == 202 and r.json()["accion"] == "quitar"
+    e = _esperar_publicacion(client)
+    assert e["ultima"]["estado"] == "listo", e["ultima"]["error"]
+    assert e["publicados"] == {}
+    assert not (data_dir.parent / "web" / "public" / "demo" / job_id).exists()
+    fila = [f for f in client.get("/api/datos").json() if f["id"] == job_id][0]
+    assert fila["publicado"] is False, "el trabajo sigue en disco; lo que se fue son los datos publicados"
+
+
+@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="hace falta ffmpeg")
+def test_publicar_corre_en_un_hilo_y_la_pantalla_ve_el_paso(client_publicar, data_dir):
+    """La petición vuelve enseguida y el progreso se lee aparte: exportar,
+    construir y desplegar tardan decenas de segundos."""
+    client, ej = client_publicar
+    _trabajo_publicable(data_dir)
+    ej.frenar()  # se cuelga en el primer comando externo, o sea después de exportar
+
+    r = client.post(f"/api/datos/{'a' * 32}/publicar")
+    assert r.status_code == 202, "la petición no espera al deploy"
+    assert ej.empezo.wait(timeout=120), "el hilo arrancó"
+    en_curso = client.get("/api/publicacion").json()["corriendo"]
+    assert en_curso["id"] == "a" * 32 and en_curso["estado"] == "corriendo"
+    assert en_curso["paso"] >= 1 and en_curso["total"] == 4 and en_curso["texto"]
+
+    otro = client.post(f"/api/datos/{'a' * 32}/publicar")
+    assert otro.status_code == 409 and "Esperá" in otro.json()["detail"], "uno por vez: se despliega el sitio entero"
+
+    ej.seguir.set()
+    assert _esperar_publicacion(client)["ultima"]["estado"] == "listo"
+
+
+def test_publicar_un_id_que_no_existe_es_404(client_publicar):
+    client, _ = client_publicar
+    assert client.post("/api/datos/no-existe/publicar").status_code == 404
+    assert client.delete("/api/datos/no-existe/publicar").status_code == 404
+    for malo in ["..", ".oculto", "a" * 65]:
+        assert client.delete(f"/api/datos/{malo}/publicar").status_code == 404, malo
+
+
+def test_quitar_lo_que_no_esta_publicado_es_404(client_publicar, data_dir):
+    client, _ = client_publicar
+    _carpeta(data_dir, "b" * 32, video="x.mp4", creado="2026-09-13T10:00:00+00:00")
+    r = client.delete(f"/api/datos/{'b' * 32}/publicar")
+    assert r.status_code == 404 and "no está publicado" in r.json()["detail"]
+
+
+def test_publicar_un_trabajo_a_medias_es_409(client_publicar, data_dir):
+    client, _ = client_publicar
+    _carpeta(data_dir, "c" * 32, video="x.mp4", creado="2026-09-13T10:00:00+00:00", estado="error", error="algo")
+    r = client.post(f"/api/datos/{'c' * 32}/publicar")
+    assert r.status_code == 409 and "no hay nada terminado que publicar" in r.json()["detail"]
+
+
+@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="hace falta ffmpeg")
+def test_un_error_al_publicar_queda_en_el_estado_y_no_rompe_la_lista(client_publicar, data_dir):
+    client, ej = client_publicar
+    _trabajo_publicable(data_dir)
+    shutil.rmtree(data_dir.parent / "web")  # sin `web/`, construir falla
+
+    assert client.post(f"/api/datos/{'a' * 32}/publicar").status_code == 202
+    e = _esperar_publicacion(client)
+    assert e["ultima"]["estado"] == "error" and "package.json" in e["ultima"]["error"]
+    assert client.get("/api/datos").status_code == 200, "la lista sigue respondiendo"
