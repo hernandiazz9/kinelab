@@ -14,6 +14,12 @@ data/athletes/
 data/incoming/
 data/exploracion/
 
+# lo que se publica a internet: sale del disco de la Mac al desplegar, no del repo.
+# Un entrenador que publique veinte swings metería 300 MB en una historia que no se
+# borra nunca. Lo que sí va a git es `data/publicados.json`: el registro de qué se
+# mandó afuera. Ver `kinelab/tools/publicar.py`.
+web/public/demo/
+
 # pesos de modelos: se descargan una vez y se fijan por hash
 models/
 banco/models/

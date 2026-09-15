@@ -1,0 +1,71 @@
+{
+  "schema": "kinelab.publicados/1.0.0",
+  "nota": "Que trabajos estan publicados en internet, desde cuando y con que enlace. Este archivo SI va a git: es el registro de que se mando afuera. Los datos publicados NO van a git (web/public/demo/ esta en .gitignore): salen del disco de la Mac al desplegar. Lo escribe `python -m kinelab.tools.publicar`; a mano, nunca.",
+  "sitio": "https://kinelab-qnm5fa60a-hernandiazz9s-projects.vercel.app",
+  "actualizado": "2026-09-15T16:53:21+00:00",
+  "trabajos": {
+    "ejemplo-cmu-64_01-face_on": {
+      "id": "ejemplo-cmu-64_01-face_on",
+      "video": "cmu-64_01-face_on",
+      "url": "https://kinelab-qnm5fa60a-hernandiazz9s-projects.vercel.app/?trabajo=ejemplo-cmu-64_01-face_on",
+      "publicado_en": "2026-09-15T16:51:22+00:00",
+      "actualizado_en": "2026-09-15T16:51:22+00:00",
+      "bytes": 2708511,
+      "archivos": 12,
+      "tramo_origen": [
+        21,
+        447
+      ],
+      "despliegue": null,
+      "despliegue_null_reason": "--solo-construir: se armó el sitio y no se desplegó. Nada salió a internet."
+    },
+    "ejemplo-cmu-64_01-down_the_line": {
+      "id": "ejemplo-cmu-64_01-down_the_line",
+      "video": "cmu-64_01-down_the_line",
+      "url": "https://kinelab-qnm5fa60a-hernandiazz9s-projects.vercel.app/?trabajo=ejemplo-cmu-64_01-down_the_line",
+      "publicado_en": "2026-09-15T16:51:34+00:00",
+      "actualizado_en": "2026-09-15T16:51:34+00:00",
+      "bytes": 2526721,
+      "archivos": 12,
+      "tramo_origen": [
+        26,
+        447
+      ],
+      "despliegue": null,
+      "despliegue_null_reason": "--solo-construir: se armó el sitio y no se desplegó. Nada salió a internet."
+    },
+    "72d91d030f12490692019526b34f188f": {
+      "id": "72d91d030f12490692019526b34f188f",
+      "video": "vid1.mp4",
+      "url": "https://kinelab-qnm5fa60a-hernandiazz9s-projects.vercel.app/?trabajo=72d91d030f12490692019526b34f188f",
+      "publicado_en": "2026-09-15T16:52:29+00:00",
+      "actualizado_en": "2026-09-15T16:52:29+00:00",
+      "bytes": 14890434,
+      "archivos": 13,
+      "tramo_origen": [
+        612,
+        902
+      ],
+      "despliegue": null,
+      "despliegue_null_reason": "--solo-construir: se armó el sitio y no se desplegó. Nada salió a internet."
+    }
+  },
+  "quitados": [
+    {
+      "id": "17ed40a4fd99462d85fc4555a1147e89",
+      "video": "cortado.mp4",
+      "url": "https://kinelab-qnm5fa60a-hernandiazz9s-projects.vercel.app/?trabajo=17ed40a4fd99462d85fc4555a1147e89",
+      "publicado_en": "2026-09-15T16:50:57+00:00",
+      "actualizado_en": "2026-09-15T16:50:57+00:00",
+      "bytes": 3600110,
+      "archivos": 12,
+      "tramo_origen": [
+        0,
+        74
+      ],
+      "despliegue": null,
+      "despliegue_null_reason": "--solo-construir: se armó el sitio y no se desplegó. Nada salió a internet.",
+      "quitado_en": "2026-09-15T16:53:10+00:00"
+    }
+  ]
+}
