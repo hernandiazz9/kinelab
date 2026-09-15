@@ -156,9 +156,12 @@ ejemplos, porque los trabajos viejos tienen el top y la escala anteriores.
   address y 57,8° en el peor cuadro, **sin estimador en el medio**: la
   geometría sola ya pone lo que ADR-007 atribuía al modelo.
 - [hecho] deploy — demo regenerada con los ángulos (`620b61a`) y desplegada:
-  `https://kinelab-qnm5fa60a-hernandiazz9s-projects.vercel.app`. Queda con la
-  protección de Vercel puesta (302 a SSO): la ve Hernán logueado, no un
-  tercero. Hacerla pública es un clic y es decisión suya. — los ángulos verdaderos en el visor 3D del
+  **https://kinelab-qnm5fa60a-hernandiazz9s-projects.vercel.app**, pública a
+  pedido de Hernán (`ssoProtection: null` en el proyecto `kinelab` del team
+  `hernandiazz9s-projects`). Verificado sin sesión: página 200, datos 200,
+  video 206 (el cuadro a cuadro anda desplegado), `pose3d` 1.1.0 con
+  ángulos, `x-robots-tag: noindex`. **El video de `vid1` es accesible para
+  cualquiera con el enlace**; volver a cerrarlo es un PATCH a la misma API. — los ángulos verdaderos en el visor 3D del
   mocap, y el valor proyectado al lado: la primera medición propia de cuánto
   se equivoca un ángulo visto desde una cámara, sobre movimiento humano real.
   No entra al registro: es referencia, como la verdad 3D del arnés.
