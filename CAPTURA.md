@@ -95,18 +95,37 @@ Más fps con la muñeca borrosa es peor que menos fps con la muñeca nítida.
 
 ## Encuadre
 
-- El atleta ocupa **80–90% del alto del cuadro**: 900+ px de cuerpo a 1080p.
-  El prototipo anterior trabajó con 116–135 px (11–16%) y ahí dos píxeles de
-  error en el codo son grados. El umbral exacto del gate se fija midiendo en
-  la Fase 1.
+- **Objetivo: el atleta ocupa 80–90% del alto del cuadro**, 900+ px de cuerpo
+  a 1080p. El prototipo anterior trabajó con 116–135 px (11–16%) y ahí dos
+  píxeles de error en el codo son grados.
+
+  **Nota medida: en vertical, con la lente principal de un teléfono, ese 80% no
+  es alcanzable a una distancia usable.** Poner el cuerpo al 80% de un cuadro
+  de 1080×1920 a 3 m pide una focal de **3078 px**, ~2,1× la cámara principal
+  de un celular (que a 1080 de ancho anda por 816 px): con esa lente habría que
+  estar a ~0,8 m, o filmar horizontal (informe del 07, punto 6). Los cuatro
+  clips reales del Galaxy S22 Ultra salieron muy por debajo: **28,2 / 28,7 /
+  29,5%** del alto en Video UHD 60 y **41,9%** en Video FHD 30 (informe del
+  11). El objetivo se mantiene como objetivo; la regla de campo mientras tanto
+  es **acercar el trípode todo lo que permita tener los pies y el palo del top
+  adentro del cuadro**.
+
+  **El umbral del gate no está fijado, y no se fija a ojo.** Lo que el motor
+  mide es `body_height_px` —altura del cuerpo en píxeles—, no la fracción del
+  cuadro; el número que decide sale del barrido de tamaño de sujeto del arnés
+  (`truth/`, encargo 13, en curso), que dice a partir de qué altura en píxeles
+  la métrica deja de estar por encima de su piso de ruido. Hasta que ese
+  barrido exista, `body_height_frac` (ESPECIFICACION 1.3) sigue sin umbral.
 - Trípode. Cámara a **altura de cintura a pecho**.
 - Dos vistas, cada una su propia sesión:
   - **`face_on`**: cámara perpendicular a la línea de tiro, mirando al pecho
     del golfista. Da giro, forward/side bend, sway, lift, cabeza.
   - **`down_the_line`**: cámara detrás del golfista, sobre la línea de tiro,
-    a ~3,5 m. Da thrust e inclinación aparente de columna. Desde acá la
-    columna "parece" inclinada por combinación de giro y side bend, no por
-    flexión — por eso las métricas declaran vista.
+    a la distancia que fija la regla de arriba (esta sección decía ~3,5 m: con
+    el teléfono vertical eso dio 28% del alto). Da thrust e inclinación
+    aparente de columna. Desde acá la columna "parece" inclinada por
+    combinación de giro y side bend, no por flexión — por eso las métricas
+    declaran vista.
 - Fondo simple, sin otras personas en cuadro. Una persona.
 - Cuerpo entero, incluidos pies y palo en el top.
 
@@ -114,8 +133,9 @@ Más fps con la muñeca borrosa es peor que menos fps con la muñeca nítida.
 
 ## Transferencia
 
-**Un solo camino permitido en producción: AirDrop del iPhone a la Mac, con
-"Mantener originales" activo.**
+**Un camino de referencia por dispositivo, y ninguno más en producción: en
+iPhone, AirDrop a la Mac con "Mantener originales" activo; en el Galaxy S22
+Ultra, el cable desde `DCIM/Camera`.**
 
 Escalera de degradación reportada por terceros para un Slo-Mo de 240 fps (una
 sola fuente, versión de macOS no declarada — **re-verificar con el cronómetro
@@ -127,9 +147,25 @@ antes de confiar**):
 | Fotos → Edit with → QuickTime Player → guardar copia | 240 |
 | **Arrastrar el clip desde Fotos** | **120** |
 | **File → Export → Export 1 Video** | **30** |
-| WhatsApp, Telegram, Drive, enlace de iCloud | recomprimido |
+| **WhatsApp como video**, Telegram, Drive, enlace de iCloud | recomprimido |
 
 Los dos gestos más naturales son los dos peores.
+
+**Medido acá, sobre el Galaxy S22 Ultra** (tres clips de Video UHD 60, informe
+del 11). El teléfono que hay no es un iPhone y no tiene AirDrop:
+
+| Camino | Qué llega | Procedencia |
+|---|---|---|
+| **Cable desde `DCIM/Camera`** | intacto: es una copia de archivo. **Es el camino de referencia** de este teléfono, y el original FHD 30 que llegó así es contra el que se comparó lo demás | informe del 03 |
+| **WhatsApp como documento** | **intacto**: HEVC `hvc1` a 43–47 Mb/s, el `udta` de Samsung entero (1,02–1,10 MB) y el mismo orden de hijos del `moov` que un original por cable. WhatsApp en modo documento **no toca el archivo** | medido, informe del 11 |
+| **WhatsApp como video** | recomprimido: H.264 de pocos Mb/s, sin `udta`, resolución bajada | **no medido acá**: es el comportamiento conocido del envío como video, `sin_verificar` |
+
+Que el modo documento salga limpio **no lo convierte en el camino de
+producción**: es un camino distinto, con su propio `id` en
+`capture-paths.yaml` (`s22ultra-video-uhd60-whatsapp-doc`), y su tasa real
+sigue sin cronómetro como cualquier otro. El cable sigue siendo la referencia
+porque no depende de que una app de terceros no cambie de criterio entre
+versiones.
 
 Camino de auditoría, no de uso diario: `libimobiledevice` + `ifuse` + `rsync -a`
 sobre `DCIM`. No probado en esta Mac.
@@ -232,18 +268,71 @@ razones, para poder corregir y re-ingestar.
 
 ## Presupuesto de datos
 
-| Modo | Tamaño por 30 s | Sesión de 20 clips |
-|---|---|---|
-| 1080p120 HEVC | ~85 MB | ~1,7 GB |
-| 1080p240 HEVC | ~240 MB | ~4,8 GB |
-| 4K120 | ~3,5 GB | descartado |
+| Modo | Tamaño por 30 s | Sesión de 20 clips | Procedencia |
+|---|---|---|---|
+| 1080p120 HEVC | ~85 MB | ~1,7 GB | sitio comercial (HEVCut) |
+| 1080p240 HEVC | ~240 MB | ~4,8 GB | sitio comercial (HEVCut) |
+| 4K120 | ~3,5 GB | descartado | spec |
+| **UHD 60 HEVC (S22 Ultra) — desaconsejado** | **165 MB** | **~3,3 GB** | **medido, encargo 12** |
+| Video FHD 30 H.264 (S22 Ultra) | 68 MB | ~1,4 GB | medido, encargo 12 |
 
-Cifras de un sitio comercial (HEVCut), no de Apple: **re-medir con el primer
-clip real**.
+Las dos primeras filas son de un sitio comercial, no de Apple: **re-medir con
+el primer clip real de iPhone**. Las dos últimas están medidas sobre los clips
+reales del Galaxy S22 Ultra (`ffprobe`, tasa del contenedor: 43,9 Mb/s en UHD
+60, 18,2 Mb/s en FHD 30).
+
+### UHD 60 está desaconsejado, y está medido por qué
+
+Tres números, de los tres clips del 14/9 (informe del 11):
+
+1. **No agrega precisión.** El recorte del cuerpo entra a `rtmpose-m`
+   reescalado a **192×256 px**. El bbox mide 1340 px de alto en el clip FHD
+   —**5,24×** de reducción, ya sobredimensionado— y 1466–1550 px en los UHD
+   (**5,7–6,0×**). Los píxeles de más se tiran antes de que el modelo los vea.
+2. **Cuesta 2,15× por cuadro.** FHD: 5,46 s fijos + 30,8 ms/cuadro. UHD:
+   5,82 s + 66,2 ms/cuadro. Por segundo de movimiento real, UHD 60 contra
+   FHD 30, son **4,29×**: vid1 son 17,8 s de video en 76,4 s de proceso.
+3. **Cuesta 2,4× de disco**: 43,9 contra 18,2 Mb/s, o 165 contra 68 MB por cada
+   30 s. No es una comparación a igualdad de todo lo demás —el UHD es HEVC a
+   60 fps y el FHD es H.264 a 30—, pero es la que hay con material real. (El
+   informe del 11 reportó 3,4× de disco; recontado sobre los mismos dos
+   archivos da 2,4×. El resto de sus números se reprodujo sin cambios.)
+
+Consecuencia práctica: **filmar en FHD y acercar el trípode.** Son dos cosas
+distintas y hay que hacer las dos. Bajar de UHD a FHD deja de pagar peso y
+tiempo por píxeles que el modelo tira, pero no es lo que arregla el encuadre:
+eso lo arregla la distancia. (Cuánto cambia la fracción del cuadro entre los
+dos modos no está medido: en el S22 no tienen la misma relación de aspecto
+—2320×1080 en FHD contra 3840×2160 en UHD— y los cuatro clips se filmaron a
+distancias distintas.)
 
 ---
 
 ## Lo que queda por verificar con el primer clip real
+
+### Con el Galaxy S22 Ultra, que es el teléfono que hay
+
+- **Ningún modo *Video* del S22 Ultra llega a 100 fps.** El tope de Video es
+  60: FHD 60 y UHD 60 (declarado por la lista de modos del teléfono; medido
+  60,026 fps de reproducción en los tres clips UHD del 11 y 29,998 en el FHD
+  del 03). Golf pide `fps_min` 100, así que **todo lo que se filme en Video se
+  rechaza**, con el camino calibrado o declarado: declarar no ablanda ningún
+  umbral.
+- **El único modo que puede pasar de 100 fps es Slow motion FHD 240**, que en
+  Android llega con la ralentización horneada (ADR-003) y que ADR-016 rechaza
+  sin calibrar. De las dos cosas juntas sale la única conclusión operativa que
+  hay hoy: **el cronómetro filmado en Slow motion FHD 240 es lo único que puede
+  producir un clip de este teléfono que pase el gate.** No es un trámite
+  pendiente; es la llave. La alternativa —mover el `fps_min` de golf— es una
+  decisión escrita, no un ajuste.
+- Cuánto mide el delta de arranque en Slow motion FHD 240, y si el archivo es
+  uniforme por tramos. Medido en los otros dos modos: **0,2015 s** en FHD 30
+  (informe del 03) y **0,073–0,110 s** en UHD 60 (informe del 11); en los dos,
+  el primero es el único delta fuera de lugar.
+- Si el S22 cambia campo de visión o estabilización entre modos: si lo hace, la
+  calibración de un modo no es transferible a otro.
+
+### Con el iPhone, si alguna vez hay uno
 
 - La firma exacta de ffprobe sobre un `.MOV` de Slo-Mo real de iPhone (edit
   list, timestamps, metadata). No hay ninguno en esta Mac.

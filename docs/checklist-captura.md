@@ -4,6 +4,12 @@ Para imprimir y llevar al campo. Derivado de `CAPTURA.md`; si algo de acá
 contradice a ese archivo, manda `CAPTURA.md`. Cada casilla se marca antes de
 seguir. Lo que no se marcó, no se filmó.
 
+**Esta hoja es del protocolo iPhone.** El teléfono que hay hoy es un Galaxy
+S22 Ultra, y su guía —en castellano llano, para quien filma— es
+`docs/filmacion-s22.md`. Con ese teléfono, además, **ningún modo Video llega a
+los 100 fps que pide golf**: la única llave es el cronómetro en Slow motion
+FHD 240 (`CAPTURA.md` §Lo que queda por verificar).
+
 ---
 
 ## A. El teléfono (una vez; después no se toca)
@@ -59,11 +65,17 @@ Con el protocolo por defecto es una sola: Video 1080p120 + AirDrop.
 
 ## D. Encuadre (por vista, con el trípode fijo)
 
-- [ ] El golfista ocupa **80–90 % del alto** del cuadro: cuerpo entero, pies y
-      palo en el top incluidos.
+- [ ] El trípode, **lo más cerca que permita tener los pies y el palo del top
+      adentro del cuadro**. Esa es la regla operativa; el 80–90 % del alto es
+      el **objetivo** y en vertical con la lente principal no se alcanza a una
+      distancia usable (`CAPTURA.md` §Encuadre). Los cuatro clips reales
+      salieron al 28–42 % y hace falta más.
+- [ ] Anotar cuánto ocupó el cuerpo, que lo dice la exploración: ______ %.
+      **No hay umbral fijado todavía**: sale del barrido de tamaño del arnés.
 - [ ] Cámara a altura de **cintura a pecho**, horizontal.
 - [ ] **`face_on`**: cámara perpendicular a la línea de tiro, mirando al pecho.
-- [ ] **`down_the_line`**: cámara detrás, sobre la línea de tiro, a ~3,5 m.
+- [ ] **`down_the_line`**: cámara detrás, sobre la línea de tiro, a la
+      distancia que fija la primera casilla (antes decía ~3,5 m).
 - [ ] Una sola persona en cuadro. Nadie cruza por detrás.
 - [ ] El trípode **no se toca** entre swings de la misma vista.
 
@@ -84,12 +96,17 @@ Una vista = una sesión = un clip con N swings.
 
 ## F. Transferir
 
-**Un solo camino: AirDrop del iPhone a la Mac, con "Mantener originales".**
+**En iPhone, un solo camino: AirDrop a la Mac, con "Mantener originales".**
 
 - [ ] Fotos → seleccionar los clips → Compartir → AirDrop → la Mac.
 - [ ] Extensión `.MOV`, codec `hevc` (se verifica en G).
 - [ ] **Nunca**: arrastrar desde Fotos (llega a 120 → recomprimido), File →
-      Export (llega a 30), WhatsApp, Telegram, Drive, enlace de iCloud.
+      Export (llega a 30), **WhatsApp como video**, Telegram, Drive, enlace de
+      iCloud.
+- [ ] Android (S22 Ultra): cable desde `DCIM/Camera` es el camino de
+      referencia. **WhatsApp como documento** también llega intacto —medido,
+      informe del 11— y es un camino aparte en `capture-paths.yaml`, con su
+      propio cronómetro.
 
 ## G. Verificar cada clip en la Mac
 
