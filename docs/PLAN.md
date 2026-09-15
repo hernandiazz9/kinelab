@@ -71,6 +71,14 @@ ejemplos, porque los trabajos viejos tienen el top y la escala anteriores.
   en nivel 3 porque una cámara sola no los puede medir; mostrar el ángulo
   verdadero y el proyectado lado a lado no rompe esa regla, la demuestra.
   Nada de esto entra al registro ni a `analysis.json` de un video. Encargo 23.
+- 2026-09-15 · Decidido sobre el 23: la demo se regenera con los ángulos
+  (hecho); el proyectado de los dos giros **se queda** como el estimado por
+  acortamiento, que es justo la definición que `HERENCIA.md` prohíbe portar y
+  acá está para medir cuánto se equivoca, rotulada; `pose3d.json` entra a
+  `CONTRATO.md` con su versión. Pendiente de escribir: el barrido de
+  geometría de cámara (distancia, altura, azimut) con los once ángulos, que
+  es lo que convertiría la tabla de un sujeto en una regla, y el `crf` del
+  exportador, elegido a ojo y nunca medido.
 - 2026-09-15 · Anotado, no cerrado: el +4,4 % residual de la escala (cadena
   desde el tobillo, estatura desde el piso). Se cierra sólo con un punto de
   contacto con el suelo validado contra una verdad que no sea nuestro propio
@@ -136,7 +144,21 @@ ejemplos, porque los trabajos viejos tienen el top y la escala anteriores.
   las manos (obturador contra nuestra recompresión) antes de tocar nada; el
   arreglo del overlay sólo si es nuestro y sólo cuando el 16 libere
   `explore.py`. Pedido de Hernán. Prompt escrito.
-- [en curso] 23 angulos-en-3d — los ángulos verdaderos en el visor 3D del
+- [hecho] 20 por-que-se-ve-borroso — `7f34c34`. **El borrón es el obturador,
+  no nuestra recompresión**: el overlay conserva el 94,1 % del laplaciano del
+  original en la caja de las manos. Ningún cambio de software lo arregla;
+  la salida es más luz o el modo de 240 fps.
+- [hecho] 22 github-y-demo-estatica — `636426a`, `5fb278a`, `c7997da`,
+  `c762bdc`. Repo privado `hernandiazz9/kinelab`; demo de 20,1 MB (`vid1`
+  424 MB → 14,9 MB, ×28,5); el sujeto pasa del 29 % al 56 % del alto.
+- [hecho] 23 angulos-en-3d — `2ed3cb6`, `c291f75`. Once ángulos verdaderos y
+  su proyectado; el codo de atrás desde `face_on` sobre-lee **28,5°** en el
+  address y 57,8° en el peor cuadro, **sin estimador en el medio**: la
+  geometría sola ya pone lo que ADR-007 atribuía al modelo.
+- [hecho] deploy — demo regenerada con los ángulos (`620b61a`) y desplegada:
+  `https://kinelab-qnm5fa60a-hernandiazz9s-projects.vercel.app`. Queda con la
+  protección de Vercel puesta (302 a SSO): la ve Hernán logueado, no un
+  tercero. Hacerla pública es un clic y es decisión suya. — los ángulos verdaderos en el visor 3D del
   mocap, y el valor proyectado al lado: la primera medición propia de cuánto
   se equivoca un ángulo visto desde una cámara, sobre movimiento humano real.
   No entra al registro: es referencia, como la verdad 3D del arnés.
