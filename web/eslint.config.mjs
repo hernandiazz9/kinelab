@@ -11,6 +11,10 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    // El árbol que se sube a Vercel (`kinelab.tools.publicar`): es una copia de
+    // `out/`, ya minificada, y está en `web/.gitignore`. Sin esto, `pnpm lint`
+    // pasa a lintear el bundle y devuelve miles de problemas que no son de nadie.
+    ".vercel/**",
     "next-env.d.ts",
   ]),
 ]);

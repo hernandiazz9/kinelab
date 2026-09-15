@@ -150,6 +150,67 @@ export interface TrabajoFila {
   fps_archivo: number | null;
   cuadros: number | null;
   eventos_frame: Eventos | null;
+  /** Si ese trabajo está publicado a internet, y desde cuándo. Opcionales porque
+   *  el `index.json` de la demo no los trae: ahí no hay backend que publique nada. */
+  publicado?: boolean;
+  publicado_url?: string | null;
+  publicado_en?: string | null;
+}
+
+// --- publicar a internet (sólo en modo local: en demo no hay a quién pedírselo) -----
+
+/** En qué va una publicación (o una baja), tal como la devuelve el backend.
+ *  Exportar, construir el sitio y desplegarlo tardan decenas de segundos: la
+ *  petición vuelve enseguida con esto y la pantalla lo sondea. */
+export interface Publicacion {
+  id: string;
+  accion: "publicar" | "quitar";
+  estado: "corriendo" | "listo" | "error";
+  paso: number;
+  total: number;
+  texto: string;
+  error: string | null;
+  url: string | null;
+  empezado: string;
+  terminado: string | null;
+}
+
+/** `GET /api/publicacion`: qué está publicado y qué está corriendo, de una. */
+export interface EstadoPublicacion {
+  sitio: string;
+  publicados: Record<string, { url: string | null; publicado_en: string | null; despliegue: string | null }>;
+  corriendo: Publicacion | null;
+  ultima: Publicacion | null;
+}
+
+/** Lo que hay que leer antes de publicar. No es un tecnicismo: el video es de una
+ *  persona y esto lo saca de la Mac del entrenador. */
+export const AVISO_PUBLICAR =
+  "Publicar sube ESTE trabajo a internet: el video del swing, la pose cuadro a cuadro, las fotos y todos los" +
+  " datos quedan accesibles para cualquiera que tenga el enlace. No hay contraseña; lo único que hay es que el" +
+  " enlace no está indexado por buscadores. Se puede quitar después, y entonces deja de estar accesible.";
+
+export async function getPublicacion(): Promise<EstadoPublicacion> {
+  if (ES_DEMO) throw new Error(AVISO_DEMO);
+  return leerJson<EstadoPublicacion>("/api/publicacion");
+}
+
+/** Arranca la publicación de un trabajo. Vuelve enseguida: el trabajo de verdad
+ *  (exportar → construir → desplegar) corre en un hilo del backend. */
+export async function publicarTrabajo(id: string): Promise<Publicacion> {
+  return pedir<Publicacion>("POST", `/api/datos/${encodeURIComponent(id)}/publicar`);
+}
+
+/** Lo saca de internet. El trabajo sigue en disco: lo que se va es lo publicado. */
+export async function despublicarTrabajo(id: string): Promise<Publicacion> {
+  return pedir<Publicacion>("DELETE", `/api/datos/${encodeURIComponent(id)}/publicar`);
+}
+
+async function pedir<T>(metodo: string, url: string): Promise<T> {
+  if (ES_DEMO) throw new Error(AVISO_DEMO);
+  const r = await fetch(url, { method: metodo, cache: "no-store" });
+  if (!r.ok) throw new Error(await leerError(r));
+  return (await r.json()) as T;
 }
 
 /** Una métrica del registro en `analysis.json`, con su sextuplo (CONTRATO.md).

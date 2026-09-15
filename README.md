@@ -83,6 +83,28 @@ los que haya. Medido sobre `vid1`: **424 MB → 14,9 MB**, y el golfista pasa de
 ocupar **29,0 %** del alto del cuadro a **56,0 %** (×1,93). Opciones:
 `--recorte sujeto|completo`, `--alto`, `--tramo auto|A-B`, `--margen`, `--crf`.
 
+### Publicar un trabajo, y despublicarlo
+
+El ciclo entero es **un comando por trabajo**, y desde la pantalla es el botón
+«publicar» de su fila, con su confirmación:
+
+```bash
+.venv/bin/python -m kinelab.tools.publicar <id>                    # exporta, construye y despliega
+.venv/bin/python -m kinelab.tools.publicar <id> --quitar           # lo saca de internet
+.venv/bin/python -m kinelab.tools.publicar <id> --solo-construir   # deja todo listo sin desplegar
+```
+
+Cuatro pasos: exporta ese trabajo **sumándolo** a los que ya estaban, anota la
+fecha y el enlace en `data/publicados.json`, construye el estático y lo despliega
+a producción con el CLI de Vercel desde el disco de esta Mac. Tarda ~1 min
+(~15 s de export por clip corto, ~55 s con `vid1`, más el deploy).
+
+**Lo publicado no está en git.** `web/public/demo/` está en `.gitignore`: un
+entrenador que publique veinte swings metería 300 MB en una historia que no se
+borra nunca. Lo que viaja con el repo es el código y **`data/publicados.json`**,
+el registro de qué se mandó afuera, desde cuándo y con qué enlace. Publicar es
+deliberado y uno por uno: subir un video a la pantalla local no publica nada.
+
 El front tiene dos modos, con **una sola** decisión en `web/src/lib/api.ts`:
 
 ```bash
