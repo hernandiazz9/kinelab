@@ -15,7 +15,7 @@ from kinelab.analysis import analyze_take, swing_signals
 from kinelab.contract.validate import validate_analysis
 from kinelab.events.manual import Edit, EventCollisionError, apply_edits
 from kinelab.events.order import sequence_order
-from kinelab.events.primitives import subframe_crossing
+from kinelab.events.primitives import direction_change_farthest, direction_changes, subframe_crossing
 from kinelab.events.segmentation import SegmentationParams, segment_reps
 from kinelab.events.signal import principal_axis
 from kinelab.ingest.__main__ import ingest_clip
@@ -24,7 +24,7 @@ from kinelab.metrics.core import MetricContext, evaluate
 from kinelab.metrics.registry import FPS_MIN_TOL, Metric, Reference, Registry, fps_min_met, judgment_allowed
 from kinelab.perception.gaps import interpolate_gaps
 from kinelab.perception.keypoints import J
-from kinelab.perception.posestore import PoseData, save_pose
+from kinelab.perception.posestore import PoseData, load_pose, save_pose
 from kinelab.tools.golfdb_eval import event_error_stats
 from sports.golf.config import GOLF
 from sports.golf.events import GOLF_SEGMENTATION, GOLF_SPORT_EVENTS, detect_golf_events
@@ -67,6 +67,79 @@ def test_events_are_fps_invariant_in_seconds():
     for ra, rb in zip(a, b):
         for name in ("address", "top", "impact"):
             assert abs(ra[name] / 60.0 - rb[name] / 240.0) <= 2 / 60.0, name
+
+
+# --- el top es el cambio de sentido MÁS LEJANO, no el último (ADR-017, encargo 15) --
+#
+# La regla vieja (ADR-008 tal como estaba en código) tomaba el último cambio de signo
+# de la velocidad de las manos proyectada. Desde `down_the_line` el eje principal queda
+# casi vertical —el movimiento hacia el objetivo cae sobre el eje óptico— y aparece un
+# tercer cambio, el fondo del arco justo antes del impacto, que ganaba por ser el
+# último. El swing sintético no lo reproduce: su arco no vuelve sobre sí mismo. Por eso
+# el caso vive en un swing de mocap real, en `tests/data/` (ver su README).
+
+FIXTURES = REPO / "tests" / "data"
+
+
+def _mocap_rep(nombre: str, view: str) -> dict:
+    """La única repetición del fixture de mocap, detectada de punta a punta."""
+    pose = load_pose(FIXTURES / nombre)
+    fps = float(pose.provenance["fps_real"])
+    sig = swing_signals(pose, fps, cutoff_hz_max=GOLF_SPORT_EVENTS.cutoff_hz_max, view=view)
+    cands, rejected = segment_reps(sig.speed, fps, GOLF_SEGMENTATION)
+    assert len(cands) == 1, (cands, rejected)
+    ev, reason = detect_golf_events(sig, cands[0])
+    assert reason is None, reason
+    axis = principal_axis(sig.hands, ev["address"].frame, ev["impact"].frame)
+    proj = sig.hands @ axis
+    return {"ev": ev, "cambios": direction_changes(proj, before=ev["impact"].frame, after=ev["address"].frame)}
+
+
+def test_top_from_down_the_line_is_the_farthest_change_and_not_the_last():
+    """El mismo swing (mocap CMU 64_01) desde las dos vistas. La verdad 3-D del arnés
+    pone el top en 269 (`events_3d`, `top_far`); desde `face_on` el motor da 270 y
+    desde `down_the_line`, 263. Con la regla del último daba 327: el fondo del arco,
+    a 5 cuadros del impacto, con un downswing de 41,7 ms."""
+    face = _mocap_rep("cmu-64_01-face_on", "face_on")
+    dtl = _mocap_rep("cmu-64_01-down_the_line", "down_the_line")
+    assert face["ev"]["top"].frame == 270, "desde face_on el top no se mueve"
+    assert abs(dtl["ev"]["top"].frame - 263) <= 2, dtl["ev"]["top"].frame
+    assert dtl["ev"]["top"].method == "direction_change_farthest"
+    # Los tres cambios de sentido de `down_the_line`, con el elegido en el medio: el
+    # último está a menos de 10 cuadros del impacto y el primero, pegado al address.
+    assert len(dtl["cambios"]) == 3 and dtl["cambios"][-1] != dtl["ev"]["top"].frame
+    assert dtl["ev"]["impact"].frame - dtl["cambios"][-1] <= 10
+    # Address e impacto no los toca esta regla: siguen donde estaban en el informe del 07.
+    assert (dtl["ev"]["address"].frame, dtl["ev"]["impact"].frame) == (146, 332)
+    assert (face["ev"]["address"].frame, face["ev"]["impact"].frame) == (141, 329)
+    # Y el downswing deja de ser una ficción de 5 cuadros: la verdad 3-D dice 508,3 ms.
+    ms = lambda a, b: (b - a) / 120.0 * 1000.0  # noqa: E731
+    assert abs(ms(dtl["ev"]["top"].frame, dtl["ev"]["impact"].frame) - 508.3) < 100.0
+
+
+def test_farthest_direction_change_is_neither_the_last_nor_the_nearest():
+    """Tres cambios de sentido con excursiones conocidas: el más lejano (10) no es el
+    último (30) ni el más cercano (20). Los tres bugs —quedarse con el último, con el
+    primero o con el más cercano— dan cuadros distintos y rompen este test."""
+    x = np.concatenate([np.linspace(0, 10, 11), np.linspace(10, 2, 11)[1:], np.linspace(2, 6, 11)[1:], np.linspace(6, 0, 11)[1:]])
+    exc = np.abs(x - x[0])
+    assert direction_changes(x, before=40, after=0) == [10, 20, 30]
+    assert [round(float(exc[k]), 1) for k in (10, 20, 30)] == [10.0, 2.0, 6.0]
+    assert direction_change_farthest(x, exc, before=40, after=0) == 10
+    # Sin ningún cambio de sentido (monótona) no hay top, y se dice: nunca un cuadro forzado.
+    assert direction_change_farthest(np.arange(41.0), exc, before=40, after=0) is None
+
+
+def test_a_reversal_in_the_first_frame_is_not_a_top():
+    """El segmento que sale del propio `after` queda afuera: si contara, el top podría
+    caer en el cuadro del address y el backswing duraría 0 ms. Medido en vid1.mp4: el
+    segundo candidato (un movimiento que no es un swing) producía address 862 = top 862
+    e inventaba una repetición que antes se rechazaba con `sin_top`."""
+    x = np.concatenate([[0.0, 0.1], np.linspace(0.1, -9.0, 20)[1:], np.linspace(-9.0, -2.0, 11)[1:]])
+    v = np.gradient(x)
+    assert v[0] > 0 > v[1], "la velocidad se invierte entre el cuadro 0 y el 1"
+    assert direction_changes(x, before=30, after=0) == [20], "y aun así el 0 no es un cambio de sentido"
+    assert direction_change_farthest(x, np.abs(x - x[0]), before=30, after=0) == 20
 
 
 def test_still_and_walking_give_zero_reps():

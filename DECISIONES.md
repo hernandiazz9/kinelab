@@ -367,3 +367,80 @@ camino declarado; como camino calibrado, sólo con cronómetro.
 
 **Consecuencia.** Invariante 2 queda: "calibrada con cronómetro, o declarada
 sin calibrar con procedencia `sin_verificar` y sin juicio (ADR-016)".
+
+---
+
+## ADR-017 · El top es el cambio de sentido más lejano, no el último
+
+**Decisión.** Entre address e impacto, el top es el cambio de sentido de la
+velocidad de las manos proyectada sobre el eje principal de la trayectoria en
+el que las manos están **más lejos** de su posición de address —distancia en el
+plano de imagen—, no el último. Es la misma distancia cuyo **mínimo** define el
+impacto: una sola señal, dos eventos. Vale en las dos vistas. En código:
+`kinelab.events.primitives.direction_change_farthest`, y el evento lo dice en
+su `method` (`direction_change_farthest`). Reabre la parte de ADR-008 que
+elegía el último; todo lo demás de ADR-008 sigue en pie.
+
+**Por qué.** [aquí] El mismo swing de mocap (CMU 64_01, 448 cuadros a 120 fps)
+proyectado con la cámara virtual del arnés desde las dos vistas, con la verdad
+3-D al lado (`truth/kinelab_truth/mocap.py`, `events_3d`, criterio `top_far`):
+
+| | cambios de sentido entre address e impacto | último | más lejano | verdad 3-D |
+|---|---|---|---|---|
+| 64_01 `face_on` | 144 (1 px), **270** (795 px) | 270 | 270 | 269 |
+| 64_01 `down_the_line` | 158 (5 px), **263** (756 px), 327 (89 px) | 327 | **263** | 269 |
+| 64_02 `face_on` | 181 (4 px), **305** (773 px) | 305 | 305 | 306 |
+| 64_02 `down_the_line` | **304** (781 px), 373 (87 px) | 373 | **304** | 306 |
+
+Desde `face_on` el eje principal está a ~63° de la vertical y hay dos cambios:
+el último **es** el más lejano y las dos reglas coinciden. Desde
+`down_the_line` el movimiento hacia el objetivo cae sobre el eje óptico, el
+eje queda casi vertical, y aparece un tercero: el fondo del arco de bajada,
+justo antes del impacto, a 89 px del address contra 756 px del top. Ganaba por
+ser el último, y el downswing salía de **41,7 ms** (5 cuadros) en 64_01 y
+**25,0 ms** en 64_02. Con la regla nueva el error del top desde esa vista pasa
+de **+58 y +67 cuadros a −6 y −2**, y las duraciones dejan de ser ficción:
+backswing 975,0 / downswing 575,0 ms contra los 1033,3 / 508,3 de la verdad
+3-D. **El top estaba en la señal; lo perdía la regla.**
+
+La versión continua de la definición de GolfDB —*"el instante en que el palo
+cambia de dirección"*— es "se invierte el sentido **en lo más alto del
+recorrido**", no "se invierte por última vez". Y coincide con `top_far`, el
+criterio que el arnés ya usaba sobre las curvas 3-D desde el informe del 07.
+
+**Lo que la regla no arregla, medido.** En los cuatro clips reales del Galaxy
+S22 (todos `face_on`) el top se mueve 4–6 cuadros más temprano en tres de
+ellos. La causa no es la regla: la señal es el **centro de las dos muñecas**, y
+en el top la muñeca izquierda se pierde (confianza 0,34–0,54, saltos de hasta
+300 px entre cuadros). Con la muñeca derecha sola —la que el modelo nunca
+pierde en estos clips— hay **un solo** cambio de sentido y las dos reglas dan
+**el mismo cuadro** en los cuatro: `cortado.mp4` 36, `20260907_170638.mp4` 139,
+`vid1.mp4` 722, `vid2.mp4` 114. Contra esa referencia, la regla vieja erraba
++3 / +2 / +4 / +1 cuadros y la nueva −3 / −2 / **0** / +1. Donde la señal está
+limpia las dos reglas coinciden; donde no, ninguna de las dos es una medición.
+La calidad de la señal de manos es problema aparte y sigue abierto.
+
+**Consecuencias.**
+
+- La primitiva vieja (`direction_change`, "el último") **no queda en el
+  motor**: se reemplaza por `direction_changes`, que enumera, más el selector.
+  Una regla reabierta que sigue disponible vuelve sola.
+- El primer segmento —de `after` a `after + 1`— no cuenta como cambio de
+  sentido: devolvería el propio cuadro del address. [aquí] Sin ese borde, el
+  segundo candidato de `vid1.mp4` (un movimiento que no es un swing) inventaba
+  una repetición con top = address = 862 y backswing de 0 ms, donde antes se
+  rechazaba con `sin_top`.
+- Los `analysis.json` ya escritos **no se recalculan solos** (invariante 18).
+  Re-analizar una toma los reescribe desde `pose.npz`, sin volver a correr el
+  modelo (invariante 1), y conserva el anterior con su `engine_version`.
+- Toda métrica anclada al top se mueve con él: medido en los clips reales,
+  1,7–5,9 cm en los desplazamientos de pelvis, tórax y cabeza en el top. El
+  top es el cero de esas métricas tanto como el address.
+- **Queda anotado y sin resolver**: ADR-008 dice que el top se detecta "por
+  inflexión de la segunda derivada de la velocidad filtrada"; el código detecta
+  el **cambio de sentido** (cero de la velocidad proyectada), que es lo que dice
+  la definición de GolfDB. ADR-017 no toca eso: sólo elige cuál de los cambios
+  de sentido es el top. La primitiva `d2_inflection` existe y hoy no la usa
+  ningún evento.
+- El error del top contra GolfDB (ESPECIFICACION 2.5) sigue sin medirse: dos
+  trials de un sujeto de mocap no son una tabla.

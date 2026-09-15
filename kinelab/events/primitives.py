@@ -169,20 +169,48 @@ def stable_window_start(speed: np.ndarray, fps: float, *, max_speed: float, min_
     return None
 
 
-def direction_change(pos_axis: np.ndarray, *, before: int, after: int) -> int | None:
-    """Último cuadro en `(after, before)` donde la velocidad 1-D cambia de signo:
-    el instante en que el movimiento se invierte. `None` si es monótono."""
+def direction_changes(pos_axis: np.ndarray, *, before: int, after: int) -> list[int]:
+    """Todos los cuadros de `(after, before)` donde la velocidad 1-D cambia de signo:
+    los instantes en que el movimiento se invierte, en orden creciente. De cada
+    cambio se reporta el cuadro más cercano a la vuelta (el de |v| menor).
+
+    El primer segmento —el que va de `after` a `after + 1`— queda afuera a
+    propósito: un cambio de sentido ahí devolvería el propio `after` (en golf, un
+    top en el cuadro del address, con backswing de 0 ms). Los extremos del
+    intervalo son eventos, no candidatos.
+    """
     x = np.asarray(pos_axis, dtype=float)
     if before - after < 3:
-        return None
+        return []
     v = np.gradient(x)
-    for i in range(int(before) - 1, int(after) + 1, -1):
+    out: list[int] = []
+    for i in range(int(after) + 2, int(before)):
         a, b = v[i - 1], v[i]
         if not (np.isfinite(a) and np.isfinite(b)) or a == 0.0:
             continue
         if a * b <= 0:
-            return i - 1 if abs(a) < abs(b) else i
-    return None
+            k = i - 1 if abs(a) < abs(b) else i
+            if not out or out[-1] != k:
+                out.append(k)
+    return out
+
+
+def direction_change_farthest(pos_axis: np.ndarray, excursion: np.ndarray, *, before: int, after: int) -> int | None:
+    """El cambio de signo de **mayor excursión** entre `after` y `before` (ADR-017).
+
+    `pos_axis` dice DÓNDE se invierte el movimiento; `excursion` dice cuánto se
+    había alejado el punto de su posición de referencia en cada cuadro, y decide
+    cuál de las inversiones es la que interesa. No es el último cambio: en una
+    trayectoria que vuelve sobre sí misma (un swing visto desde atrás) el último
+    es el fondo del arco de vuelta, a centímetros del punto de partida.
+
+    `None` si no hay ningún cambio de signo, o si ninguno tiene excursión finita.
+    """
+    e = np.asarray(excursion, dtype=float)
+    changes = [k for k in direction_changes(pos_axis, before=before, after=after) if np.isfinite(e[k])]
+    if not changes:
+        return None
+    return max(changes, key=lambda k: float(e[k]))
 
 
 def peak_window(criterion: np.ndarray, *, peak: int, radius: int, valid: np.ndarray | None = None) -> int:
