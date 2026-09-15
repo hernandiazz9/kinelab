@@ -11,6 +11,7 @@ from __future__ import annotations
 import numpy as np
 from scipy.signal import butter, filtfilt, savgol_filter
 
+from kinelab.perception.gaps import interpolate_gaps
 from kinelab.perception.keypoints import H
 
 
@@ -70,13 +71,45 @@ def butterworth_lowpass(x: np.ndarray, fps: float, *, cutoff_hz: float, order: i
     return y
 
 
-def hands_center(kpts: np.ndarray) -> np.ndarray:
-    """Centro de las dos muñecas `(T,2)`; si falta una, la otra; NaN si faltan las dos.
-    Las dos manos van juntas en el grip: independiente de la lateralidad."""
+def hands_center(kpts: np.ndarray, scores: np.ndarray | None = None, *, min_score: float = 0.0, max_gap: int = 5) -> np.ndarray:
+    """Centro de las dos muñecas `(T,2)`, **pesado por la confianza de cada muñeca en
+    cada cuadro**. Las dos manos van juntas en el grip: independiente de la lateralidad.
+
+    - `scores` `(T,J)` son los scores crudos del modelo (`pose.npz`). Sin ellos, las
+      dos muñecas pesan igual, que es lo que hacía esta función antes.
+    - `min_score`: una muñeca por debajo de ese score **no entra** en el cuadro. El
+      umbral es del deporte (en golf, `GolfEventParams.wrist_score_min`), no del
+      motor; el default 0,0 es "sin umbral".
+    - Si las dos muñecas quedan afuera (o faltan) en un cuadro, el punto queda `NaN`
+      y lo rellena el **mismo relleno acotado de la percepción**
+      (`interpolate_gaps`, rachas ≤ `max_gap`, nunca extrapolando bordes): un hueco
+      corto se interpola, uno largo se queda en `NaN`. Nunca una invención.
+
+    Por qué (medido, informe del encargo 15 y ADR-017 §"Lo que la regla no arregla").
+    En los dos clips del 7/9 el modelo **pierde la muñeca izquierda justo en el top**
+    —en `cortado.mp4`, cuadros 32–38: score 0,35 · 0,36 · 0,40 · 0,40 · 0,43 · 0,51 ·
+    0,39, con la x saltando 414 → 435 → 356 → 672 → 486 → 491 → 497 → 331 px— mientras
+    la derecha va suave y con score ≥ 0,53 en todo el clip. Un promedio a dos manos
+    con peso igual hereda entero ese salto de 300 px, y el top —que es un cambio de
+    sentido de esta misma señal— se mueve con él: contra la muñeca derecha sola, el
+    error del top era de −3, −2, 0 y +1 cuadros en los cuatro clips reales. Pesar por
+    confianza y descartar lo que el modelo declara malo es medir con la muñeca que el
+    modelo ve, sin elegirla a mano ni depender de la lateralidad.
+    """
     kpts = np.asarray(kpts, dtype=float)
     pair = np.stack([kpts[:, H.LEFT_WRIST], kpts[:, H.RIGHT_WRIST]], axis=1)  # (T,2,2)
-    with np.errstate(invalid="ignore"):
-        return np.nanmean(pair, axis=1)
+    if scores is None:
+        w = np.ones(pair.shape[:2], dtype=float)
+    else:
+        s = np.asarray(scores, dtype=float)
+        w = np.stack([s[:, H.LEFT_WRIST], s[:, H.RIGHT_WRIST]], axis=1)  # (T,2)
+        w = np.where(np.isfinite(w) & (w >= float(min_score)), w, 0.0)
+    w = np.where(np.isfinite(pair).all(axis=2), w, 0.0)
+    total = w.sum(axis=1)
+    num = np.einsum("tk,tkc->tc", w, np.nan_to_num(pair, nan=0.0))
+    with np.errstate(invalid="ignore", divide="ignore"):
+        out = np.where(total[:, None] > 0, num / np.where(total > 0, total, 1.0)[:, None], np.nan)
+    return interpolate_gaps(out, max_gap)
 
 
 def speed(positions: np.ndarray, fps: float, scale: np.ndarray | float) -> np.ndarray:

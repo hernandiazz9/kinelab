@@ -195,6 +195,55 @@ def direction_changes(pos_axis: np.ndarray, *, before: int, after: int) -> list[
     return out
 
 
+@dataclass
+class FarthestChange:
+    """El cambio de sentido elegido por ADR-017, con los que casi le empatan.
+
+    `tol_frames` es la banda del evento: 1 cuando la elección es clara, y la
+    distancia en cuadros al rival más lejano cuando hay rivales — los candidatos
+    cuya excursión está a menos de `margin` de la del ganador."""
+
+    frame: int | None = None
+    excursion: float | None = None
+    candidates: tuple[int, ...] = ()
+    rivals: tuple[int, ...] = ()
+    margin: float | None = None
+    tol_frames: int = 1
+
+
+def direction_change_farthest_band(pos_axis: np.ndarray, excursion: np.ndarray, *, before: int, after: int, margin: float | None = None) -> FarthestChange:
+    """`direction_change_farthest` más la banda: cuánto se puede mover el evento
+    porque otro candidato está a tiro de la excursión que lo gana.
+
+    La regla de ADR-017 no se toca: gana el cambio de sentido de **mayor
+    excursión**. Lo que se agrega es decir cuándo esa ventaja no significa nada.
+    `margin` es el ancho por debajo del cual dos excursiones no se distinguen —
+    en golf, dos veces el ruido en px que el propio clip estima—; los candidatos
+    que caen dentro son `rivals`, y `tol_frames` es la distancia en cuadros al
+    más lejano de ellos, mínimo 1.
+
+    Por qué (medido, informe del encargo 15): en `vid1.mp4` los tres cambios de
+    sentido del centro de manos están a 590,3 / 587,0 / 587,7 px del address —3,3
+    px entre el primero y el último— y el ruido por cuadro que el motor estima en
+    ese clip es 2,27 px. Gana el tercero por 2,6 px, poco más de un σ: la regla
+    elegía dentro del ruido y el evento salía con `tol_frames` 1, como si no
+    hubiera duda. Con la banda, la duda viaja en el número (invariante 8).
+
+    `margin` en `None` o no positivo = sin banda: `tol_frames` 1, `rivals` vacío.
+    """
+    e = np.asarray(excursion, dtype=float)
+    changes = tuple(k for k in direction_changes(pos_axis, before=before, after=after) if np.isfinite(e[k]))
+    if not changes:
+        return FarthestChange(margin=margin)
+    win = max(changes, key=lambda k: float(e[k]))
+    best = float(e[win])
+    rivals: tuple[int, ...] = ()
+    if margin is not None and np.isfinite(margin) and margin > 0:
+        rivals = tuple(k for k in changes if k != win and best - float(e[k]) < float(margin))
+    tol = max([1] + [abs(int(k) - int(win)) for k in rivals])
+    return FarthestChange(frame=int(win), excursion=best, candidates=changes, rivals=rivals, margin=margin, tol_frames=tol)
+
+
 def direction_change_farthest(pos_axis: np.ndarray, excursion: np.ndarray, *, before: int, after: int) -> int | None:
     """El cambio de signo de **mayor excursión** entre `after` y `before` (ADR-017).
 
@@ -206,11 +255,23 @@ def direction_change_farthest(pos_axis: np.ndarray, excursion: np.ndarray, *, be
 
     `None` si no hay ningún cambio de signo, o si ninguno tiene excursión finita.
     """
-    e = np.asarray(excursion, dtype=float)
-    changes = [k for k in direction_changes(pos_axis, before=before, after=after) if np.isfinite(e[k])]
-    if not changes:
+    return direction_change_farthest_band(pos_axis, excursion, before=before, after=after).frame
+
+
+def still_noise_px(x: np.ndarray, *, start: int, end: int) -> float | None:
+    """σ de los residuos de una recta ajustada a `x[start:end]` (ambos inclusive).
+
+    El ruido por cuadro de una señal 1-D, medido donde el sujeto está quieto. Se
+    ajusta una recta y no una constante porque una deriva lenta del jugador
+    —acomodarse en el address— es movimiento, no ruido, y contarla como ruido
+    infla la banda. `None` si no hay al menos tres valores finitos.
+    """
+    seg = np.asarray(x, dtype=float)[int(start) : int(end) + 1]
+    seg = seg[np.isfinite(seg)]
+    if seg.size < 3:
         return None
-    return max(changes, key=lambda k: float(e[k]))
+    t = np.arange(seg.size, dtype=float)
+    return float(np.std(seg - np.polyval(np.polyfit(t, seg, 1), t), ddof=1))
 
 
 def peak_window(criterion: np.ndarray, *, peak: int, radius: int, valid: np.ndarray | None = None) -> int:
