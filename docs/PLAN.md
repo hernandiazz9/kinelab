@@ -86,6 +86,23 @@ ejemplos, porque los trabajos viejos tienen el top y la escala anteriores.
   qué salió afuera. Motivo: un entrenador que publique veinte swings metería
   300 MB en una historia de git que no se borra, y los videos son de
   personas. Encargo 25.
+- 2026-09-15 · **`duration_plausible` no se baja: se filma más largo.** Con
+  factor 8, los 3 s reales son 24 s de grabación, y filmar más es gratis y da
+  mejor material. Bajar el umbral sería cambiar un número de ojo por otro. A
+  futuro, lo correcto es que el mínimo sea del **gesto** y no de la toma, que
+  es lo que el chequeo quiere decir y necesita pose para evaluarse: queda
+  anotado como pendiente, no como encargo.
+- 2026-09-15 · Por arreglar en el 16, que es quien tiene `analysis.py`: con
+  un camino **calibrado**, `warnings[1]` sigue diciendo "camino declarado sin
+  cronómetro… fps asumidos". Es falso: está medido. Una línea
+  (`kinelab/analysis.py:195` usa la nota de declarado para todo lo que no sea
+  `medido_aqui`); lo correcto es decir que la procedencia no se verificó
+  porque el gate no corrió.
+- 2026-09-15 · El sesgo de **−11,3 ms** entre el impacto del motor y el
+  contacto con la pelota es n = 1. Si se repite en otros swings, el
+  sub-cuadro necesita un campo de **sesgo contra la pelota** además de su
+  propia precisión: hoy declara ±1,3 ms, ocho veces menos que el sesgo.
+  Pendiente de más material, no de código.
 - 2026-09-15 · Anotado, no cerrado: el +4,4 % residual de la escala (cadena
   desde el tobillo, estatura desde el piso). Se cierra sólo con un punto de
   contacto con el suelo validado contra una verdad que no sea nuestro propio
@@ -176,11 +193,16 @@ ejemplos, porque los trabajos viejos tienen el top y la escala anteriores.
   de demo (recorte al sujeto, video liviano, JPEG, transformación afín
   declarada) y modo estático del front para desplegar en Vercel. El motor no
   se despliega: es un visor de resultados ya calculados. Prompt escrito.
-- [en curso] 24 cronometro-y-swing-lento — `~/Desktop/Cortado-lenta.mp4`: un
-  swing en cámara lenta **con el cronómetro filmado en el mismo cuadro**
-  (se lee 00:05.27 en el primer cuadro). Calibrar el camino, pasar el gate
-  por primera vez y ver si alguna métrica alcanza `judgment_allowed: true`.
-  Es el desbloqueo de la Fase 0.
+- [hecho] 24 cronometro-y-swing-lento — `1b0a640`. **240,15 fps ± 0,60,
+  uniforme, estirado ×8,0005**: la primera tasa de captura medida del
+  proyecto y el primer camino calibrado. El gate pasa 8 de 9 y falla sólo
+  `duration_plausible` (2,49 s reales contra 3). Diez métricas darían
+  `judgment_allowed: true` si pasara. Hallazgo nuevo: el motor pone el
+  impacto **11,3 ms antes** del contacto real con la pelota, invisible a
+  60 fps.
+- [en curso] 26 lo-que-enseno-el-cronometro — las nueve lecciones de filmación
+  a la guía y a `CAPTURA.md`, la tasa del segundo clip como verificación
+  independiente, y el test que fija el camino calibrado. Prompt escrito.
 - [en curso] 25 publicar-un-trabajo — botón «publicar» por trabajo en la
   pantalla, con confirmación y con «quitar de internet»; los datos publicados
   salen de git y el sitio se despliega desde el disco. Publicar es deliberado
