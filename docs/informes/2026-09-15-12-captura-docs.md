@@ -35,22 +35,36 @@ de `service/` que caducaba por fecha. Sólo documentos y un test; ni motor, ni
 - **`tests/test_service.py`**: la fecha del ejemplo de
   `test_datos_lista_un_ejemplo_de_otro_proceso` es ahora `now + 1 min`, no
   `"2026-09-14T12:00:00+00:00"`. Dos líneas y un `import datetime as dt`.
+- **Un segundo test del mismo archivo, con la misma clase de bug, se puso rojo
+  mientras corría esta sesión y lo arreglé.**
+  `test_datos_analysis_trae_las_metricas_con_su_razon` quemaba
+  `assert len(metricas) == 12`. La sesión del 13 le dio vistas a las dos
+  métricas de rodilla en `sports/golf/mdc.yaml` (`_m()` mata la métrica cuando
+  la fila del arnés no tiene `views`), el registro pasó de 12 a 14 y el test de
+  `service/` se puso rojo sin que `service/` cambiara. Ahora afirma
+  `set(metricas) == set(REGISTRY.ids())`: lo que el test quería decir, más
+  fuerte que contar, y verde con 12 y con 14. El archivo es mío por el prompt,
+  así que la sesión del 13 no podía arreglarlo.
 
 Commits: ver al cierre.
 
 ## Probado
 
-- **`.venv/bin/pytest -q tests/test_service.py`: 55 en verde, 23,0 s.** Antes
-  de tocarlo: 54 verdes y 1 rojo
+- **`.venv/bin/pytest -q tests/test_service.py`: 55 en verde, 25,7 s.** Al
+  empezar: 54 verdes y 1 rojo
   (`test_datos_lista_un_ejemplo_de_otro_proceso`,
   `assert ['subida', 'ejemplo'] == ['ejemplo', 'subida']`). Reproducido en rojo
-  primero, arreglado después.
-- **Suite entera del motor: 264 en verde, 40,6 s.** Arnés (`truth/`): **13 en
+  primero, arreglado después. A mitad de sesión apareció el segundo rojo
+  (`assert 14 == 12`), causado por el `mdc.yaml` sin commitear del 13 y no por
+  nada mío; arreglado también, en el mismo archivo.
+- **Suite entera del motor: 272 en verde, 53,2 s** (eran 264 una hora antes: las
+  sesiones en paralelo fueron agregando tests). Arnés (`truth/`): **13 en
   verde**. Los dos números incluyen trabajo sin commitear de las sesiones 13,
-  14 y 15, que estaban corriendo en paralelo sobre `kinelab/metrics/core.py`,
-  `kinelab/events/primitives.py`, `sports/golf/events.py`, `tests/test_fase2.py`
-  y `truth/`. Lo único que toqué yo de código es el test de arriba, y su archivo
-  no lo tocó nadie más (verificado con `git diff tests/test_service.py`).
+  14 y 15, que estaban corriendo sobre `kinelab/metrics/core.py`,
+  `kinelab/events/primitives.py`, `sports/golf/events.py`, `sports/golf/mdc.yaml`,
+  `tests/test_fase2.py` y `truth/`. Lo único que toqué yo de código es
+  `tests/test_service.py`, y ese archivo no lo tocó nadie más (verificado con
+  `git diff`).
 - **Los tamaños de la tabla de presupuesto los medí acá**, con `ffprobe` sobre
   los dos clips reales, porque el 11 no los había puesto en MB:
 
@@ -128,8 +142,10 @@ Nada de front. Dos cosas:
 ```bash
 .venv/bin/pytest -q tests/test_service.py
 ```
-55 en verde. Antes de este encargo daba 1 rojo, y el rojo volvía solo cada día
-que pasaba.
+55 en verde. Antes de este encargo daba 1 rojo que volvía solo cada día que
+pasaba, y durante la sesión apareció un segundo rojo por una métrica nueva del
+arnés. Los dos eran números quemados en el test; los dos están arreglados
+afirmando contra algo que se mueve solo (la hora, el registro).
 
 Y lo otro es leer `docs/filmacion-s22.md` con ojos de quien va a filmar: es la
 hoja que se le manda a esa persona. Lo que hay que mirar, en orden: (1) que el

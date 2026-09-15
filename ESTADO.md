@@ -60,14 +60,22 @@ tenían trabajo sin commitear en el árbol.
   `tests/test_service.py::test_datos_lista_un_ejemplo_de_otro_proceso` escribe
   la fecha del ejemplo como `now + 1 min` en vez de
   `"2026-09-14T12:00:00+00:00"`.
+- **Un segundo test del mismo archivo, con la misma clase de bug, arreglado
+  mientras corría la sesión.** `test_datos_analysis_trae_las_metricas_con_su_razon`
+  quemaba `assert len(metricas) == 12`; cuando la sesión del 13 le dio vistas a
+  las dos métricas de rodilla en `sports/golf/mdc.yaml`, el registro pasó a 14 y
+  el test de `service/` se puso rojo sin que `service/` cambiara. Ahora compara
+  `set(metricas) == set(REGISTRY.ids())`, que es lo que el test quería afirmar
+  —están todas, con valor o con razón— y no depende de cuántas haya.
 
 ### Medido
 
-- **`tests/test_service.py`: 55 en verde** (23,0 s). Antes: 54 verdes, 1 rojo,
-  reproducido primero en rojo. **Motor entero: 264 en verde** (40,6 s). **Arnés:
-  13 en verde.** Los dos últimos números incluyen el trabajo sin commitear de
-  las sesiones 13, 14 y 15; el único archivo de código que toqué es el test, y
-  nadie más lo tocó.
+- **`tests/test_service.py`: 55 en verde** (25,7 s). Al empezar: 54 verdes y 1
+  rojo (el de la fecha), reproducido primero en rojo. **Motor entero: 272 en
+  verde** (53,2 s; eran 264 una hora antes — las sesiones en paralelo agregaron
+  tests mientras tanto). **Arnés: 13 en verde.** Los dos últimos números
+  incluyen trabajo sin commitear de las sesiones 13, 14 y 15; el único archivo
+  de código que toqué es `tests/test_service.py`, y nadie más lo tocó.
 - **Los tamaños del presupuesto, medidos acá con `ffprobe`**: `vid1.mp4` (UHD 60
   HEVC) 43,9 Mb/s de contenedor → 165 MB por 30 s; `20260907_170638.mp4`
   (FHD 30 H.264) 18,2 Mb/s → 68 MB.
