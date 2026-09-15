@@ -3,6 +3,124 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 15 de septiembre de 2026 — encargo 15: el top es el cambio de sentido más lejano (ADR-017)
+
+Prompt: `docs/prompts/15-top-desde-down-the-line.md`. Informe:
+`docs/informes/2026-09-15-15-top-desde-down-the-line.md`. Commits `0f8f18e`
+(regla, tests, fixture y ADR-017) y el de cierre con `ESTADO.md` y el informe.
+Corrió en paralelo con el 12 (`CAPTURA.md`, `docs/`, `tests/test_service.py`,
+ya commiteado), el 13 (`truth/`, `sports/golf/mdc.yaml`) y el 14
+(`truth/kinelab_truth/mocap.py`, `kinelab/metrics/core.py`).
+
+### Qué existe ahora
+
+- **ADR-017 en `DECISIONES.md`**, citando ADR-008: entre address e impacto, el
+  top es el cambio de sentido de la velocidad proyectada de las manos en el que
+  **están más lejos** de su posición de address (distancia en el plano de
+  imagen), no el último.
+- **`kinelab/events/primitives.py`**: `direction_change` (el último) se parte en
+  `direction_changes`, que enumera, y `direction_change_farthest`, que elige. La
+  vieja **no queda en el motor**. El primer segmento —de `after` a `after + 1`—
+  no cuenta como cambio de sentido: devolvía el propio cuadro del address.
+- **`sports/golf/events.py`**: el top usa el selector nuevo con la excursión =
+  la distancia de las manos al address, **la misma señal cuyo mínimo ya elegía
+  el impacto**. El `method` del evento dice `direction_change_farthest`.
+- **`tests/data/`** (nuevo, 184 KB): el `pose.npz` del mocap CMU 64_01 en las
+  dos vistas, con `README.md` (sha256, la atribución textual de CMU y el comando
+  para regenerarlo). Es un archivo y no se genera en el test porque
+  `kinelab_truth` vive en `truth/`, con su propio entorno a propósito
+  (invariante 14).
+- Tres tests nuevos en `tests/test_fase2.py`: el mocap desde las dos vistas, un
+  caso construido con tres cambios de sentido donde el último no es el más
+  lejano, y el borde del primer cuadro.
+
+### Medido
+
+**Mocap CMU, 120 fps, contra la verdad 3-D del propio mocap** (`events_3d`,
+criterio `top_far`, que no pasa por la cámara):
+
+| trial · vista | address | top antes | **después** | verdad 3-D | impacto | backswing (ms) | downswing (ms) |
+|---|---|---|---|---|---|---|---|
+| 64_01 `face_on` | 141 | 270 | **270** | 269 | 329 | 1075,0 | 491,7 |
+| 64_01 `down_the_line` | 146 | 327 | **263** | 269 | 332 | 1508,3 → **975,0** | 41,7 → **575,0** |
+| 64_02 `face_on` | 172 | 305 | **305** | 306 | 373 | 1108,3 | 566,7 |
+| 64_02 `down_the_line` | 196 | 373 | **304** | 306 | 376 | 1475,0 → **900,0** | 25,0 → **600,0** |
+
+Verdad 3-D de las duraciones: 1033,3 / 508,3 ms (64_01) y 1033,3 / 558,3
+(64_02). **Desde `down_the_line` el error del top pasa de +58 y +67 cuadros a
+−6 y −2**; desde `face_on` no se mueve ni un cuadro.
+
+**Los cuatro clips reales del S22, todos `face_on`**: `cortado.mp4` 39 → **33**,
+`20260907_170638.mp4` 141 → **137**, `vid1.mp4` 726 → **722**, `vid2.mp4` 115 →
+**115**; `vid3.mp4` sigue con 0 repeticiones. Address e impacto, iguales.
+
+**Tres de los cuatro se movieron y la causa no es la regla**: la señal es el
+centro de las dos muñecas y en el top la izquierda se pierde (confianza
+0,34–0,54, saltos de hasta 300 px entre cuadros). Con la muñeca **derecha**
+sola —limpia, confianza ≥ 0,53— hay **un solo** cambio de sentido y las dos
+reglas dan el mismo cuadro en los cuatro clips: 36, 139, 722, 114. Contra esa
+referencia, la regla vieja erraba +3 / +2 / +4 / +1 y la nueva −3 / −2 / **0** /
++1.
+
+**Lo anclado al top se mueve con él** (altura declarada 1,75 m en los cuatro):
+`pelvis_sway_top_cm` 0,7 → −5,2 en `cortado` (5,9 cm, contra un MDC de 2,87),
+−0,7 → −4,6 en el original, −1,5 → −3,5 en vid1; `tempo_ratio` de vid1, 3,6 →
+2,63. Las duraciones siguen en `null` en los cuatro (`fps_min` 120) y ninguna
+métrica quedó con `judgment_allowed` verdadero.
+
+**Suite del motor: 264 en verde** al commitear la regla (261 + 3 nuevos) y
+**272** al cerrar, con el trabajo sin commitear del 12, 13 y 14 adentro; arnés
+**29** (lo amplía el 13, no se tocó acá). Los tres bugs inyectados —elegir el
+más cercano, elegir el último, incluir el primer segmento— ponen en rojo 2, 2 y
+1 test.
+
+**De punta a punta con el CLI**, `datos` sobre los cuatro clips, con su camino
+declarado: `cortado.mp4` top 1,100 s (cuadro 33, backswing 866,7 / downswing
+366,7 ms, tempo 2,36); `20260907_170638.mp4` top 4,567 s (137, 866,7 / 333,4,
+tempo 2,6); `vid1.mp4` top 12,028 s (722, 833,0 / 316,5, tempo 2,63, **una sola
+repetición**); `vid2.mp4` top 1,916 s (115, sin cambios). Correr el modelo de
+nuevo sobre cada clip devuelve exactamente los mismos cuadros que el
+re-análisis desde el `pose.npz` guardado.
+
+**En vid1 la elección es frágil**: los tres cambios de sentido están a 590,3 /
+587,0 / 587,7 px del address —3,3 px entre el primero y el último— y el ruido
+por cuadro que el propio motor estima en ese clip es **2,27 px**. Gana el 722
+por 2,6 px. No hay regla de empate para el top; queda como pregunta en el
+informe.
+
+### Qué falta o no se probó
+
+- **La señal de manos es lo que limita el top en `face_on`, no la regla**
+  (arriba). Un `hands_center` pesado por confianza cambiaría los cuatro clips
+  reales — y también el address y el impacto, que salen de la misma señal. El
+  prompt prohibía tocarlos: **decisión del orquestador**.
+- **ADR-008 dice "inflexión de la segunda derivada"; el código detecta el cambio
+  de sentido** (cero de la velocidad proyectada), que es lo que dice la
+  definición de GolfDB. Anotado en ADR-017, sin resolver. `d2_inflection` existe
+  en el motor y hoy no la usa ningún evento.
+- **El error del top sigue sin medirse contra GolfDB** (ESPECIFICACION 2.5).
+- **`data/examples/analysis.example.json` quedó con `"method":
+  "direction_change"`** en sus tres eventos top. Es de `data/examples/`, que
+  toca el encargo 14: no se editó. El schema no valida el contenido de `method`,
+  así que no rompe ningún test.
+- **Las tomas ya analizadas conservan su top viejo** hasta que se re-analicen
+  (invariante 18): las nueve subidas de `data/exploracion/` del 12 al 14/9 y los
+  dos ejemplos de mocap del encargo 07 — el de `down_the_line` con el top en
+  327, justo el caso que este encargo arregla. No se rehicieron porque el
+  ejemplo lo escribe `kinelab_truth.mocap`, que está editando el encargo 14. Los
+  cuatro clips reales sí se rehicieron.
+- El front no se abrió ni se tocó `web/` ni `service/` (regla de trabajo).
+
+### Desviaciones
+
+- Ninguna del contrato: `events[].top` conserva su forma y `method` es un
+  string libre en el schema.
+- Del prompt, una: además de la regla hubo que fijar el **borde del primer
+  segmento**, que no estaba en el pedido. Lo destapó la corrida real (`vid1.mp4`
+  inventaba una repetición con top = address). Está en ADR-017 y tiene test.
+
+---
+
 ## 15 de septiembre de 2026 — encargo 12: lo medido entra a los documentos de captura
 
 Prompt: `docs/prompts/12-captura-docs.md`. Informe:
