@@ -6,6 +6,7 @@ YAML de fixture adentro. El archivo viaja como cuerpo crudo de un PUT.
 
 from __future__ import annotations
 
+import datetime as dt
 import shutil
 from pathlib import Path
 
@@ -499,13 +500,16 @@ def test_datos_lista_un_ejemplo_de_otro_proceso(client_datos, clips, data_dir):
     assert j["origen"] == "subida" and j["etiqueta"] is None
 
     # Copiado de un trabajo real, con su trabajo.json escrito a mano: sin campo
-    # `id` (el id es la carpeta) y con el texto del rótulo.
+    # `id` (el id es la carpeta) y con el texto del rótulo. La fecha es relativa
+    # a `now` y no literal: con una fecha quemada el ejemplo deja de ser el más
+    # nuevo apenas pasa ese día y la lista se da vuelta sola.
     etiqueta = "ejemplo · mocap CMU 64_01 · cámara virtual · no es video"
+    creado = (dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=1)).isoformat(timespec="seconds")
     ejemplo = data_dir / "exploracion" / "ejemplo-cmu-64_01-face_on"
     shutil.copytree(data_dir / "exploracion" / j["id"], ejemplo)
     (ejemplo / "trabajo.json").write_text(
         '{"estado": "listo", "origen": "ejemplo", "video": "cmu-64_01-face_on", "vista": "face_on",'
-        ' "altura_m": 1.75, "creado": "2026-09-14T12:00:00+00:00", "etiqueta": "%s"}' % etiqueta,
+        ' "altura_m": 1.75, "creado": "%s", "etiqueta": "%s"}' % (creado, etiqueta),
         encoding="utf-8",
     )
 
