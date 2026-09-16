@@ -100,9 +100,16 @@ una sola sesión por vez.
   aceptación contra los rangos de la auditoría ±3 px ∥ [pendiente]
   exit-134-del-arnes — sólo `truth/`, sin material real.
 - **R4** · [pendiente] follow-end-en-su-repeticion — la cota del candidato
-  propio; además `explore.py` con el `wrist_score_min` del deporte (hoy la
-  columna del CSV y el overlay usan otra señal de manos que los eventos),
-  `tol_frames` visible, y `git rm kinelab/events/order.py`.
+  propio; `tol_frames` visible; `git rm kinelab/events/order.py`; y **una sola
+  señal y una sola escala en la pantalla**. Inventario del 16/9, verificado
+  contra HEAD: la tabla por cuadro usa `swing_signals` con `wrist_score_min`
+  0,0 y convierte a cm con `body_height_px` de cada cuadro, mientras los
+  eventos usan 0,55 y las métricas en cm usan `quality.scale_px` (el máximo de
+  la cadena del 14). Resultado: dos números en cm para el mismo evento que no
+  coinciden en la misma pantalla. Además `datos-eventos.json`, el overlay, las
+  fotos y el cero de los desplazamientos del CSV usan sólo la repetición 1
+  aunque haya más, y sin address el cero es el cuadro 0: decirlo en la
+  pantalla o elegir la repetición.
 - **R5** · [pendiente] escala-y-altura-trazables (analysis 2.1.0).
 - **R6** · [pendiente] fuente-de-la-calibracion — `calibration_clip_sha256` en
   capture-paths 1.2.0, `fps_calibration.same_file` en capture 1.3.0, aviso, y
@@ -125,6 +132,11 @@ una sola sesión por vez.
 - **Ronda del orquestador con evidencia** — ADRs de definición (finish, top,
   address), la banda, el 717, qué condiciones de ADR-019 cumple cada métrica, y
   si la Fase 5 arranca con descriptivos.
+- [pendiente, sin ronda] `summary.metrics.hands_speed_curve_top_to_impact`
+  (`kinelab/analysis.py:215`) no es una métrica del registro y no tiene las
+  seis cosas de `AGENTS.md`: registrarla con las seis o sacarla del summary.
+  Y el comentario de `web/src/components/TablaCuadros.tsx:4` dice 118 columnas:
+  hoy son 115 con altura y 106 sin ella.
 - [pendiente, sin ronda] pasada-barata-local; barrido de geometría de cámara
   para los ángulos del 23; archivar `docs/checklist-captura.md` (iPhone) cuando
   la sección de la sesión de validación exista.
