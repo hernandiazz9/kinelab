@@ -9,8 +9,16 @@ Prompt: `docs/prompts/18-senal-de-manos.md`. Informe:
 `docs/informes/2026-09-15-18-senal-de-manos.md`. Corrió en paralelo con el **16**
 (contrato 2.0.0) y el **26** (guía de filmación). Con el 16 hubo que coordinar:
 tres enganches de este encargo viven en archivos suyos y **los escribió él**, a
-pedido y con el código exacto (ver §Desviaciones). No se tocó ningún archivo del
+pedido y con el código exacto (ver §Desviaciones). No se editó ningún archivo del
 16 ni del 26.
+
+Commits: `c94c8d8` (motor), `c7a322c` (este ESTADO y el informe), `54532d1`
+(deporte y tests). **Y `03aea3f`, que es el trabajo del 16 commiteado por esta
+sesión a pedido de Hernán**: la sesión del 16 terminó sin commitear, con el
+contrato 2.0.0 entero sin commitear en el árbol y `54532d1` dependiendo de él. Se
+verificó antes sin tocarlo —motor 345 y arnés 43 en verde, `pnpm lint` y
+`pnpm build` limpios— y el mensaje dice qué le falta: **su informe, su sección de
+este archivo y las corridas reales de su punto 6.**
 
 ### Qué existe ahora
 
@@ -103,7 +111,8 @@ a 240**. Con el daño posicional realista encima, el umbral igual gana siempre:
 −1 contra −11 a 120 fps, −9 contra −15 a 240. En los clips reales el efecto total
 fue de 1 a 2 cuadros y siempre hacia el cuadro de la señal limpia.
 
-Suites: **motor en verde** (los 19 nuevos incluidos). **Mutación manual: 8 de 8**
+Suites: **motor 345 en verde** sobre una copia limpia del HEAD final, **arnés
+43** (los 19 nuevos incluidos). **Mutación manual: 8 de 8**
 ponen en rojo entre 1 y 9 tests, incluidos los dos que pedía el prompt —pesar por
 1 − confianza (7 rojos) y umbral en 0 (6 rojos)—, más el margen al revés, la
 banda con el rival más cercano, ADR-017 al revés, el ruido como desvío de la

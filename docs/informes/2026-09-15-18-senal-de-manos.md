@@ -34,14 +34,23 @@ impacto.
   Se pidieron por escrito con el código exacto y se verificaron corriendo.
 
 Commits: `c94c8d8` (los dos archivos del motor, verificados solos sobre una copia
-limpia de HEAD) y el de `sports/golf/events.py` + los tests, que esperó a que el
-schema 2.0.0 del 16 estuviera en HEAD: con el schema viejo, escribir `mdc` dentro
-de `subframe` hace fallar la validación de **todo** `analysis.json`.
+limpia de HEAD), `c7a322c` (ESTADO y este informe) y `54532d1`
+(`sports/golf/events.py` + los tests), que esperó al schema 2.0.0: con el schema
+viejo, escribir `mdc` dentro de `subframe` hace fallar la validación de **todo**
+`analysis.json`.
+
+**`03aea3f` es el trabajo del encargo 16, commiteado por esta sesión a pedido de
+Hernán.** La sesión del 16 terminó sin commitear ni escribir su informe, con el
+contrato 2.0.0 entero sin commitear en el árbol y el último commit del 18
+dependiendo de él. Antes de commitearlo se verificó, sin tocar una línea: motor
+345 y arnés 43 en verde, `pnpm lint` y `pnpm build` limpios, `truth/reports/` sin
+cambios. El mensaje del commit dice de quién es y qué le falta (su informe, su
+sección de ESTADO y las corridas reales de su punto 6).
 
 ## Probado
 
-**Suite del motor: 344 en verde** en el árbol compartido (los 19 nuevos y el
-trabajo del 16 adentro). Los dos archivos del motor se verificaron **solos sobre
+**Suite del motor: 345 en verde** sobre una copia limpia del HEAD final
+(`54532d1`); arnés **43 en verde**. Los dos archivos del motor se verificaron **solos sobre
 una copia limpia de HEAD** antes de commitearlos —`git archive HEAD` a /tmp, sin
 tocar el árbol que comparten tres sesiones—: **320 en verde, cero rojos**. El
 arnés no se tocó.
