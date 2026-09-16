@@ -1,8 +1,24 @@
 # 21 — El visor definitivo: el esqueleto dibujado desde datos, con capas que se apagan
 
-Para correr: `/encargo 21` en una sesión nueva, **después de que cierren el
-16, el 19 y el 20** (los tres tocan archivos que vas a necesitar). Leé antes
-sus informes.
+> **POSTERGADO el 16/9/2026 por la auditoría del primer juicio**
+> (`docs/informes/2026-09-16-auditoria-primer-juicio.md` §4). **No correr
+> todavía.** Va después de: el 28 (pantalla sin falsedades), el encargo que
+> acote `follow_end` a su repetición, y la sesión de validación filmada; y sin
+> ninguna sesión abierta que edite `kinelab/analysis.py` o `kinelab/explore.py`.
+> El orquestador lo re-emite con estos cinco ajustes incorporados:
+>
+> 1. **Dependencias:** las de arriba, no «16, 19 y 20».
+> 2. **Cuadro y tiempo:** el número de cuadro sale del fps de **reproducción**
+>    del archivo servido (30,0169 en el Slow motion del S22, estirado ×8,0005),
+>    nunca de `timestamps_s` de `pose.npz`, que es n / 240,15.
+> 3. **Material de prueba:** además del cuadro 741 de `vid1`, `cortado3-lento`
+>    (HEVC, 2977 cuadros) y una toma de la sesión de validación.
+> 4. **Hash del master:** va en `header.source.master_sha256`, que ya existe en
+>    el schema 2.0.0 (hoy `null`). No hace falta cambiar el contrato.
+> 5. **Juicio:** el front no calcula ni muestra juicio; pinta lo que manda el
+>    motor: `uncertainty.method`, `null_reason` y `warnings`.
+
+Para correr: ver el recuadro de arriba.
 
 ## Contexto
 

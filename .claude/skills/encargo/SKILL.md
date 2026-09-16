@@ -58,17 +58,33 @@ o con el TestClient: lo que no se levanta es `next dev` ni el navegador.
 
 Puede haber **otra sesión trabajando en este mismo directorio** en otro
 encargo; el prompt lo dice en "En paralelo" y nombra los archivos que toca la
-otra. El repo es uno solo y el índice de git también, así que:
+otra. **Nunca más de dos a la vez**, y una sesión que corre el motor sobre
+material real no coincide con otra que edita `kinelab/` o `sports/`: los
+números saldrían de un código a medio escribir (pasó en el 26). El repo es uno
+solo y el índice de git también, así que:
 
 - **Dos sesiones nunca editan el mismo archivo.** `git commit -- ruta` lleva
   el estado entero del archivo, incluidas las líneas a medio hacer de la
   otra sesión. Si el prompt no te asigna un archivo que necesitás, no lo
   toques: lo que cambiarías va en el informe.
-- Nunca `git add -A`, `git add .` ni `git commit -a`. Siempre rutas explícitas
-  de lo que vos tocaste (`git add ruta1 ruta2 && git commit -m …`, o
-  `git commit -m … -- ruta1 ruta2`).
-- `git status` antes de cada commit. Si aparecen archivos que no son tuyos, ni
-  los toques ni los commitees; si te estorban, decilo en el informe.
+- **Commitear siempre con `git commit -m "…" -- ruta1 ruta2`**, las rutas al
+  final. Esa forma commitea sólo esas rutas aunque el índice tenga otras
+  cosas. `git add ruta && git commit -m "…"` **no** sirve: commitea todo lo
+  que esté staged, incluido lo que otra sesión dejó ahí. Pasó en `eed337c`,
+  que se llevó un `git mv` ajeno.
+- `git add` sólo para archivos **nuevos** tuyos, en el mismo comando que su
+  commit. `git mv` y `git rm`, también en el mismo comando que su commit:
+  nunca los dejes staged.
+- Nunca `git add -A`, `git add .`, `git commit -a` ni `git stash`.
+- Al empezar, `git diff --cached --name-only` tiene que estar vacío. Antes de
+  cada commit, tiene que listar sólo archivos tuyos. Si lista uno ajeno,
+  **pará** y decilo en el informe: no lo commitees ni lo saques del índice.
+- `ESTADO.md` se edita en un solo paso, al cierre. Como lo editan todas las
+  sesiones, antes de commitearlo `git diff ESTADO.md` tiene que mostrar sólo
+  tu sección. Si trae líneas de otra sesión sin commitear, no lo commitees:
+  dejá el texto de tu sección en tu informe y avisalo.
+- Los tests se leen por **exit code y conteo** de pasados y fallados, no por
+  la palabra «passed».
 - En `ESTADO.md` tu sección lleva el número del encargo en el título. No
   edites secciones de otros encargos en curso.
 
