@@ -107,6 +107,7 @@ def null_metric(metric: Metric, reason: str, *, view: str, fps_real: float, fps_
     return {
         "value": None,
         "unit": metric.unit,
+        "metric_version": metric.metric_version,
         "confidence": None,
         "uncertainty": None,
         "view": view,

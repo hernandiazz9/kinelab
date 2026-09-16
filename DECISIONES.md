@@ -52,6 +52,20 @@ tenga MDC medido para todas sus métricas de nivel 1.
 - **El implemento.** Un shaft de 1066–1219 mm es un segmento largo ajustable a
   un modelo de línea; una pala de 45,5 cm no tiene geometría que ajustar.
 
+**Nota del 15 de septiembre de 2026.** El 80–90 % de encuadre que cita el punto
+«Encuadre» de arriba **ya no es el número de `CAPTURA.md`**. Medido: con la
+lente principal de un teléfono en vertical ese 80 % no es alcanzable a una
+distancia usable —pide una focal de 3078 px contra los ~816 px de la cámara
+principal, o sea filmar a 0,8 m (informe del 07)— y los cuatro clips reales del
+Galaxy S22 salieron a **28,2–29,5 %** en UHD 60 y **41,9 %** en FHD 30 (informe
+del 11). Además, lo que decide no es la fracción del cuadro sino
+`body_height_px`: en 4K, 28 % del cuadro son 1104 px, **más** que el 80 % de un
+1080p (864 px), y con ese número los cuatro clips pasan con margen las dos
+propuestas de umbral del arnés (informe del 13). **La decisión de ADR-002 no
+cambia**: el argumento de golf sobre pádel es que el golfista está quieto y la
+cámara es repetible, y eso sigue en pie sea cual sea la fracción que se
+consiga; lo que cambia es que el 80–90 % es un objetivo y no un hecho medido.
+
 ---
 
 ## ADR-003 · Captura con la cámara nativa, en modo Video, con cronómetro
@@ -187,6 +201,22 @@ cuadros, cualquier orden entre ellos se reporta como `indeterminado`.
 - [fabricante] Onform, líder del mercado, reporta 94,6% de acierto en el orden
   de picos **después** de excluir los que caen a menos de 2 cuadros a 120 fps.
   Se copia la exclusión.
+
+**Nota del 15 de septiembre de 2026: el código no detecta el top por inflexión.**
+Este ADR dice «inflexión de la segunda derivada de la velocidad filtrada». Lo
+que `sports/golf/events.py` hace es buscar el **cambio de sentido** de la
+velocidad de las manos proyectada sobre el eje principal de la trayectoria —el
+cero de la velocidad proyectada—, que es la versión continua de la definición
+textual de GolfDB que este mismo ADR adopta: *el palo cambia de dirección*.
+ADR-017 eligió **cuál** de esos cambios de sentido es el top (el más lejano del
+address, no el último) y no tocó el criterio. La primitiva `d2_inflection`
+existe en `kinelab/events/primitives.py` y hoy **no la usa ningún evento**.
+Queda anotado y sin decidir: o se corrige el texto de este ADR para que diga lo
+que hace el código y lo que define GolfDB, o alguien mide las dos reglas una
+contra otra. Lo segundo no está hecho.
+
+**Y la exclusión de los picos a < 2 cuadros ya no tiene a quién excluir**: era
+la regla de `sequence_order`, que murió con ADR-018.
 
 ---
 
@@ -444,3 +474,79 @@ La calidad de la señal de manos es problema aparte y sigue abierto.
   ningún evento.
 - El error del top contra GolfDB (ESPECIFICACION 2.5) sigue sin medirse: dos
   trials de un sujeto de mocap no son una tabla.
+
+---
+
+## ADR-018 · La ganancia y el orden de la secuencia mueren; `analysis.json` va a 2.0.0
+
+**Decisión.** `summary.gain` y `events[].sequence_order` salen del contrato, del
+motor, del arnés, del CSV de exploración y de la pantalla. No quedan detrás de
+una bandera ni "por si acaso". Sacar dos campos **requeridos** del schema es un
+bump **major**: `analysis.json` pasa de 1.2.0 a **2.0.0**.
+
+**Por qué.** [aquí] El arnés del encargo 13 midió la ganancia contra tres bancos
+de cocientes 3-D **conocidos** (1,0 · 1,5 · 2,0), 16 semillas por condición, y
+muere en las dos vistas:
+
+| vista | verdad 3-D pelvis | lo que mide el motor | sesgo peor |
+|---|---|---|---|
+| `down_the_line` | 139,6 °/s | **11110,2 °/s** (80×) | −1,8 en `pelvis_to_torso` |
+| `face_on` | tórax 139,6 → 209,5 → 279,3 (×2,0) | 74,0 → 120,1 → **572,3** (×7,7) | +4,8 en `pelvis_to_torso` |
+
+La causa es geométrica y tiene su propio test: las tres líneas giran alrededor
+del eje vertical, y eso en el plano de imagen es degenerado. Desde
+`down_the_line` la línea de caderas apunta a la cámara y **su proyección baja a
+3,6 px**; el ángulo aparente de un segmento de 3,6 px es ruido amplificado, no
+una velocidad angular. Desde `face_on` la línea de hombros pasa por su propio
+colapso a los 90° de giro. El número que viajaba en `summary.gain` **no era la
+ganancia de velocidad angular**: era el largo proyectado del segmento disfrazado
+de °/s. La tolerancia contra la que se lo juzgó es 0,3 —el ancho de rango
+declarado, procedencia `estimacion`— y ninguna vista la pasa.
+
+Las tres columnas del CSV de exploración salen de la misma función
+(`hip_line_rate_deg_s`, `shoulder_line_rate_deg_s`, `arm_left_rate_deg_s`) y la
+pantalla las rotulaba **«rotación aparente de caderas / hombros»**. Un rótulo
+honesto sobre un número que no mide nada sigue siendo un número que no mide
+nada: los picos de 3244–3979 °/s que `ESTADO.md` venía anotando en el mocap y en
+los clips reales son el mismo artefacto.
+
+`sequence_order` cae con ella por dos razones independientes, y cualquiera de
+las dos alcanza: sale de la **misma función** y de los mismos picos, así que
+hereda entero el artefacto; y el orden de la secuencia cinemática ya estaba
+**fuera de alcance** por `CONTEXTO.md` §Fuera de alcance y en el nivel 3 de
+`CONTRATO.md` §Niveles, con la evidencia del cementerio 4 de `HERENCIA.md` (el
+80 % de las lecturas reales del prototipo anterior era 0 ms —el piso de
+cuantización— y el timing no varía con el nivel en 47 golfistas a 240 Hz).
+Estaba en el contrato por inercia, no por una decisión.
+
+**Lo que NO cambia.** La ganancia sigue en `CONTEXTO.md` §Vocabulario y en
+`CONTRATO.md` §Niveles como **concepto**: el cociente de picos de velocidad
+angular entre segmentos consecutivos sigue siendo lo correcto de medir en lugar
+del orden. Lo que murió es medirlo **desde una cámara sola, por el ángulo
+aparente de una línea en el plano de imagen**. Con dos cámaras, o con el shaft
+detectado, o con una señal que no sea un segmento que apunta al eje óptico, se
+reabre con un ADR nuevo y su barrido.
+
+**Consecuencias.**
+
+- El schema pierde `summary.gain` y `events[].sequence_order`, y en el mismo
+  bump gana tres cosas que estaban decididas y sin escribir: `metric_version`
+  en cada sextuplo (obligatorio), `quality.scale_px` con `{value, frame,
+  method}` —el divisor de las ocho métricas en cm, hoy invisible— y el lugar
+  **opcional** de `events[].<evento>.subframe.mdc`. Ver `CONTRATO.md`
+  §Versionado.
+- `kinelab/metrics/generic.py` pierde `line_angle_rate` y `gain`;
+  `SportMetrics` pierde `gain_segments`; `sports/golf/` pierde `GAIN_SEGMENTS`.
+- El arnés pierde su bloque de ganancia (`gain_table`,
+  `evaluate_gain_condition`, `truth_gain`, `gain_params`, `segment_rate_3d` y la
+  sección `gain` de `mdc.yaml`): medía lo que el motor calculaba, y el motor no
+  lo calcula más. **La evidencia queda**, en el informe
+  `docs/informes/2026-09-15-13-arnes-ganancia-subcuadro-encuadre.md`, en la
+  tabla de arriba, y en la corrida que la mató,
+  `truth/reports/mdc-2026-09-15.json`.
+- `kinelab/events/order.py` (`sequence_order`) queda **huérfano y sin importar**
+  desde ningún lado. No se borró en este encargo porque `kinelab/events/` es de
+  otra sesión en curso; la baja queda anotada en `ESTADO.md`.
+- No hay `analysis.json` que migrar: los únicos que existen están en
+  `data/exploracion/` y en las carpetas `.kinelab`, que se rehacen con un
+  comando, y el ejemplo del repo se regeneró.

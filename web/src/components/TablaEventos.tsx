@@ -33,8 +33,6 @@ const FILAS: FilaResumen[] = [
   { titulo: "manos vs address (dx / dy)", cols: ["hands_dx_vs_address_pct", "hands_dy_vs_address_pct"], dec: 1, unidad: " % altura", signo: true },
   { titulo: "velocidad de manos", cols: ["hands_speed_cm_s"], dec: 0, unidad: " cm/s" },
   { titulo: "velocidad de manos", cols: ["hands_speed_bh_s"], dec: 2, unidad: " alturas/s" },
-  { titulo: "rotación aparente de hombros / caderas", cols: ["shoulder_line_rate_deg_s", "hip_line_rate_deg_s"], dec: 0, unidad: " °/s", signo: true },
-  { titulo: "rotación del brazo izquierdo", cols: ["arm_left_rate_deg_s"], dec: 0, unidad: " °/s", signo: true },
   { titulo: "altura del cuerpo", cols: ["body_height_px"], dec: 0, unidad: " px" },
   { titulo: "banderas de plausibilidad (0 = limpio)", cols: ["plausibility_flags"], dec: 0, unidad: "" },
 ];
@@ -42,9 +40,6 @@ const FILAS: FilaResumen[] = [
 const PICOS: Record<string, string> = {
   hands_speed_bh_s: "velocidad de manos (alturas/s)",
   hands_speed_cm_s: "velocidad de manos (cm/s)",
-  shoulder_line_rate_deg_s: "rotación aparente de hombros (°/s)",
-  hip_line_rate_deg_s: "rotación aparente de caderas (°/s)",
-  arm_left_rate_deg_s: "rotación del brazo izquierdo (°/s)",
 };
 
 const th = "px-3 py-1.5 text-left font-medium";

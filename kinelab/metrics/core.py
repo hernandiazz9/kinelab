@@ -1,9 +1,10 @@
 """Evaluación de una métrica: del registro al sextuplo del CONTRATO.
 
 `evaluate` corre `metric.compute(ctx, shift)` con los eventos anclados sin
-mover y movidos ±1 cuadro (invariante 8): el rango que sale es la
-incertidumbre. La confianza es la media de los scores de los keypoints
-involucrados en los cuadros ancla. `judgment_allowed` viene del registro.
+mover y movidos ± la tolerancia en cuadros de cada evento (invariante 8; ±1 si
+la repetición no declara otra): el rango que sale es la incertidumbre. La
+confianza es la media de los scores de los keypoints involucrados en los
+cuadros ancla. `judgment_allowed` viene del registro.
 
 Acá vive también **la escala**: cuántos píxeles mide la estatura declarada del
 atleta en esta repetición, que es el divisor de toda métrica en cm. Ver
@@ -106,8 +107,14 @@ class MetricContext:
     fps_provenance: str = "sin_verificar"
     athlete_height_m: float | None = None
     hands_speed: np.ndarray | None = None  # (T,) alturas/s
+    # Tolerancia en cuadros de cada evento ancla en ESTA repetición (`tol_frames`).
+    # La invariante 8 se propaga desde ahí y no desde un ±1 fijo: un evento cuya
+    # regla decidió dentro del ruido declara una banda más ancha y las métricas
+    # ancladas a él la heredan. Vacío = ±1 cuadro, que es lo de siempre.
+    tolerances: dict[str, int] = field(default_factory=dict)
     extra: dict = field(default_factory=dict)
     _scale_px: float | None = field(default=None, repr=False, compare=False)
+    _scale_frame: int | None = field(default=None, repr=False, compare=False)
 
     def frame(self, event: str, shift: dict[str, int] | None = None) -> int:
         f = self.events[event] + (shift or {}).get(event, 0)
@@ -132,8 +139,21 @@ class MetricContext:
             lo = max(0, min(int(self.frame_start), chain.size - 1))
             hi = max(lo, min(int(self.frame_end), chain.size - 1))
             w = chain[lo : hi + 1]
-            self._scale_px = float(np.nanmax(w)) if np.isfinite(w).any() else float("nan")
+            if np.isfinite(w).any():
+                self._scale_px = float(np.nanmax(w))
+                self._scale_frame = lo + int(np.nanargmax(w))
+            else:
+                self._scale_px = float("nan")
         return None if not np.isfinite(self._scale_px) or self._scale_px <= 0 else self._scale_px
+
+    def scale_detail(self) -> dict:
+        """La escala de esta repetición, con el cuadro en que la cadena llegó a su
+        máximo y cómo se obtuvo. Es el número que divide a toda métrica en cm: va
+        a `quality.scale_px` para que se pueda auditar (CONTRATO.md §La escala)."""
+        value = self.scale_px()
+        if value is None:
+            return {"value": None, "frame": None, "method": "sin_cadena_medible"}
+        return {"value": round(value, 1), "frame": int(self._scale_frame), "method": "max_stature_chain_px"}
 
     def px_to_cm(self, px: float, frame: int) -> float | None:
         """Píxeles → cm con la escala de la repetición y la altura declarada.
@@ -174,6 +194,10 @@ def evaluate(metric: Metric, ctx: MetricContext, *, joints: tuple[int, ...] = ()
     met = fps_min_met(metric, ctx.fps)
     base = {
         "unit": metric.unit,
+        # Versión de ESTA métrica (CONTRATO.md §Versionado). Sin ella, mejorar
+        # una métrica es invisible para quien lee un análisis: los siete números
+        # en cm cambiaron con la escala del encargo 14 y nada lo avisaba.
+        "metric_version": metric.metric_version,
         "view": ctx.view,
         "mdc": metric.mdc,
         "level": metric.level,
@@ -197,10 +221,12 @@ def evaluate(metric: Metric, ctx: MetricContext, *, joints: tuple[int, ...] = ()
         value = float(metric.compute(ctx, {}))
         alts = [value]
         for e in metric.anchored_to:
-            for d in (-1, 1):
+            d0 = max(1, int(ctx.tolerances.get(e, 1)))
+            for d in (-d0, d0):
                 alts.append(float(metric.compute(ctx, {e: d})))
     except MetricNull as e:
         return {"value": None, **base, "judgment_allowed": False, "null_reason": str(e)}
+    tol_max = max([1] + [int(ctx.tolerances.get(e, 1)) for e in metric.anchored_to])
     alts = [a for a in alts if np.isfinite(a)]
     if not alts or not np.isfinite(value):
         return {"value": None, **base, "judgment_allowed": False, "null_reason": "valor no finito (keypoints faltantes en los cuadros ancla)"}
@@ -212,6 +238,6 @@ def evaluate(metric: Metric, ctx: MetricContext, *, joints: tuple[int, ...] = ()
         # La procedencia del fps va también en la frase que lee un humano: la
         # incertidumbre de ±1 cuadro se calcula sobre un eje de tiempo que, en un
         # camino declarado, es un supuesto (ADR-016).
-        "uncertainty": {"low": round(min(alts), nd), "high": round(max(alts), nd), "method": f"±1 cuadro en cada evento ancla a {ctx.fps:g} fps ({ctx.fps_provenance})"},
+        "uncertainty": {"low": round(min(alts), nd), "high": round(max(alts), nd), "method": f"±{tol_max} cuadro(s) en cada evento ancla a {ctx.fps:g} fps ({ctx.fps_provenance})"},
         "null_reason": None,
     }

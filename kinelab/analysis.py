@@ -21,14 +21,19 @@ from kinelab.events.signal import butterworth_lowpass, cutoff_for_fps, hands_cen
 from kinelab.ingest.gate import DECLARED_NOTE, CaptureJson
 from kinelab.ingest.session import sha256_file
 from kinelab.metrics.core import MetricContext, evaluate
-from kinelab.metrics.generic import gain, repeatability_curves, repeatability_scalar
+from kinelab.metrics.generic import repeatability_curves, repeatability_scalar
 from kinelab.metrics.registry import REGISTRY, Registry
 from kinelab.perception.framing import body_height_px
 from kinelab.perception.gaps import interpolate_gaps
 from kinelab.perception.posestore import POSE_FILE, PoseData, load_pose
 from kinelab.sport import SportConfig
 
-SCHEMA_VERSION = "1.2.0"  # 1.2.0: `fps_provenance` en el header y en cada métrica (ADR-016); 1.1.0: `subframe` opcional en los eventos
+# 2.0.0 (ADR-018): mueren `summary.gain` y `events[].sequence_order`, los dos
+# requeridos por el schema — sacar un campo requerido es major. En el mismo bump
+# entran `metric_version` en cada sextuplo, `quality.scale_px` y el lugar
+# opcional de `events[].<evento>.subframe.mdc`. 1.2.0: `fps_provenance` en el
+# header y en cada métrica (ADR-016); 1.1.0: `subframe` opcional en los eventos.
+SCHEMA_VERSION = "2.0.0"
 SERIES_MAX_HZ = 10.0
 QUALITY_MIN_DETECTION = 0.90
 QUALITY_MAX_PLAUSIBILITY_REJECT = 0.05
@@ -52,9 +57,13 @@ class SwingSignals:
     view: str | None = None  # vista declarada de la toma; None = desconocida (exploración por cuadro)
 
 
-def swing_signals(pose: PoseData, fps: float, *, cutoff_hz_max: float = 12.0, max_gap: int = 5, view: str | None = None) -> SwingSignals:
+def swing_signals(pose: PoseData, fps: float, *, cutoff_hz_max: float = 12.0, max_gap: int = 5, view: str | None = None, wrist_score_min: float = 0.0) -> SwingSignals:
+    # `wrist_score_min` es el umbral POR DEBAJO del cual una muñeca no entra al centro
+    # de manos. El umbral es del deporte, no del motor (invariante 13): llega por
+    # parámetro desde `build_analysis`. Default 0,0 = sin umbral, las dos muñecas
+    # pesadas por su confianza.
     kp = interpolate_gaps(pose.keypoints, max_gap)
-    hands_raw = hands_center(kp)
+    hands_raw = hands_center(kp, pose.scores, min_score=wrist_score_min, max_gap=max_gap)
     bh = body_height_px(kp, fps)
     if np.isfinite(bh).any():
         scale = np.where(np.isfinite(bh) & (bh > 0), bh, np.nanmedian(bh))
@@ -72,10 +81,33 @@ def swing_signals(pose: PoseData, fps: float, *, cutoff_hz_max: float = 12.0, ma
 
     still = stillness_signal(spd, fps, 0.1)
     floor = float(np.nanpercentile(still, 10)) if np.isfinite(still).any() else 0.0
-    return SwingSignals(fps=fps, hands_raw=hands_raw, hands=hands, speed=spd, body_height=bh, valid=np.isfinite(hands).all(axis=1), params={"filter": "butterworth", "order": 4, "cutoff_hz": cutoff, "cutoff_hz_max": cutoff_hz_max, "gap_fill_max_frames": max_gap, "speed_unit": unit, "signal": "hands_center", "noise_floor_bh_s": round(floor, 4)}, noise_floor_bh_s=floor, view=view)
+    return SwingSignals(fps=fps, hands_raw=hands_raw, hands=hands, speed=spd, body_height=bh, valid=np.isfinite(hands).all(axis=1), params={"filter": "butterworth", "order": 4, "cutoff_hz": cutoff, "cutoff_hz_max": cutoff_hz_max, "gap_fill_max_frames": max_gap, "speed_unit": unit, "signal": "hands_center", "wrist_score_min": float(wrist_score_min), "noise_floor_bh_s": round(floor, 4)}, noise_floor_bh_s=floor, view=view)
 
 
-def _quality(pose: PoseData, rep_count: int) -> dict:
+def _scale_summary(scales: list[dict]) -> dict:
+    """`quality.scale_px`: el divisor en píxeles de toda métrica en cm, con el
+    cuadro en que se midió (CONTRATO.md §La escala).
+
+    Hay una escala **por repetición**. Con varias, el número que se publica es la
+    mediana y el cuadro es el de la repetición que la aporta —nunca un promedio
+    de cuadros, que no sería ningún cuadro—. Sin ninguna escala medible el valor
+    es `null` y `method` dice por qué: en ese caso cada métrica en cm cae a
+    `body_height_px`, que es la convención anterior."""
+    ok = [s for s in scales if s.get("value") is not None]
+    if not ok:
+        method = "sin_repeticiones" if not scales else "sin_cadena_medible"
+        note = {
+            "sin_repeticiones": "no se calculó ninguna escala: no hay repeticiones con métricas",
+            "sin_cadena_medible": "la cadena de la estatura no se pudo medir en ningún cuadro; cada métrica en cm cae a body_height_px (CONTRATO.md §La escala)",
+        }[method]
+        return {"value": None, "frame": None, "method": f"{method}: {note}"}
+    med = float(np.median([s["value"] for s in ok]))
+    pick = min(ok, key=lambda s: (abs(s["value"] - med), s["frame"]))
+    method = pick["method"] if len(ok) == 1 else f"{pick['method']} · mediana de {len(ok)} repeticiones"
+    return {"value": round(pick["value"], 1), "frame": pick["frame"], "method": method}
+
+
+def _quality(pose: PoseData, rep_count: int, scales: list[dict] | None = None) -> dict:
     prov = pose.provenance
     framing = prov.get("framing") or {}
     T = int(pose.keypoints.shape[0])
@@ -102,6 +134,7 @@ def _quality(pose: PoseData, rep_count: int) -> dict:
         "blur_estimate": None,
         "plausibility": {"rejected_frames": rejected, "by_reason": {k: int(v) for k, v in counts.items()}},
         "camera_motion_px": motion,
+        "scale_px": _scale_summary(scales or []),
         "verdict": verdict,
         "reasons": reasons,
     }
@@ -128,7 +161,7 @@ def build_analysis(take_dir: Path, capture: CaptureJson, pose: PoseData, sport: 
             "Declará el camino en capture-paths.yaml o filmá el cronómetro; sin fps no hay eje de tiempo."
         )
     fps = float(capture.fps_real)
-    sig = swing_signals(pose, fps, cutoff_hz_max=ev.cutoff_hz_max, view=capture.view)
+    sig = swing_signals(pose, fps, cutoff_hz_max=ev.cutoff_hz_max, view=capture.view, wrist_score_min=float(getattr(ev.params, "wrist_score_min", 0.0) or 0.0))
     cands, rejected = segment_reps(sig.speed, fps, ev.segmentation)
     events_out: list[dict] = []
     reps: list[dict] = []
@@ -144,7 +177,7 @@ def build_analysis(take_dir: Path, capture: CaptureJson, pose: PoseData, sport: 
             rejected["solapada"] = rejected.get("solapada", 0) + 1
             continue
         n = len(reps) + 1
-        events_out.append({"rep": n, **{k: (events[k].to_dict() if events.get(k) else None) for k in ev.order}, "sequence_order": "sin_datos"})
+        events_out.append({"rep": n, **{k: (events[k].to_dict() if events.get(k) else None) for k in ev.order}})
         reps.append({"rep": n, "frame_start": int(start), "frame_end": int(end), "t_start": round(start / fps, 4), "t_end": round(end / fps, 4), "peak_speed_bh_s": round(c.peak_speed, 3), "metrics": {}})
         prev_end = end
     edits = load_edits(take_dir)
@@ -158,7 +191,7 @@ def build_analysis(take_dir: Path, capture: CaptureJson, pose: PoseData, sport: 
     sm = sport.metrics
     registry = registry or (sm.registry if sm else REGISTRY)
     summary_metrics: dict = {}
-    gain_out: dict = {}
+    scales: list[dict] = []
     warnings: list[str] = []
     if sm is not None and reps:
         kp = interpolate_gaps(pose.keypoints, 5)
@@ -166,35 +199,45 @@ def build_analysis(take_dir: Path, capture: CaptureJson, pose: PoseData, sport: 
             warnings.append("Sin altura declarada del atleta: las métricas en cm quedan en null. Creá data/athletes/<slug>.yaml con altura_m o pasá --altura-m.")
         per_metric: dict[str, list] = {m.id: [] for m in registry}
         curves: list[np.ndarray] = []
-        gains: list[dict] = []
         for r, e in zip(reps, events_out):
             ev_frames = {k: e[k]["frame"] for k in ev.order if e.get(k)}
-            ctx = MetricContext(keypoints=kp, scores=pose.scores, fps=fps, view=capture.view, body_height_px=sig.body_height, events=ev_frames, frame_start=r["frame_start"], frame_end=r["frame_end"], fps_provenance=capture.fps_provenance, athlete_height_m=height_m, hands_speed=sig.speed)
+            ctx = MetricContext(keypoints=kp, scores=pose.scores, fps=fps, view=capture.view, body_height_px=sig.body_height, events=ev_frames, frame_start=r["frame_start"], frame_end=r["frame_end"], fps_provenance=capture.fps_provenance, athlete_height_m=height_m, hands_speed=sig.speed, tolerances={k: int(e[k]["tol_frames"]) for k in ev.order if e.get(k)})
             for m in registry:
                 out = evaluate(m, ctx, joints=sm.joints.get(m.id, ()))
                 r["metrics"][m.id] = out
                 per_metric[m.id].append(out["value"])
             if "top" in ev_frames and "impact" in ev_frames:
                 curves.append(sig.speed[ev_frames["top"] : ev_frames["impact"] + 1])
-            g = gain(kp, fps, sm.gain_segments, r["frame_start"], r["frame_end"])
-            gains.append(g)
-            e["sequence_order"] = g["sequence_order"]
+            scales.append(ctx.scale_detail())
         for m in registry:
             vals = [v for v in per_metric[m.id] if v is not None]
             summary_metrics[m.id] = {"median": round(float(np.median(vals)), 3) if vals else None, "n": len(vals), "mdc": m.mdc, "unit": m.unit, "level": m.level, "repeatability": repeatability_scalar(per_metric[m.id])}
         summary_metrics["hands_speed_curve_top_to_impact"] = {"median": None, "n": len(curves), "mdc": None, "unit": "bh/s", "level": 1, "repeatability": repeatability_curves(curves)}
-        for key in ("pelvis_to_torso", "torso_to_arm"):
-            vals = [g["ratios"].get(key) for g in gains]
-            vals = [v for v in vals if v is not None]
-            gain_out[key] = {"value": round(float(np.median(vals)), 3) if vals else None, "unit": "ratio", "n": len(vals), "confidence": None}
-        gain_out["sequence_order"] = {"by_rep": [g["sequence_order"] for g in gains], "note": "indeterminado cuando dos picos caen a < 2 cuadros (ADR-008)"}
-    # El supuesto del camino declarado, antes de cualquier número (ADR-016).
+    # Antes de cualquier número, por qué la tasa de cuadros no está verificada
+    # (ADR-016). Son DOS casos distintos y el aviso no los puede mezclar:
+    #
+    # - camino DECLARADO: no hay cronómetro, así que la tasa de captura se
+    #   asume igual a la de reproducción. El número es un supuesto.
+    # - camino CALIBRADO sin gate (modo exploración): la tasa está **medida**
+    #   con cronómetro filmado; lo que nadie verificó es que ESTE archivo haya
+    #   venido por ese camino, porque eso lo hace el gate (`fps_matches_path`)
+    #   y el gate no corrió. Decir "fps asumidos" de una tasa medida es falso:
+    #   lo encontró el encargo 24 con el primer camino calibrado del proyecto.
     if capture.fps_provenance != "medido_aqui":
-        warnings.insert(
-            0,
-            f"Tasa de cuadros sin verificar: {DECLARED_NOTE} ('{capture.capture_path_id}', {fps:g} fps asumidos). "
-            "Los tiempos y las duraciones son descriptivos; ninguna métrica puede ser juicio hasta filmar el cronómetro.",
-        )
+        if capture.capture_path_calibrated:
+            warnings.insert(
+                0,
+                f"Tasa de cuadros sin verificar: el camino '{capture.capture_path_id}' está calibrado y su tasa de "
+                f"captura está medida con cronómetro ({fps:g} fps), pero el gate no corrió: nadie verificó que este "
+                "archivo haya venido por ese camino (ADR-016). Los tiempos y las duraciones son descriptivos; "
+                "ninguna métrica puede ser juicio hasta que la toma pase el gate.",
+            )
+        else:
+            warnings.insert(
+                0,
+                f"Tasa de cuadros sin verificar: {DECLARED_NOTE} ('{capture.capture_path_id}', {fps:g} fps asumidos). "
+                "Los tiempos y las duraciones son descriptivos; ninguna métrica puede ser juicio hasta filmar el cronómetro.",
+            )
     step = max(1, int(math.ceil(fps / SERIES_MAX_HZ)))
     if edits:
         warnings.append(f"{len(edits)} corrección(es) manual(es) aplicadas desde events-manual.json.")
@@ -209,10 +252,10 @@ def build_analysis(take_dir: Path, capture: CaptureJson, pose: PoseData, sport: 
             "gesture": capture.gesture,
             "view": capture.view,
         },
-        "quality": _quality(pose, len(reps)),
+        "quality": _quality(pose, len(reps), scales),
         "events": events_out,
         "reps": reps,
-        "summary": {"rep_count": len(reps), "reps_rejected": {"count": int(sum(rejected.values())), "reasons": rejected}, "metrics": summary_metrics, "gain": gain_out},
+        "summary": {"rep_count": len(reps), "reps_rejected": {"count": int(sum(rejected.values())), "reasons": rejected}, "metrics": summary_metrics},
         "series": {"t": np.round(pose.timestamps_s[::step], 4), "hands_speed_bh_s": np.round(sig.speed[::step], 4), "params": {**sig.params, "segmentation": asdict(ev.segmentation), "events": asdict(ev.params), "series_hz": fps / step}},
         "warnings": warnings,
         "deviations": [],

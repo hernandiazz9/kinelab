@@ -21,14 +21,13 @@ import yaml
 from types import SimpleNamespace
 
 from kinelab.analysis import swing_signals
-from kinelab.events.primitives import peak_window, stillness_signal
+from kinelab.events.primitives import peak_window, still_run_start, stillness_signal
 from kinelab.events.signal import principal_axis
 from kinelab.metrics.core import MetricContext, evaluate
-from kinelab.metrics.generic import gain
 from kinelab.perception.framing import body_height_px
 from kinelab.perception.keypoints import H
 from kinelab_truth.camera import Intrinsics, load_intrinsics, project, view_extrinsics
-from kinelab_truth.swing import SwingParams, TruthSwing, gain_params, truth_swing
+from kinelab_truth.swing import SwingParams, TruthSwing, truth_swing
 
 
 @dataclass(frozen=True)
@@ -140,18 +139,6 @@ VALID_TOL = {"cm": 2.0, "ms": 25.0, "deg": 5.0, "ratio": 0.3}
 MDC_TOL = {"cm": 5.0, "ms": 30.0, "deg": 15.0, "ratio": 0.3}  # ms: ±1 cuadro uniforme en dos eventos da ~27 ms a 120 fps (jitter pesimista)
 
 
-# ---------------------------------------------------------------------------
-# Ganancia de velocidad angular (CONTRATO.md §summary.gain)
-# ---------------------------------------------------------------------------
-
-# Cocientes verdaderos con los que se arma el banco: el nominal y dos variantes.
-GAIN_TARGETS: tuple[dict[str, float], ...] = (
-    {"pelvis_to_torso": 1.5, "torso_to_arm": 1.5},
-    {"pelvis_to_torso": 1.0, "torso_to_arm": 1.0},
-    {"pelvis_to_torso": 2.0, "torso_to_arm": 2.0},
-)
-
-
 def _stats(err: np.ndarray, est: np.ndarray, truth: float) -> dict:
     """Sesgo, SD, límites de acuerdo, SEM y MDC de un juego de estimaciones."""
     if est.size == 0:
@@ -164,63 +151,6 @@ def _stats(err: np.ndarray, est: np.ndarray, truth: float) -> dict:
         "loa_low": round(float(err.mean() - 1.96 * sd), 4), "loa_high": round(float(err.mean() + 1.96 * sd), 4),
         "sem": round(sem, 4), "mdc": round(1.96 * np.sqrt(2) * sem, 4),
     }
-
-
-def evaluate_gain_condition(sw: TruthSwing, cond: Condition, intr: Intrinsics, segments: dict, truth_ratios: dict[str, float], seeds: int) -> dict:
-    """Lo que el motor calcula como ganancia desde esta condición, contra la verdad 3-D."""
-    est: dict[str, list[float]] = {k: [] for k in truth_ratios}
-    peaks: dict[str, list[float]] = {k: [] for k in segments}
-    for px, _sc, events, fps, _bh in realize_seeds(sw, cond, intr, seeds):
-        g = gain(px, fps, segments, events["address"], events["follow_end"])
-        for k in truth_ratios:
-            v = g["ratios"].get(k)
-            if v is not None and np.isfinite(v):
-                est[k].append(float(v))
-        for k, v in g["peaks_deg_s"].items():
-            peaks[k].append(float(v))
-    rows = {}
-    for k, truth in truth_ratios.items():
-        v = np.asarray(est[k], float)
-        rows[k] = {"unit": "ratio", **_stats(v - truth, v, truth)}
-    rows["_peaks_deg_s_median"] = {k: (round(float(np.median(v)), 1) if v else None) for k, v in peaks.items()}
-    return rows
-
-
-def gain_table(sw_factory, segments: dict, intr: Intrinsics, *, seeds: int, conditions: list[Condition] | None = None) -> dict:
-    """Sesgo, límites de acuerdo y MDC de la ganancia por vista y condición, contra
-    cocientes 3-D conocidos. El veredicto por vista usa la misma regla que las
-    métricas: |sesgo| en la condición nominal contra `VALID_TOL['ratio']`, que es el
-    ancho de rango declarado (procedencia `estimacion`)."""
-    conds = conditions or sweep_conditions()
-    tol = VALID_TOL["ratio"]
-    rigs = []
-    for targets in GAIN_TARGETS:
-        params, achieved, sw = sw_factory(targets)
-        truth_ratios = {k: float(achieved["ratios"][k]) for k in targets if k in achieved["ratios"]}
-        results = [{"condition": asdict(c), "label": c.label(), "ratios": evaluate_gain_condition(sw, c, intr, segments, truth_ratios, seeds)} for c in conds]
-        rigs.append({
-            "targets": targets, "truth_ratios": truth_ratios,
-            "truth_peaks_deg_s": achieved["peaks_deg_s"], "truth_peak_frames": achieved["peak_frames"],
-            "params": {"pelvis_rot_top_deg": params.pelvis_rot_top_deg, "thorax_rot_top_deg": round(params.thorax_rot_top_deg, 3), "arm_arc_top_deg": round(params.arm_arc_top_deg, 3), "arm_arc_end_deg": round(params.arm_arc_end_deg, 3)},
-            "results": results,
-        })
-    verdict: dict[str, dict] = {}
-    for key in ("pelvis_to_torso", "torso_to_arm"):
-        by_view: dict[str, dict] = {}
-        for view in ("face_on", "down_the_line"):
-            nominal_label = replace(NOMINAL, view=view).label()
-            biases, mdcs = [], []
-            for rig in rigs:
-                row = next((r["ratios"].get(key) for r in rig["results"] if r["label"] == nominal_label), None)
-                if row and row.get("bias") is not None:
-                    biases.append(abs(row["bias"]))
-                    mdcs.append(row["mdc"])
-            worst = max(biases) if biases else None
-            by_view[view] = {"abs_bias_max": None if worst is None else round(worst, 4), "mdc_max": (round(max(mdcs), 4) if mdcs else None), "passes": bool(worst is not None and worst <= tol)}
-        views = [v for v, r in by_view.items() if r["passes"]]
-        verdict[key] = {"unit": "ratio", "tolerance": tol, "by_view": by_view, "views": views,
-                        "note": "" if views else "sin vista válida: la ganancia muere (ESPECIFICACION 3.3)"}
-    return {"tolerance_ratio": tol, "segments": {k: list(v) for k, v in segments.items()}, "verdict": verdict, "rigs": rigs}
 
 
 # ---------------------------------------------------------------------------
@@ -265,13 +195,18 @@ def evaluate_subframe_condition(sw: TruthSwing, cond: Condition, intr: Intrinsic
     fps_out = cond.fps
     for px, _sc, events, fps, _bh in realize_seeds(sw, replace(cond, event_jitter_frames=0), intr, seeds):
         fps_out = fps
-        sig = swing_signals(SimpleNamespace(keypoints=px.astype(np.float64)), fps, view=cond.view)
+        # `scores=None`: el arnés no tiene confianza por keypoint —proyecta puntos
+        # exactos y les suma ruido a mano—, así que las dos muñecas pesan igual.
+        # Es la rama sin scores de `hands_center`, la de siempre.
+        sig = swing_signals(SimpleNamespace(keypoints=px.astype(np.float64), scores=None), fps, view=cond.view)
         still = stillness_signal(sig.speed, fps, event_params.still_smooth_s)
         thr = max(event_params.still_speed_max, event_params.noise_factor * float(sig.noise_floor_bh_s or 0.0))
         addr = events["address"]
         dist = np.hypot(*(sig.hands - sig.hands[addr]).T)
         imp = peak_window(dist, peak=events["impact"], radius=max(1, int(round(event_params.impact_search_s * fps))))
-        out = subframe_fn(sig, addr, imp, still, thr, event_params)
+        # El arranque de la racha de quietud del address, que es de donde el
+        # estimador saca el ruido por cuadro de la señal.
+        out = subframe_fn(sig, addr, imp, still_run_start(still, max_speed=thr, end=addr), event_params)
         if out.get("t_sub_s") is None:
             reason = (out.get("null_reason") or "sin razón").split("(")[0].strip()
             nulls[reason] = nulls.get(reason, 0) + 1
@@ -407,13 +342,12 @@ def framing_table(sw: TruthSwing, intr: Intrinsics, registry, joints: dict, summ
             "warning": "PROPUESTA, no umbral. El gate NO lo lee: fijarlo es decisión del orquestador con CAPTURA.md (encargo 13)."}
 
 
-def build_table(registry, joints: dict, *, candidate_views: dict[str, tuple[str, ...]] | None = None, camera: str = "iphone17pro-1080p120", params: SwingParams = SwingParams(), seeds: int = 16, conditions: list[Condition] | None = None, gain_segments: dict[str, tuple[int, int]] | None = None, subframe_fn=None, event_params=None, dead_metrics: dict[str, str] | None = None, extras: bool = True) -> dict:
+def build_table(registry, joints: dict, *, candidate_views: dict[str, tuple[str, ...]] | None = None, camera: str = "iphone17pro-1080p120", params: SwingParams = SwingParams(), seeds: int = 16, conditions: list[Condition] | None = None, subframe_fn=None, event_params=None, dead_metrics: dict[str, str] | None = None, extras: bool = True) -> dict:
     """`candidate_views`: las vistas que el deporte DECLARA por métrica; el arnés sólo puede
     quitar vistas (una métrica que colapsa desde una vista la pierde), nunca agregar.
 
-    `gain_segments`, `subframe_fn` y `event_params` los pone el deporte (ver
-    `__main__`): el arnés no conoce ninguno. Sin ellos, los bloques de ganancia y de
-    sub-cuadro no se corren.
+    `subframe_fn` y `event_params` los pone el deporte (ver `__main__`): el arnés no
+    conoce ninguno. Sin ellos, el bloque de sub-cuadro no se corre.
 
     `dead_metrics` son las que un barrido anterior ya mató: **no están en el
     registro**, así que el arnés no las puede volver a medir, pero su fila sigue en
@@ -450,12 +384,6 @@ def build_table(registry, joints: dict, *, candidate_views: dict[str, tuple[str,
         d = info if isinstance(info, dict) else {"note": info}
         summary.setdefault(mid, {"unit": d.get("unit", ""), "views": [], "fps_min": None, "mdc": None, "mdc_by_view": {}, "note": d.get("note", "")})
     out = {"generated_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"), "camera": asdict(intr), "swing_params": asdict(params), "seeds": seeds, "level": "0 (proyección + ruido; sin estimador)", "results": results, "summary": summary}
-    if extras and gain_segments:
-        def factory(targets: dict[str, float]):
-            pr, achieved = gain_params(targets, gain_segments, base=params)
-            return pr, achieved, truth_swing(pr, fps=240.0)
-
-        out["gain"] = gain_table(factory, gain_segments, intr, seeds=seeds, conditions=conds)
     if extras and subframe_fn is not None and event_params is not None:
         out["subframe"] = subframe_table(sw, intr, subframe_fn=subframe_fn, event_params=event_params, seeds=seeds, params=params)
     if extras:
@@ -482,8 +410,6 @@ def write_outputs(table: dict, reports_dir: Path, mdc_yaml: Path) -> None:
         lines.append(f"    mdc: {s['mdc'] if s['mdc'] is not None else 'null'}")
         if s["note"]:
             lines.append(f"    note: \"{s['note']}\"")
-    if table.get("gain"):
-        lines += _gain_yaml(table["gain"])
     if table.get("subframe"):
         lines += _subframe_yaml(table["subframe"])
     if table.get("framing"):
@@ -496,28 +422,6 @@ def _yaml_block(data: dict, indent: int) -> list[str]:
     text = yaml.safe_dump(data, allow_unicode=True, sort_keys=False, default_flow_style=False).rstrip("\n")
     pad = " " * indent
     return [pad + line if line else line for line in text.split("\n")]
-
-
-def _gain_yaml(g: dict) -> list[str]:
-    lines = [
-        "",
-        "# Ganancia de velocidad angular pelvis→tórax→brazo (CONTRATO.md §summary.gain).",
-        "# Verdad: los cocientes de los picos de velocidad angular 3-D de las MISMAS líneas,",
-        "# con tres bancos de cocientes conocidos (1,5 · 1,0 · 2,0). Una vista vale si el",
-        f"# |sesgo| en la condición nominal es ≤ {g['tolerance_ratio']} (ancho de rango declarado, procedencia estimacion).",
-        "gain:",
-    ]
-    for key, v in g["verdict"].items():
-        lines.append(f"  {key}:")
-        lines.append(f"    unit: {v['unit']}")
-        lines.append(f"    views: [{', '.join(v['views'])}]")
-        lines.append(f"    tolerance: {v['tolerance']}")
-        lines.append("    by_view:")
-        for view, r in v["by_view"].items():
-            lines.append(f"      {view}: {{abs_bias_max: {r['abs_bias_max']}, mdc_max: {r['mdc_max']}, passes: {str(r['passes']).lower()}}}")
-        if v["note"]:
-            lines.append(f"    note: \"{v['note']}\"")
-    return lines
 
 
 def _subframe_yaml(sb: dict) -> list[str]:

@@ -1,12 +1,16 @@
 """Cálculos genéricos de nivel 1: duraciones, desplazamientos respecto de un
-evento cero, deltas de ángulo, repetibilidad y ganancia. Sin deporte adentro."""
+evento cero, deltas de ángulo y repetibilidad. Sin deporte adentro.
+
+La ganancia de velocidad angular y el orden de la secuencia **no están acá y no
+vuelven** (ADR-018): el arnés midió que la velocidad angular de una línea en el
+plano de imagen es un artefacto del largo proyectado del segmento (80× de error
+en la línea de caderas desde `down_the_line`), no una medición.
+"""
 
 from __future__ import annotations
 
 import numpy as np
 
-from kinelab.events.order import sequence_order
-from kinelab.events.signal import butterworth_lowpass, cutoff_for_fps
 from kinelab.metrics.core import MetricContext, MetricNull
 from kinelab.perception.plausibility import angle_deg
 
@@ -49,36 +53,6 @@ def angle_delta_deg(ctx: MetricContext, shift: dict[str, int], a: int, b: int, c
     if not (np.isfinite(v0) and np.isfinite(v1)):
         raise MetricNull("keypoints faltantes para el ángulo en algún cuadro ancla")
     return v1 - v0
-
-
-def line_angle_rate(kpts: np.ndarray, i: int, j: int, fps: float, cutoff_hz_max: float = 12.0) -> np.ndarray:
-    """Velocidad angular (°/s) de la línea i→j en el plano de imagen, filtrada."""
-    d = kpts[:, j] - kpts[:, i]
-    ang = np.degrees(np.unwrap(np.arctan2(d[:, 1], d[:, 0])))
-    ang = butterworth_lowpass(ang, fps, cutoff_hz=cutoff_for_fps(fps, cutoff_hz_max))
-    w = np.gradient(ang) * fps
-    w[~np.isfinite(d).all(axis=1)] = np.nan
-    return np.abs(w)
-
-
-def gain(kpts: np.ndarray, fps: float, segments: dict[str, tuple[int, int]], start: int, end: int, *, min_gap_frames: int = 2) -> dict:
-    """Picos de velocidad angular por segmento en [start, end] y cociente entre
-    consecutivos. El orden sólo se declara si los picos están a ≥ 2 cuadros."""
-    peaks: dict[str, int] = {}
-    vals: dict[str, float] = {}
-    for name, (i, j) in segments.items():
-        w = line_angle_rate(kpts, i, j, fps)[start : end + 1]
-        if not np.isfinite(w).any():
-            continue
-        k = int(np.nanargmax(w))
-        peaks[name] = start + k
-        vals[name] = float(w[k])
-    names = list(segments)
-    ratios = {}
-    for a, b in zip(names, names[1:]):
-        if a in vals and b in vals and vals[a] > 0:
-            ratios[f"{a}_to_{b}"] = round(vals[b] / vals[a], 3)
-    return {"peaks_deg_s": {k: round(v, 1) for k, v in vals.items()}, "peak_frames": peaks, "ratios": ratios, "sequence_order": sequence_order(peaks, min_gap_frames=min_gap_frames)}
 
 
 def dtw_normalized(a: np.ndarray, b: np.ndarray) -> float:

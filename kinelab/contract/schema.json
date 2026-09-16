@@ -21,7 +21,7 @@
     },
     "quality": {
       "type": "object", "additionalProperties": false,
-      "required": ["detection_rate", "body_height_px", "blur_estimate", "plausibility", "camera_motion_px", "verdict", "reasons"],
+      "required": ["detection_rate", "body_height_px", "blur_estimate", "plausibility", "camera_motion_px", "scale_px", "verdict", "reasons"],
       "properties": {
         "detection_rate": {"type": "number"},
         "body_height_px": {
@@ -34,6 +34,10 @@
           "properties": {"rejected_frames": {"type": "integer"}, "by_reason": {"type": "object", "additionalProperties": {"type": "integer"}}}
         },
         "camera_motion_px": {"type": ["number", "null"]},
+        "scale_px": {
+          "type": "object", "additionalProperties": false, "required": ["value", "frame", "method"],
+          "properties": {"value": {"type": ["number", "null"]}, "frame": {"type": ["integer", "null"]}, "method": {"type": "string"}}
+        },
         "verdict": {"type": "string", "enum": ["confiable", "con_reservas", "no_usar"]},
         "reasons": {"type": "array", "items": {"type": "string"}}
       }
@@ -42,11 +46,10 @@
       "type": "array",
       "items": {
         "type": "object", "additionalProperties": false,
-        "required": ["rep", "address", "top", "impact", "follow_end", "sequence_order"],
+        "required": ["rep", "address", "top", "impact", "follow_end"],
         "properties": {
           "rep": {"type": "integer"},
-          "address": {"$event": true}, "top": {"$event": true}, "impact": {"$event": true}, "follow_end": {"$event": true},
-          "sequence_order": {"type": "string"}
+          "address": {"$event": true}, "top": {"$event": true}, "impact": {"$event": true}, "follow_end": {"$event": true}
         }
       }
     },
@@ -64,12 +67,11 @@
     },
     "summary": {
       "type": "object", "additionalProperties": false,
-      "required": ["rep_count", "reps_rejected", "metrics", "gain"],
+      "required": ["rep_count", "reps_rejected", "metrics"],
       "properties": {
         "rep_count": {"type": "integer"},
         "reps_rejected": {"type": "object", "additionalProperties": false, "required": ["count", "reasons"], "properties": {"count": {"type": "integer"}, "reasons": {"type": "object", "additionalProperties": {"type": "integer"}}}},
-        "metrics": {"type": "object"},
-        "gain": {"type": "object"}
+        "metrics": {"type": "object"}
       }
     },
     "series": {
@@ -105,14 +107,20 @@
           "properties": {"curvature_frames": {"type": ["number", "null"]}, "noise_frames": {"type": ["number", "null"]}, "noise_px": {"type": ["number", "null"]}, "slope_px_per_frame": {"type": ["number", "null"]}}
         },
         "method": {"type": "string"}, "signal": {"type": "string"}, "views": {"type": "array", "items": {"type": "string"}},
-        "provenance": {"type": "string"}, "null_reason": {"type": ["string", "null"]}
+        "provenance": {"type": "string"}, "null_reason": {"type": ["string", "null"]},
+        "mdc": {
+          "type": ["object", "null"], "additionalProperties": false, "required": ["value", "unit", "provenance", "source"],
+          "properties": {"value": {"type": ["number", "null"]}, "unit": {"type": "string"},
+                         "provenance": {"type": "string", "enum": ["medido_aqui", "pares", "fabricante", "estimacion", "sin_verificar"]},
+                         "source": {"type": "string"}}
+        }
       }
     },
     "metric": {
       "type": "object", "additionalProperties": false,
-      "required": ["value", "unit", "confidence", "uncertainty", "view", "mdc", "level", "fps_min", "fps_min_met", "fps_provenance", "judgment_allowed", "null_reason"],
+      "required": ["value", "unit", "metric_version", "confidence", "uncertainty", "view", "mdc", "level", "fps_min", "fps_min_met", "fps_provenance", "judgment_allowed", "null_reason"],
       "properties": {
-        "value": {"type": ["number", "null"]}, "unit": {"type": "string"}, "confidence": {"type": ["object", "null"]}, "uncertainty": {"type": ["object", "null"]},
+        "value": {"type": ["number", "null"]}, "unit": {"type": "string"}, "metric_version": {"type": "string"}, "confidence": {"type": ["object", "null"]}, "uncertainty": {"type": ["object", "null"]},
         "view": {"type": "string"}, "mdc": {"type": ["number", "null"]}, "level": {"type": "integer", "enum": [1, 2]}, "fps_min": {"type": "number"},
         "fps_min_met": {"type": "boolean"}, "fps_provenance": {"type": "string", "enum": ["medido_aqui", "sin_verificar"]},
         "judgment_allowed": {"type": "boolean"}, "null_reason": {"type": ["string", "null"]}

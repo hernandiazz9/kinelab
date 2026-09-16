@@ -1,10 +1,15 @@
-"""Los tres barridos del encargo 13: ganancia, instante sub-cuadro y encuadre.
+"""Los dos barridos vivos del encargo 13: instante sub-cuadro y encuadre.
 
-Lo que se verifica acá es el ARNÉS, no el motor: que la verdad 3-D sea la que se
-pidió, que la verdad del cruce sea el mismo criterio geométrico en tiempo
-continuo, y que los dos modelos de ruido se comporten como dicen (el relativo
-deja el MDC invariante al tamaño; el absoluto lo hace crecer). Los veredictos
-—la ganancia muere, el sub-cuadro vive— salen de la corrida, no de estos tests.
+Lo que se verifica acá es el ARNÉS, no el motor: que la verdad del cruce sea el
+mismo criterio geométrico en tiempo continuo, y que los dos modelos de ruido se
+comporten como dicen (el relativo deja el MDC invariante al tamaño; el absoluto
+lo hace crecer). El veredicto —el sub-cuadro vive— sale de la corrida, no de
+estos tests.
+
+El barrido de **ganancia** que este archivo tenía no está más: ADR-018 la mató
+en las dos vistas y el motor dejó de calcularla, así que el arnés no tiene qué
+medir. La evidencia quedó en `docs/informes/2026-09-15-13-*.md`, en ADR-018 y en
+`truth/reports/mdc-2026-09-15.json`, que es la corrida que la mató.
 """
 
 from __future__ import annotations
@@ -14,13 +19,11 @@ from dataclasses import replace
 import numpy as np
 import pytest
 
-from kinelab.metrics.generic import line_angle_rate
 from kinelab.perception.keypoints import H
 from kinelab_truth.camera import load_intrinsics
 from kinelab_truth.harness import (
     NOMINAL,
     Condition,
-    evaluate_gain_condition,
     evaluate_subframe_condition,
     framing_table,
     project_condition,
@@ -28,66 +31,14 @@ from kinelab_truth.harness import (
     realize_seeds,
     subframe_truth_s,
 )
-from kinelab_truth.swing import SwingParams, gain_params, segment_rate_3d, truth_gain, truth_swing
+from kinelab_truth.swing import SwingParams, truth_swing
 
 CAMERA = "iphone17pro-1080p120"
-SEGMENTS = {"pelvis": (H.LEFT_HIP, H.RIGHT_HIP), "torso": (H.LEFT_SHOULDER, H.RIGHT_SHOULDER), "arm": (H.LEFT_SHOULDER, H.LEFT_WRIST)}
 
 
 @pytest.fixture(scope="module")
 def intr():
     return load_intrinsics(CAMERA)
-
-
-# --- la verdad 3-D de la ganancia -------------------------------------------
-
-
-def test_segment_rate_3d_de_un_giro_conocido():
-    """Una línea que gira 90° en 1 s alrededor del eje vertical va a 90 °/s."""
-    fps, T = 240.0, 241
-    t = np.arange(T) / fps
-    th = np.radians(90.0 * t)  # 90° por segundo
-    pts = np.zeros((T, 2, 3))
-    pts[:, 0] = np.stack([np.cos(th), np.zeros(T), np.sin(th)], axis=1)
-    pts[:, 1] = -pts[:, 0]
-    w = segment_rate_3d(pts, 0, 1, fps)
-    assert np.allclose(w[5:-5], 90.0, atol=0.05)
-
-
-@pytest.mark.parametrize("targets", [{"pelvis_to_torso": 1.5, "torso_to_arm": 1.5}, {"pelvis_to_torso": 1.0, "torso_to_arm": 1.0}, {"pelvis_to_torso": 2.0, "torso_to_arm": 2.0}])
-def test_gain_params_consigue_los_cocientes_pedidos(targets):
-    """El banco se arma con cocientes 3-D conocidos: lo conseguido es la verdad."""
-    params, achieved = gain_params(targets, SEGMENTS)
-    for key, want in targets.items():
-        assert achieved["ratios"][key] == pytest.approx(want, abs=1e-3)
-    # y los picos verdaderos son los de los segmentos, no los de los parámetros
-    sw = truth_swing(params, fps=240.0)
-    assert truth_gain(sw, SEGMENTS)["ratios"] == achieved["ratios"]
-
-
-def test_la_linea_de_caderas_es_degenerada_en_proyeccion(intr):
-    """El porqué del veredicto de la ganancia, en un número: girando alrededor del
-    eje vertical, la línea de caderas se acorta en la imagen hasta casi cero desde
-    `down_the_line`, y ahí el ángulo aparente se dispara."""
-    sw = truth_swing(SwingParams(), fps=240.0)
-    px, fps, _bh = project_condition(sw, replace(NOMINAL, view="down_the_line", noise_frac=0.0), intr)
-    largo = np.linalg.norm(px[:, H.RIGHT_HIP] - px[:, H.LEFT_HIP], axis=1)
-    a, b = sw.events["address"], sw.events["follow_end"]
-    assert largo[a:b].min() < 10.0  # px: la línea colapsa
-    w_img = np.nanmax(line_angle_rate(px, H.LEFT_HIP, H.RIGHT_HIP, fps)[a:b])
-    w_3d = np.nanmax(segment_rate_3d(sw.points_m, H.LEFT_HIP, H.RIGHT_HIP, sw.fps)[a:b])
-    assert w_img > 20 * w_3d  # el pico aparente es un artefacto, no una medición
-
-
-def test_evaluate_gain_condition_da_sesgo_contra_la_verdad(intr):
-    sw_params, achieved = gain_params({"pelvis_to_torso": 1.5, "torso_to_arm": 1.5}, SEGMENTS)
-    sw = truth_swing(sw_params, fps=240.0)
-    truth = {k: float(v) for k, v in achieved["ratios"].items()}
-    rows = evaluate_gain_condition(sw, replace(NOMINAL, view="face_on"), intr, SEGMENTS, truth, seeds=3)
-    for key in truth:
-        assert rows[key]["n"] == 3
-        assert rows[key]["truth"] == pytest.approx(1.5, abs=1e-3)
-        assert rows[key]["bias"] is not None
 
 
 # --- el instante sub-cuadro --------------------------------------------------

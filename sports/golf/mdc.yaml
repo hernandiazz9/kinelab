@@ -1,5 +1,5 @@
 # Tabla de MDC por métrica — escrita por el arnés (truth/), NO a mano (ESPECIFICACION 3.3).
-# generado: 2026-09-15T10:46:32+00:00 · nivel 0 (proyección + ruido; sin estimador) · cámara iphone17pro-1080p120 (sin_verificar) · semillas 16
+# generado: 2026-09-15T18:18:42+00:00 · nivel 0 (proyección + ruido; sin estimador) · cámara iphone17pro-1080p120 (sin_verificar) · semillas 16
 # views: |sesgo| nominal bajo tolerancia; fps_min: menor fps con |sesgo| y MDC bajo tolerancia;
 # mdc: el peor entre nominal y azimut ≤ 30° en las vistas válidas. Ver truth/reports/.
 metrics:
@@ -75,28 +75,6 @@ metrics:
     fps_min: null
     mdc: null
     note: "sin vista válida: la métrica muere (ESPECIFICACION 3.3)"
-
-# Ganancia de velocidad angular pelvis→tórax→brazo (CONTRATO.md §summary.gain).
-# Verdad: los cocientes de los picos de velocidad angular 3-D de las MISMAS líneas,
-# con tres bancos de cocientes conocidos (1,5 · 1,0 · 2,0). Una vista vale si el
-# |sesgo| en la condición nominal es ≤ 0.3 (ancho de rango declarado, procedencia estimacion).
-gain:
-  pelvis_to_torso:
-    unit: ratio
-    views: []
-    tolerance: 0.3
-    by_view:
-      face_on: {abs_bias_max: 4.7958, mdc_max: 3.9819, passes: false}
-      down_the_line: {abs_bias_max: 1.8146, mdc_max: 0.1568, passes: false}
-    note: "sin vista válida: la ganancia muere (ESPECIFICACION 3.3)"
-  torso_to_arm:
-    unit: ratio
-    views: []
-    tolerance: 0.3
-    by_view:
-      face_on: {abs_bias_max: 3.5582, mdc_max: 2.9823, passes: false}
-      down_the_line: {abs_bias_max: 1.2858, mdc_max: 0.0919, passes: false}
-    note: "sin vista válida: la ganancia muere (ESPECIFICACION 3.3)"
 
 # Instante sub-cuadro del impacto (CONTRATO.md §subframe). NO es una métrica del
 # registro: es un campo del evento. La verdad es el mismo cruce geométrico calculado

@@ -14,7 +14,6 @@ from kinelab.__main__ import main as kinelab_main
 from kinelab.analysis import analyze_take, swing_signals
 from kinelab.contract.validate import validate_analysis
 from kinelab.events.manual import Edit, EventCollisionError, apply_edits
-from kinelab.events.order import sequence_order
 from kinelab.events.primitives import direction_change_farthest, direction_changes, subframe_crossing
 from kinelab.events.segmentation import SegmentationParams, segment_reps
 from kinelab.events.signal import principal_axis
@@ -23,7 +22,7 @@ from kinelab.ingest.capture_paths import load_capture_paths
 from kinelab.metrics.core import MetricContext, evaluate
 from kinelab.metrics.registry import FPS_MIN_TOL, Metric, Reference, Registry, fps_min_met, judgment_allowed
 from kinelab.perception.gaps import interpolate_gaps
-from kinelab.perception.keypoints import J
+from kinelab.perception.keypoints import H, J
 from kinelab.perception.posestore import PoseData, load_pose, save_pose
 from kinelab.tools.golfdb_eval import event_error_stats
 from sports.golf.config import GOLF
@@ -151,11 +150,6 @@ def test_still_and_walking_give_zero_reps():
         assert cands == []
 
 
-def test_sequence_order_exclusion_rule():
-    assert sequence_order({"pelvis": 10, "torso": 14, "arm": 20}) == "pelvis>torso>arm"
-    assert sequence_order({"pelvis": 10, "torso": 11, "arm": 20}) == "indeterminado"
-
-
 def test_registry_rules_and_judgment():
     r = Registry("t")
     with pytest.raises(ValueError, match="nivel 3"):
@@ -263,7 +257,7 @@ def test_a_2997_fps_swing_computes_the_30fps_metrics_and_nulls_the_rest():
 
 def test_manual_edits_keep_detected_and_reject_collisions():
     ev = {"id": "top", "frame": 100, "t_s": 1.0, "tol_frames": 1, "uncertainty_s": 0.01, "method": "x", "manual": False, "frame_detected": None}
-    mk = lambda rep, base: {"rep": rep, "address": {**ev, "id": "address", "frame": base}, "top": {**ev, "frame": base + 100}, "impact": {**ev, "id": "impact", "frame": base + 130}, "follow_end": None, "sequence_order": "sin_datos"}
+    mk = lambda rep, base: {"rep": rep, "address": {**ev, "id": "address", "frame": base}, "top": {**ev, "frame": base + 100}, "impact": {**ev, "id": "impact", "frame": base + 130}, "follow_end": None}
     events = [mk(1, 0), mk(2, 500)]
     out = apply_edits(events, [Edit(1, "top", 110, "hoy")], fps=100.0, order=("address", "top", "impact", "follow_end"))
     assert out[0]["top"]["frame"] == 110 and out[0]["top"]["frame_detected"] == 100 and out[0]["top"]["manual"] is True
@@ -339,6 +333,41 @@ def test_a_declared_path_keeps_the_numbers_and_kills_every_judgment(clips, captu
     assert not any(w.startswith("Tasa de cuadros sin verificar") for w in calibrado["warnings"])
 
 
+def test_a_calibrated_path_without_gate_says_the_gate_did_not_run(clips, capture_paths_yaml, tmp_path):
+    """El aviso decía algo FALSO, y lo encontró el encargo 24 con el primer camino
+    calibrado del proyecto: con `s22ultra-slomo-fhd240-recorte-mac` el
+    `analysis.json` salía diciendo «camino declarado sin cronómetro … 240.15 fps
+    asumidos», y esos 240,15 están **medidos** con un cronómetro filmado.
+
+    Son dos casos distintos y el aviso los tiene que separar. Camino declarado: no
+    hay cronómetro, la tasa es un supuesto. Camino calibrado sin gate (modo
+    exploración): la tasa está medida, y lo que nadie verificó es que este archivo
+    haya venido por ese camino —eso lo hace `fps_matches_path`, que es del gate—.
+    Eso último es lo que ADR-016 dice de verdad."""
+    take, _ = _synthetic_take(clips, capture_paths_yaml, tmp_path)
+    cj = json.loads((take / "capture.json").read_text(encoding="utf-8"))
+    assert cj["capture_path_calibrated"] is True
+
+    # camino CALIBRADO, procedencia sin verificar: es exactamente lo que arma el
+    # modo exploración (`kinelab/explore.py`), que no corre el gate.
+    cj["fps_provenance"] = "sin_verificar"
+    (take / "capture.json").write_text(json.dumps(cj), encoding="utf-8")
+    w = analyze_take(take, GOLF, write=False, height_m=1.80)["warnings"][0]
+    assert w.startswith("Tasa de cuadros sin verificar")
+    assert "el gate no corrió" in w and "medida con cronómetro" in w
+    assert "asumidos" not in w and "camino declarado sin cronómetro" not in w, "no puede decir que una tasa medida es un supuesto"
+
+    # y el camino DECLARADO sigue diciendo lo suyo, que ahí sí es verdad
+    cj["capture_path_calibrated"] = False
+    (take / "capture.json").write_text(json.dumps(cj), encoding="utf-8")
+    w2 = analyze_take(take, GOLF, write=False, height_m=1.80)["warnings"][0]
+    assert "fps asumidos" in w2 and "reproduce a la velocidad de captura" in w2
+    assert "el gate no corrió" not in w2
+
+    # las dos frases arrancan igual: el front y `explore.py` las buscan por prefijo
+    assert w2.startswith("Tasa de cuadros sin verificar")
+
+
 def test_schema_requires_fps_provenance_in_header_and_in_every_metric(clips, capture_paths_yaml, tmp_path):
     """ADR-016: la procedencia del fps no es opcional. Un `analysis.json` sin
     ella no valida — ni en el header ni en una métrica —, así que no puede
@@ -361,11 +390,130 @@ def test_schema_requires_fps_provenance_in_header_and_in_every_metric(clips, cap
     assert any("a_ojo" in e for e in validate_analysis(mal)), "procedencia fuera del enum"
 
 
+# --- contrato 2.0.0: lo que murió y lo que entró (ADR-018, encargo 16) ---------
+
+
+def test_schema_rejects_the_dead_gain_and_sequence_order(clips, capture_paths_yaml, tmp_path):
+    """ADR-018. Los dos campos no sólo dejan de escribirse: el validador los
+    RECHAZA. Sin esto, un `analysis.json` con `summary.gain` seguiría pasando y
+    la ganancia podría volver por la puerta de atrás en cualquier reescritura."""
+    take, _ = _synthetic_take(clips, capture_paths_yaml, tmp_path)
+    a = json.loads(json.dumps(analyze_take(take, GOLF, write=False, height_m=1.80), default=lambda o: o.tolist()))
+    assert validate_analysis(a) == []
+    assert "gain" not in a["summary"]
+    assert all("sequence_order" not in e for e in a["events"])
+    assert a["header"]["schema_version"] == "2.0.0"
+
+    con_gain = json.loads(json.dumps(a))
+    con_gain["summary"]["gain"] = {"pelvis_to_torso": {"value": 1.49}}
+    assert any("gain" in e for e in validate_analysis(con_gain)), "summary.gain tiene que rebotar"
+
+    con_orden = json.loads(json.dumps(a))
+    con_orden["events"][0]["sequence_order"] = "pelvis>torso>arm"
+    assert any("sequence_order" in e for e in validate_analysis(con_orden)), "events[].sequence_order tiene que rebotar"
+
+
+def test_schema_requires_metric_version_and_scale_px(clips, capture_paths_yaml, tmp_path):
+    """Los dos campos nuevos del 2.0.0 son OBLIGATORIOS. `metric_version` es lo
+    único que avisa que una métrica cambió de valor sin cambiar de nombre (las
+    ocho en cm, con la escala del encargo 14); `quality.scale_px` es el divisor
+    de esas ocho, que hasta el 2.0.0 no quedaba escrito en ningún lado."""
+    take, _ = _synthetic_take(clips, capture_paths_yaml, tmp_path)
+    a = json.loads(json.dumps(analyze_take(take, GOLF, write=False, height_m=1.80), default=lambda o: o.tolist()))
+    assert validate_analysis(a) == []
+
+    sin_version = json.loads(json.dumps(a))
+    mid = next(iter(sin_version["reps"][0]["metrics"]))
+    del sin_version["reps"][0]["metrics"][mid]["metric_version"]
+    assert any("metric_version" in e for e in validate_analysis(sin_version))
+
+    sin_escala = json.loads(json.dumps(a))
+    del sin_escala["quality"]["scale_px"]
+    assert any("scale_px" in e for e in validate_analysis(sin_escala))
+
+    # y el sub-cuadro tiene su LUGAR para el MDC, con la forma que pide el contrato
+    con_mdc = json.loads(json.dumps(a))
+    sf = con_mdc["events"][0]["impact"]["subframe"]
+    sf["mdc"] = {"value": 2.9269, "unit": "ms", "provenance": "medido_aqui", "source": "sports/golf/mdc.yaml §events.impact.subframe"}
+    assert validate_analysis(con_mdc) == []
+    sf["mdc"] = {"value": 2.9269, "unit": "ms"}
+    assert any("provenance" in e or "source" in e for e in validate_analysis(con_mdc)), "si el mdc está, va entero"
+    sf["mdc"] = {"value": 2.9269, "unit": "ms", "provenance": "a_ojo", "source": "x"}
+    assert any("a_ojo" in e for e in validate_analysis(con_mdc)), "procedencia fuera del enum"
+
+
+def test_metric_version_travels_from_the_registry_to_the_json(clips, capture_paths_yaml, tmp_path):
+    """Las ocho métricas en cm están en 1.1.0 (encargo 14: cambió la convención de
+    escala) y el resto en 1.0.0; el registro de golf, en 0.2.0. Lo que declara el
+    registro es lo que viaja al JSON, incluso en una métrica en `null`."""
+    take, _ = _synthetic_take(clips, capture_paths_yaml, tmp_path)
+    a = analyze_take(take, GOLF, write=False, height_m=1.80)
+    assert a["header"]["registry_version"] == "0.2.0"
+    m = a["reps"][0]["metrics"]
+    en_cm = sorted(mid for mid in m if m[mid]["unit"] == "cm")
+    assert len(en_cm) == 8, en_cm
+    assert all(m[mid]["metric_version"] == "1.1.0" for mid in en_cm)
+    assert all(m[mid]["metric_version"] == "1.0.0" for mid in m if m[mid]["unit"] != "cm")
+    nulo = m["pelvis_thrust_top_cm"]
+    assert nulo["value"] is None and nulo["metric_version"] == "1.1.0", "un null tampoco pierde la versión"
+
+
+def test_quality_scale_px_is_the_divisor_of_the_cm_metrics(clips, capture_paths_yaml, tmp_path):
+    """El número que se publica tiene que ser EL que dividió, no uno parecido:
+    se reconstruye la métrica en cm a mano desde la escala y los keypoints."""
+    take, sw = _synthetic_take(clips, capture_paths_yaml, tmp_path)
+    a = analyze_take(take, GOLF, write=False, height_m=1.80)
+    sp = a["quality"]["scale_px"]
+    assert sp["value"] is not None and sp["method"].startswith("max_stature_chain_px")
+    assert 0 <= sp["frame"] < sw.keypoints.shape[0]
+    ev = a["events"][0]
+    kp = sw.keypoints.astype(float)
+    hip = lambda f: (kp[f, H.LEFT_HIP] + kp[f, H.RIGHT_HIP]) / 2
+    dx = hip(ev["top"]["frame"])[0] - hip(ev["address"]["frame"])[0]
+    esperado = dx / sp["value"] * 1.80 * 100.0
+    assert a["reps"][0]["metrics"]["pelvis_sway_top_cm"]["value"] == pytest.approx(esperado, abs=0.11)
+
+
+def test_the_uncertainty_band_follows_each_event_tolerance(clips, capture_paths_yaml, tmp_path):
+    """Invariante 8: la banda sale del `tol_frames` de cada evento ancla, no de un
+    ±1 fijo. Con tol 1 es lo de siempre; con tol 3 en el top, el backswing se
+    ensancha exactamente tres cuadros a cada lado y el follow, que no se ancla al
+    top, no se mueve."""
+    take, _ = _synthetic_take(clips, capture_paths_yaml, tmp_path)
+    a = analyze_take(take, GOLF, write=False, height_m=1.80)
+    bs = a["reps"][0]["metrics"]["backswing_duration_ms"]
+    assert bs["uncertainty"]["method"].startswith("±1 cuadro(s)")
+    ancho = bs["uncertainty"]["high"] - bs["uncertainty"]["low"]
+    assert ancho == pytest.approx(2 * 1000.0 / 120.0, abs=0.2)
+
+    e, r = a["events"][0], a["reps"][0]
+    pose = load_pose(take)
+    ctx = MetricContext(
+        keypoints=pose.keypoints.astype(float), scores=pose.scores, fps=120.0, view="face_on",
+        body_height_px=np.full(pose.keypoints.shape[0], 900.0),
+        events={k: e[k]["frame"] for k in ("address", "top", "impact", "follow_end") if e.get(k)},
+        frame_start=r["frame_start"], frame_end=r["frame_end"],
+        fps_provenance="medido_aqui", athlete_height_m=1.80, tolerances={"top": 3},
+    )
+    out = evaluate(GOLF_METRICS.get("backswing_duration_ms"), ctx)
+    assert out["uncertainty"]["high"] - out["uncertainty"]["low"] == pytest.approx(2 * 3 * 1000.0 / 120.0, abs=0.2)
+    assert out["uncertainty"]["method"].startswith("±3 cuadro(s)")
+
+
 def test_repo_example_is_valid():
     p = REPO / "data" / "examples" / "analysis.example.json"
     if not p.is_file():
         pytest.skip("todavía no se generó el ejemplo")
-    assert validate_analysis(json.loads(p.read_text(encoding="utf-8"))) == []
+    d = json.loads(p.read_text(encoding="utf-8"))
+    assert validate_analysis(d) == []
+    # el ejemplo se genera con el motor (tests/helpers/gen_analysis_example.py), no
+    # a mano: hasta el encargo 16 se editaba a mano y quedó con `gain`, con
+    # `sequence_order` y con el `method` que ADR-017 había reemplazado.
+    assert d["header"]["schema_version"] == "2.0.0" and d["header"]["registry_version"] == "0.2.0"
+    assert "gain" not in d["summary"] and all("sequence_order" not in e for e in d["events"])
+    assert all(e["top"]["method"] == "direction_change_farthest" for e in d["events"])
+    assert d["quality"]["scale_px"]["value"] is not None
+    assert all(m["metric_version"] for r in d["reps"] for m in r["metrics"].values())
 
 
 def test_metrics_in_analysis(clips, capture_paths_yaml, tmp_path):
@@ -385,7 +533,6 @@ def test_metrics_in_analysis(clips, capture_paths_yaml, tmp_path):
     assert abs(m["pelvis_sway_top_cm"]["value"]) < 1.0, "la pelvis sintética no se mueve"
     assert a["summary"]["metrics"]["backswing_duration_ms"]["repeatability"]["kind"] == "sd_abs"
     assert a["summary"]["metrics"]["hands_speed_curve_top_to_impact"]["repeatability"]["n"] == 2
-    assert "pelvis_to_torso" in a["summary"]["gain"]
     b = analyze_take(take, GOLF, write=False)
     assert b["reps"][0]["metrics"]["pelvis_sway_top_cm"]["value"] is None and "altura" in b["reps"][0]["metrics"]["pelvis_sway_top_cm"]["null_reason"]
 
@@ -523,7 +670,7 @@ def test_analysis_carries_the_impact_subframe(clips, capture_paths_yaml, tmp_pat
     take, sw = _synthetic_take(clips, capture_paths_yaml, tmp_path)
     a = analyze_take(take, GOLF)
     assert validate_analysis(json.loads((take / "analysis.json").read_text())) == []
-    assert a["header"]["schema_version"] == "1.2.0", "`subframe` (1.1.0) y `fps_provenance` (1.2.0)"
+    assert a["header"]["schema_version"] == "2.0.0", "mueren gain y sequence_order (ADR-018)"
     for rep in a["events"]:
         assert rep["impact"]["subframe"]["fraction"] is not None
         assert rep["impact"]["frame"] == json.loads((take / "analysis.json").read_text())["events"][rep["rep"] - 1]["impact"]["frame"]

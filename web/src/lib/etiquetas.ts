@@ -61,9 +61,6 @@ const FIJAS: Record<string, Etiqueta> = {
   hands_height_pct: { nombre: "altura de manos sobre los tobillos", unidad: "%", dec: 1 },
   hands_speed_bh_s: { nombre: "velocidad de manos", unidad: "alturas/s", dec: 2 },
   hands_speed_cm_s: { nombre: "velocidad de manos", unidad: "cm/s", dec: 0 },
-  shoulder_line_rate_deg_s: { nombre: "rotación aparente de la línea de hombros", unidad: "°/s", dec: 0, signo: true },
-  hip_line_rate_deg_s: { nombre: "rotación aparente de la línea de caderas", unidad: "°/s", dec: 0, signo: true },
-  arm_left_rate_deg_s: { nombre: "rotación del brazo izquierdo", unidad: "°/s", dec: 0, signo: true },
 };
 
 export const DURACIONES: Record<string, string> = {

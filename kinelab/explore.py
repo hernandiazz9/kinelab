@@ -44,7 +44,6 @@ from kinelab.events.signal import butterworth_lowpass, cutoff_for_fps, fill_nan_
 from kinelab.ingest.capture_paths import GENERIC_VIDEO_ID, CapturePaths, resolve_path_id
 from kinelab.ingest.gate import CaptureJson, Check, Gate, declared_reason, slomo_declared_reason
 from kinelab.ingest.session import sha256_file
-from kinelab.metrics.generic import line_angle_rate
 from kinelab.perception.estimator import EstimatorConfig
 from kinelab.perception.gaps import interpolate_gaps
 from kinelab.perception.keypoints import HALPE26_LIMBS, HALPE26_NAMES, H, LEFT_RIGHT_PAIRS
@@ -182,9 +181,11 @@ def per_frame_table(pose, fps: float, height_m: float | None, address: int | Non
         "arm_left_vs_vertical_deg": _vs_vertical_deg(k, H.LEFT_SHOULDER, H.LEFT_WRIST), "arm_right_vs_vertical_deg": _vs_vertical_deg(k, H.RIGHT_SHOULDER, H.RIGHT_WRIST),
         "hands_x_vs_hip_bh": (hands[:, 0] - mid_hip[:, 0]) / bh, "hands_height_pct": (ankle_y - hands[:, 1]) / bh * 100.0,
         "hands_speed_bh_s": sig.speed,
-        "shoulder_line_rate_deg_s": line_angle_rate(k, H.RIGHT_SHOULDER, H.LEFT_SHOULDER, fps), "hip_line_rate_deg_s": line_angle_rate(k, H.RIGHT_HIP, H.LEFT_HIP, fps),
-        "arm_left_rate_deg_s": line_angle_rate(k, H.LEFT_SHOULDER, H.LEFT_WRIST, fps),
     }
+    # Las tres columnas de velocidad angular de una línea (hombros, caderas, brazo)
+    # NO están más: el arnés midió que son un artefacto del largo proyectado del
+    # segmento —11110 °/s contra 139,6 verdaderos en la línea de caderas desde
+    # `down_the_line`— y el front las mostraba como «rotación aparente». ADR-018.
     # el tronco: ángulo cadera→hombro respecto de la vertical hacia ARRIBA, positivo = hombros hacia la derecha de la imagen
     d = mid_sh - mid_hip
     cols["trunk_lean_deg"] = np.degrees(np.arctan2(d[:, 0], -d[:, 1]))
@@ -372,7 +373,7 @@ def explore(video: Path | None, out_dir: Path, sport: SportConfig, *, height_m: 
             durations[f"{a}_to_{b}_ms"] = round((events[b] - events[a]) / fps * 1000.0, 1)
     if "address" in events and "top" in events and "impact" in events and events["impact"] > events["top"]:
         durations["tempo_ratio"] = round((events["top"] - events["address"]) / (events["impact"] - events["top"]), 2)
-    peaks = {k: (None if not np.isfinite(v := np.nanmax([r[k] for r in rows if r[k] is not None] or [np.nan])) else round(float(v), 2)) for k in ("hands_speed_bh_s", "hands_speed_cm_s", "shoulder_line_rate_deg_s", "hip_line_rate_deg_s", "arm_left_rate_deg_s") if k in names}
+    peaks = {k: (None if not np.isfinite(v := np.nanmax([r[k] for r in rows if r[k] is not None] or [np.nan])) else round(float(v), 2)) for k in ("hands_speed_bh_s", "hands_speed_cm_s") if k in names}
     summary = {"aviso": AVISO, "video": capture.original_name, "camino": capture.capture_path_id, "camino_calibrado": capture.capture_path_calibrated,
                "fps_provenance": capture.fps_provenance, "fps_aviso": nota_fuente or next((w for w in analysis["warnings"] if w.startswith("Tasa de cuadros sin verificar")), None),
                "fps_archivo": fps, "cuadros": len(rows), "altura_m": height_m, "gate_diria": gate_notes, "eventos_frame": events, "eventos_t_s": {k: round(f / fps, 3) for k, f in events.items()}, "eventos_subcuadro": subframes, "duraciones": durations, "picos": peaks, "en_cada_evento": finite_or_none(at), "diferencias_vs_address": deltas, "calidad": analysis["quality"], "columnas": names}

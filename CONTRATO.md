@@ -252,10 +252,11 @@ header        schema_version, engine_version, registry_version, generated_at,
                       fps_provenance}
 quality       detection_rate, body_height_px {median, min, max, frac_of_frame},
               blur_estimate, plausibility {rejected_frames, by_reason},
+              scale_px {value, frame, method}, camera_motion_px,
               verdict: confiable | con_reservas | no_usar, reasons[]
 events[]      una por repetición — ver abajo
 reps[]        una por repetición — métricas con su sextuplo
-summary       agregados + repetibilidad + ganancia
+summary       agregados + repetibilidad
 series        t[], y algunas señales a ≤ 10 Hz para los gráficos
 warnings[]    avisos legibles
 deviations[]  desviaciones del contrato, fechadas
@@ -267,15 +268,21 @@ deviations[]  desviaciones del contrato, fechadas
 {
   "rep": 3,
   "address":    {"frame": 412, "t_s": 3.437, "tol_frames": 1, "method": "stable_window", "manual": false, "subframe": null},
-  "top":        {"frame": 517, "t_s": 4.313, "tol_frames": 1, "method": "d2_inflection", "manual": false, "subframe": null},
+  "top":        {"frame": 517, "t_s": 4.313, "tol_frames": 1, "method": "direction_change_farthest", "manual": false, "subframe": null},
   "impact":     {"frame": 548, "t_s": 4.571, "tol_frames": 1, "method": "peak_window", "manual": true, "subframe": {...}},
-  "follow_end": {"frame": 604, "t_s": 5.038, "tol_frames": 2, "method": "d2_inflection", "manual": false, "subframe": null},
-  "sequence_order": "indeterminado"
+  "follow_end": {"frame": 604, "t_s": 5.038, "tol_frames": 2, "method": "still_after_impact", "manual": false, "subframe": null}
 }
 ```
 
-`sequence_order` toma `indeterminado` cuando dos picos caen dentro de ±2
-cuadros. Nunca se fuerza un orden.
+**`sequence_order` no está más** (ADR-018): salía de la misma función que la
+ganancia y de los mismos picos, y el orden de la secuencia cinemática ya estaba
+fuera de alcance por `CONTEXTO.md` y en el nivel 3 de §Niveles. Sacarlo es parte
+del bump a 2.0.0.
+
+`tol_frames` es la tolerancia del evento **en esta repetición**, y es de donde
+sale la banda de toda métrica anclada a él: `evaluate` mueve cada evento ancla
+±`tol_frames` (invariante 8), no un ±1 fijo. Un evento cuya regla decidió dentro
+del ruido declara una banda más ancha y las métricas la heredan.
 
 ### `subframe`: el instante entre dos cuadros
 
@@ -292,7 +299,8 @@ geométrica es un cruce y no un cuadro. Hoy lo tiene sólo el impacto de golf.
   "components": {"curvature_frames": 0.1104, "noise_frames": 0.0128, "noise_px": 1.204, "slope_px_per_frame": 115.363},
   "method": "hands_cross_address_linear_interp",
   "signal": "centro de las dos muñecas (crudo, huecos rellenados) proyectado sobre su dirección de viaje en el impacto",
-  "views": ["face_on"], "provenance": "estimacion", "null_reason": null
+  "views": ["face_on"], "provenance": "estimacion", "null_reason": null,
+  "mdc": {"value": 2.9269, "unit": "ms", "provenance": "medido_aqui", "source": "sports/golf/mdc.yaml §events.impact.subframe"}
 }
 ```
 
@@ -307,8 +315,16 @@ geométrica es un cruce y no un cuadro. Hoy lo tiene sólo el impacto de golf.
   velocidad local (`curvature_frames`), y se le suma en cuadratura el ruido de
   la señal propagado por la pendiente (`noise_frames`). Los sumandos quedan a
   la vista en `components`.
-- `provenance` es `estimacion` mientras el arnés no le mida MDC: es
-  descriptivo, no juicio (ADR-007).
+- `provenance` es la del **valor**: `estimacion`, porque el cruce sale de una
+  interpolación lineal entre dos cuadros. Es descriptivo, no juicio (ADR-007).
+- **`mdc` es opcional** (`null` o ausente donde nadie lo midió) y lleva su
+  propia unidad y su propia procedencia, que no tiene por qué ser la del valor:
+  el MDC del cruce lo mide el arnés y es `medido_aqui`, con `source` diciendo de
+  qué archivo y sección salió. Es el único lugar del contrato donde un campo de
+  **evento** —y no una métrica del registro— lleva MDC: el registro es de
+  métricas y un instante entre cuadros no es una. Tener el MDC no lo vuelve
+  juicio: eso lo sigue decidiendo `judgment_allowed` de las métricas ancladas, y
+  con un camino sin calibrar es `false` igual (ADR-016).
 - Una corrección manual de `frame` **no** toca `subframe`: describe la señal,
   con sus dos cuadros escritos al lado.
 
@@ -318,8 +334,9 @@ geométrica es un cruce y no un cuadro. Hoy lo tiene sólo el impacto de golf.
 "backswing_duration_ms": {
   "value": 876.0,
   "unit": "ms",
+  "metric_version": "1.0.0",
   "confidence": {"value": 0.92, "method": "event_tolerance_propagation"},
-  "uncertainty": {"low": 859.3, "high": 892.7, "method": "±1 frame at 119.88 fps"},
+  "uncertainty": {"low": 859.3, "high": 892.7, "method": "±1 cuadro(s) en cada evento ancla a 119.88 fps (medido_aqui)"},
   "view": "face_on",
   "mdc": 21.0,
   "level": 1,
@@ -330,6 +347,13 @@ geométrica es un cruce y no un cuadro. Hoy lo tiene sólo el impacto de golf.
   "null_reason": null
 }
 ```
+
+`metric_version` es la versión de **esta** métrica, la misma que declara el
+registro. Va en el sextuplo y no sólo en el registro porque, si no, un bump de
+métrica es invisible para quien lee un `analysis.json`: las ocho métricas en cm
+cambiaron de valor con la convención de escala del encargo 14 y nada en el
+archivo lo avisaba. `registry_version` sigue en el `header`, y son dos números
+distintos a propósito.
 
 `fps_provenance` es de dónde sale el `fps_real` con el que se calculó el tiempo:
 `medido_aqui` (cronómetro filmado, camino calibrado) o `sin_verificar` (camino
@@ -379,13 +403,17 @@ eje del tiempo es un supuesto y no una medición.
   "metrics": {
     "backswing_duration_ms": {"median": 871.0, "sd_abs": 34.2, "n": 10, "mdc": 21.0,
                               "repeatability": {"kind": "sd_abs", "value": 34.2, "noise_floor": 9.1}}
-  },
-  "gain": {
-    "pelvis_to_torso": {"value": 1.49, "unit": "ratio", "n": 10, "confidence": {...}},
-    "torso_to_arm":    {"value": 1.51, "unit": "ratio", "n": 10, "confidence": {...}}
   }
 }
 ```
+
+**`summary.gain` no está más** (ADR-018). El arnés midió que la velocidad
+angular de una línea en el plano de imagen es el largo proyectado del segmento
+disfrazado de °/s —11110 °/s contra 139,6 verdaderos en la línea de caderas
+desde `down_the_line`, con la proyección colapsada a 3,6 px— y muere en las dos
+vistas. La ganancia sigue siendo el **concepto** correcto (§Niveles, y
+`CONTEXTO.md` §Vocabulario): lo que murió es medirla con una cámara sola por el
+ángulo aparente de un segmento.
 
 La repetibilidad **siempre** lleva `noise_floor`: el piso de ruido del propio
 pipeline, medido corriendo el mismo clip con jitter o dos clips del mismo
@@ -462,6 +490,21 @@ proyectada** (`kinelab/metrics/core.py`: `stature_chain_px`,
   cero, que es la convención anterior: un número con su sesgo conocido antes que
   un `null`.
 
+**Y queda escrito en el JSON**, en `quality.scale_px`:
+
+```json
+"scale_px": {"value": 1089.6, "frame": 75, "method": "max_stature_chain_px"}
+```
+
+Es un solo número que multiplica a ocho métricas: si está mal por un factor,
+las ocho devuelven valores plausibles multiplicados por ese factor y nada las
+delata (cementerio 6 de `HERENCIA.md`). Por eso viaja con el **cuadro** en que
+se midió —el del máximo de la cadena, que se puede ir a mirar— y con el método.
+Hay una escala **por repetición**; con varias, el que se publica es la mediana y
+el cuadro es el de la repetición que la aporta, nunca un promedio de cuadros
+(que no sería ningún cuadro). Sin ninguna escala medible, `value` y `frame` son
+`null` y `method` dice por qué.
+
 **Por qué no la altura cabeza→tobillos del address, que es lo que había.** Un
 golfista en address está agachado hacia la pelota, o sea **hacia la cámara** en
 `face_on`: el tronco se inclina sobre el eje óptico y en la imagen no se ve
@@ -512,10 +555,32 @@ homografía.
 
 - `schema_version` semver. **Renombrar un campo o cambiar una unidad es
   major**, aunque parezca inocente: la IA que lee el JSON ya aprendió el
-  nombre viejo. Métrica nueva y opcional es minor. Va en **1.2.0**: 1.1.0 por el
-  `subframe` de los eventos (campo nuevo y opcional) y 1.2.0 por
-  `fps_provenance` en `header.source` y en cada métrica (ADR-016). El de 1.2.0
-  es un campo **obligatorio** en un bump minor: está anotado en §Desviaciones.
+  nombre viejo. Métrica nueva y opcional es minor. Va en **2.0.0**.
+
+  **Por qué 2.0.0 es major, sin discusión**: se **sacan dos campos requeridos**,
+  `summary.gain` y `events[].sequence_order` (ADR-018). Un `analysis.json` 1.2.0
+  no valida contra el schema nuevo —le sobran dos claves— y un lector que
+  espere `summary.gain` se rompe. Es exactamente el caso que §Versionado llama
+  major, y acá no hay ninguna de las tres razones que hicieron minor a los bumps
+  anteriores: no es un campo nuevo, el valor no se corrigió, **el campo no
+  existe más**.
+
+  Con el schema abierto entran, en el mismo bump, tres cosas que estaban
+  decididas y sin escribir (informes del 13 y del 14):
+
+  1. **`metric_version` en cada sextuplo**, obligatorio. El contrato lo declaraba
+     por métrica y el JSON no lo llevaba: el bump que avisa que las ocho métricas
+     en cm cambiaron de valor con la escala del 14 **no se podía leer desde un
+     análisis**.
+  2. **`quality.scale_px`** con `{value, frame, method}`: el divisor de esas ocho
+     métricas, que hasta hoy no quedaba escrito en ningún lado (§La escala).
+  3. **`events[].<evento>.subframe.mdc`**, opcional, con su unidad, su
+     procedencia y su fuente. Acá se define el lugar y el validador; el número lo
+     escribe quien lea la tabla del arnés.
+
+  Los tres serían minor por sí solos —dos campos nuevos y uno opcional—; van
+  juntos en el major porque el major ya estaba, y abrir el schema dos veces para
+  lo mismo es peor.
 - `capture.json` lleva su propio `schema_version`, hoy **1.2.0**: 1.1.0 agregó
   `fps_playback_raw`, `vfr_ratio_raw`, `first_delta_s` y `fps_note`; 1.2.0
   agrega `capture_path_calibrated` y `fps_provenance` (ADR-016). Los seis son
@@ -528,7 +593,11 @@ homografía.
   seis campos del cronómetro, que ahora sólo son obligatorios cuando
   `calibrated: true`. Un archivo 1.0.0 sigue cargando sin cambios.
 - `registry_version` aparte, y `metric_version` por métrica. Con un solo
-  número, mejorar una métrica invalida el historial del atleta.
+  número, mejorar una métrica invalida el historial del atleta. Los dos viajan
+  en el JSON: `registry_version` en el `header`, `metric_version` en cada
+  sextuplo. Hoy: registro de golf **0.2.0**; las ocho métricas en cm en
+  **1.1.0** y las seis restantes (cuatro duraciones, tempo y dos rodillas) en
+  1.0.0.
 - **Cambiar la convención de escala (§La escala) es `metric_version` minor en
   las siete métricas en cm** — `1.0.0 → 1.1.0` — y `registry_version` minor
   (`0.1.0 → 0.2.0`). `schema_version` de `analysis.json` **no** se toca: no se

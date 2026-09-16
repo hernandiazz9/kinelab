@@ -62,7 +62,6 @@ class SportMetrics:
 
     registry: Any  # kinelab.metrics.registry.Registry con las métricas del deporte
     joints: dict[str, tuple[int, ...]]  # keypoints involucrados por métrica (para la confianza)
-    gain_segments: dict[str, tuple[int, int]]  # segmentos para la ganancia de velocidad angular, en orden proximal→distal
 
 
 @dataclass(frozen=True)
