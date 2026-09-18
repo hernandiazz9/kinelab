@@ -34,6 +34,7 @@ import {
   ES_DEMO,
   ETAPA,
   archivoUrl,
+  bajarAnalysis,
   getTransformacion,
   getTrabajo,
   listarTrabajos,
@@ -44,6 +45,7 @@ import {
   subirVideo,
   trabajoDeLaUrl,
   ultimoTrabajoId,
+  type Analysis,
   type EventoId,
   type Trabajo,
   type TrabajoFila,
@@ -170,6 +172,25 @@ export default function Pagina() {
   const trabajo = fase.tipo === "listo" || fase.tipo === "procesando" ? fase.trabajo : null;
   const abiertoId = trabajo?.id ?? null;
 
+  // `analysis.json` se baja ACÁ y no en `Metricas`, que va abajo de todo: los
+  // avisos de arriba son `analysis.warnings` y se leen antes que cualquier
+  // número. Una sola lectura para los dos. Se guarda con su URL al lado para que
+  // la respuesta de un trabajo anterior nunca se aplique al que se está viendo.
+  const urlAnalysis = trabajo ? archivoUrl(trabajo, "analysis.json") : null;
+  const [leidoAnalysis, setLeidoAnalysis] = useState<{ url: string; valor: Analysis | null; error: string | null } | null>(null);
+  useEffect(() => {
+    if (!urlAnalysis) return;
+    let vivo = true;
+    bajarAnalysis(urlAnalysis)
+      .then((a) => vivo && setLeidoAnalysis({ url: urlAnalysis, valor: a, error: null }))
+      .catch((e: Error) => vivo && setLeidoAnalysis({ url: urlAnalysis, valor: null, error: e.message }));
+    return () => {
+      vivo = false;
+    };
+  }, [urlAnalysis]);
+  const analysis = leidoAnalysis?.url === urlAnalysis ? leidoAnalysis.valor : null;
+  const errorAnalysis = leidoAnalysis?.url === urlAnalysis ? leidoAnalysis.error : null;
+
   return (
     <main className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-6">
       <header className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
@@ -192,7 +213,7 @@ export default function Pagina() {
       {nota && <p className="text-sm text-amber-300">{nota}</p>}
 
       {/* Los avisos, antes de cualquier número derivado (ADR-016). */}
-      {fase.tipo === "listo" && <Avisos resumen={fase.trabajo.resumen!} archivo={fase.trabajo.archivo} />}
+      {fase.tipo === "listo" && <Avisos resumen={fase.trabajo.resumen!} archivo={fase.trabajo.archivo} analysis={analysis} />}
 
       {/* Y la ficha del archivo, que está desde antes de la pose. */}
       {trabajo?.archivo && <FichaArchivo ficha={trabajo.archivo} procesando={fase.tipo === "procesando"} />}
@@ -213,7 +234,9 @@ export default function Pagina() {
         </section>
       )}
 
-      {fase.tipo === "listo" && <Resultado trabajo={fase.trabajo} cuadro={cuadro} onCuadro={setCuadro} ir={ir} irArriba={irArriba} reproductor={reproductor} />}
+      {fase.tipo === "listo" && (
+        <Resultado trabajo={fase.trabajo} cuadro={cuadro} onCuadro={setCuadro} ir={ir} irArriba={irArriba} reproductor={reproductor} analysis={analysis} errorAnalysis={errorAnalysis} />
+      )}
     </main>
   );
 }
@@ -239,6 +262,8 @@ function Resultado({
   ir,
   irArriba,
   reproductor,
+  analysis,
+  errorAnalysis,
 }: {
   trabajo: Trabajo;
   cuadro: number;
@@ -246,6 +271,8 @@ function Resultado({
   ir: (n: number) => void;
   irArriba: (n: number) => void;
   reproductor: React.RefObject<ReproductorHandle | null>;
+  analysis: Analysis | null;
+  errorAnalysis: string | null;
 }) {
   const r = trabajo.resumen!;
   const [verDosCuadros, setVerDosCuadros] = useState(false);
@@ -318,7 +345,7 @@ function Resultado({
                 {subImpacto.t_sub_s !== null && (
                   <span className="text-zinc-500">
                     {" · "}
-                    {fmt(subImpacto.t_sub_s, 4)} s{subImpacto.uncertainty_s !== null && ` ± ${fmt(subImpacto.uncertainty_s * 1000, 1)} ms`}
+                    {fmt(subImpacto.t_sub_s, 4)} s{subImpacto.uncertainty_s !== null && ` · precisión interna del cruce ± ${fmt(subImpacto.uncertainty_s * 1000, 1)} ms`}
                   </span>
                 )}
               </span>
@@ -331,6 +358,15 @@ function Resultado({
                 estimado: cuándo las manos pasan por su posición de address, no el contacto con la bola
               </span>
             </div>
+          )}
+          {subImpacto && (
+            // Qué es y qué no es ese ±. Sin números: el único sesgo contra la
+            // pelota que existe salió de un informe sobre un clip, no del motor,
+            // y ponerlo acá lo convertiría en una medición que no es.
+            <p className="text-xs text-zinc-500">
+              La <span className="text-zinc-400">precisión interna del cruce</span> es cuánto se corre ese instante estimado por el ruido de la señal y por la curvatura entre los dos cuadros: es la precisión del cruce
+              consigo mismo. No incluye el sesgo contra el contacto con la pelota, que no está medido.
+            </p>
           )}
           {verDosCuadros && parImpacto && (
             <DosCuadros src={overlay} fps={r.fps_archivo} antes={parImpacto.antes} despues={parImpacto.despues} fraccion={subImpacto?.fraction ?? null} primerCuadro={primerCuadro} />
@@ -371,8 +407,8 @@ function Resultado({
           cuando no se pudo. Antes de las tablas de exploración, que son la lupa. */}
       {archivoUrl(trabajo, "analysis.json") && (
         <section>
-          {/* `key`: al abrir otro trabajo se re-monta y vuelve a leer el JSON. */}
-          <Metricas key={archivoUrl(trabajo, "analysis.json")!} url={archivoUrl(trabajo, "analysis.json")!} />
+          {/* El JSON lo bajó `Pagina`, que lo necesita también para los avisos. */}
+          <Metricas analysis={analysis} error={errorAnalysis} />
         </section>
       )}
 

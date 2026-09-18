@@ -104,11 +104,18 @@ export function etiquetaCamino(c: { id: string; device: string; mode: string; no
   return partes.join(" · ");
 }
 
-/** "entre el cuadro 44 y el 45 (0,44 ± 0,11)", o la razón por la que no hay número. */
+/** "entre el cuadro 44 y el 45 (0,44 ± 0,11 cuadros de precisión interna del
+ *  cruce)", o la razón por la que no hay número.
+ *
+ *  El ± lleva su nombre porque se leía como el error del instante y no lo es:
+ *  `uncertainty_frames` es cuánto se corre el cruce por el ruido de la señal y
+ *  por la curvatura entre los dos cuadros (`components` en el contrato), o sea
+ *  la precisión del cruce consigo mismo. El sesgo contra el contacto con la
+ *  pelota no está adentro y no está medido. */
 export function textoSubcuadro(sf: { frame_before: number | null; frame_after: number | null; fraction: number | null; uncertainty_frames: number | null; null_reason: string | null } | null | undefined): string | null {
   if (!sf) return null;
   if (sf.fraction === null || sf.frame_before === null) return sf.null_reason ? `sin instante entre cuadros: ${sf.null_reason}` : null;
-  const banda = sf.uncertainty_frames === null ? "" : ` ± ${fmt(sf.uncertainty_frames, 2)}`;
+  const banda = sf.uncertainty_frames === null ? "" : ` ± ${fmt(sf.uncertainty_frames, 2)} cuadros de precisión interna del cruce`;
   return `entre el cuadro ${sf.frame_before} y el ${sf.frame_after} (${fmt(sf.fraction, 2)}${banda})`;
 }
 

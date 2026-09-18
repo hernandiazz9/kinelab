@@ -4,11 +4,17 @@
 // virtualizadas (miles de cuadros × 118 columnas no entran en el DOM de una),
 // clic en una fila → ese cuadro en el reproductor, y la fila del cuadro actual
 // resaltada.
+//
+// «Entero» menos las columnas que ADR-018 retiró (`lib/retirados.ts`), que el
+// CSV de un trabajo calculado con un contrato anterior sigue trayendo. El
+// archivo se puede descargar tal cual: lo que no se hace es mostrarlas como si
+// fueran una medición.
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { bajarTexto } from "@/lib/api";
 import { parseCsv, type Tabla } from "@/lib/csv";
 import { etiqueta, fmt } from "@/lib/etiquetas";
+import { esRetirado } from "@/lib/retirados";
 
 const ALTO = 26; // px por fila; fijo para poder virtualizar
 const VENTANA = 50;
@@ -40,13 +46,14 @@ export default function TablaCuadros({ url, cuadroActual, onIr }: Props) {
     };
   }, [url]);
 
+  // `i` es la posición en el CSV y se conserva: es con lo que se lee cada fila.
+  // Sacar una columna acá no corre a las demás.
+  const mostrables = useMemo(() => (tabla ? tabla.columnas.map((c, i) => ({ c, i, e: etiqueta(c) })).filter(({ c }) => !esRetirado(c)) : []), [tabla]);
+
   const cols = useMemo(() => {
-    if (!tabla) return [];
     const q = filtro.trim().toLowerCase();
-    return tabla.columnas
-      .map((c, i) => ({ c, i, e: etiqueta(c) }))
-      .filter(({ c, e }, i) => i === 0 || !q || c.toLowerCase().includes(q) || e.nombre.toLowerCase().includes(q));
-  }, [tabla, filtro]);
+    return mostrables.filter(({ c, e, i }) => i === 0 || !q || c.toLowerCase().includes(q) || e.nombre.toLowerCase().includes(q));
+  }, [mostrables, filtro]);
 
   if (error) return <p className="text-sm text-red-300">No se pudo leer el CSV: {error}</p>;
   if (!tabla) return <p className="text-sm text-zinc-500">cargando la tabla por cuadro…</p>;
@@ -73,7 +80,7 @@ export default function TablaCuadros({ url, cuadroActual, onIr }: Props) {
           className="w-80 rounded border border-zinc-700 bg-zinc-900 px-2 py-1"
         />
         <span className="text-zinc-400">
-          {n} cuadros × {tabla.columnas.length} columnas{filtro && ` · mostrando ${cols.length}`}
+          {n} cuadros × {mostrables.length} columnas{filtro && ` · mostrando ${cols.length}`}
         </span>
         <button type="button" onClick={irAlActual} className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 hover:bg-zinc-800">
           ir al cuadro actual ({cuadroActual})

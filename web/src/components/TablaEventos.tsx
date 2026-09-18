@@ -1,9 +1,15 @@
 // Toda la data por evento de `datos-eventos.json`: primero el cuadro legible,
 // después duraciones, picos, diferencias contra el address, y por último TODAS
 // las columnas en cada evento. Nada se resume en un puntaje (ADR-012).
+//
+// «Todas» quiere decir todas menos las que ADR-018 retiró (`lib/retirados.ts`),
+// que un trabajo calculado con un contrato anterior sigue trayendo en el
+// archivo. Lo desconocido no se esconde: lo que no tiene nombre legible se
+// muestra con su identificador.
 
 import type { EventoId, Resumen } from "@/lib/api";
 import { DURACIONES, EVENTOS, etiqueta, fmt, fmtCol, textoSubcuadro } from "@/lib/etiquetas";
+import { sinRetirados } from "@/lib/retirados";
 import { COLOR_EVENTO } from "./Reproductor";
 
 interface FilaResumen {
@@ -86,7 +92,8 @@ export default function TablaEventos({ resumen, onIr }: { resumen: Resumen; onIr
   const difs = Object.keys(resumen.diferencias_vs_address);
   const difCols = Array.from(new Set(difs.flatMap((k) => Object.keys(resumen.diferencias_vs_address[k]))));
   const duraciones = Object.entries(resumen.duraciones);
-  const picos = Object.entries(resumen.picos);
+  const picos = sinRetirados(Object.entries(resumen.picos), ([k]) => k);
+  const columnas = sinRetirados(resumen.columnas, (c) => c);
 
   if (evs.length === 0) {
     return <p className="mt-6 rounded border border-amber-700 bg-amber-950/40 p-3 text-sm">El motor no encontró ningún evento (address, top, impacto) en este video: no hay tabla por evento. La tabla por cuadro está abajo igual.</p>;
@@ -139,6 +146,11 @@ export default function TablaEventos({ resumen, onIr }: { resumen: Resumen; onIr
           <div className="rounded border border-zinc-800">
             <table className={tabla}>
               <tbody>
+                {picos.length === 0 && (
+                  <tr>
+                    <td className={td}>—</td>
+                  </tr>
+                )}
                 {picos.map(([k, v]) => (
                   <tr key={k}>
                     <td className={`${td} text-zinc-300`}>{PICOS[k] ?? k}</td>
@@ -189,12 +201,12 @@ export default function TablaEventos({ resumen, onIr }: { resumen: Resumen; onIr
       )}
 
       <details className="mt-6">
-        <summary className="cursor-pointer text-base font-semibold">Todas las variables en cada evento ({resumen.columnas.length} columnas)</summary>
+        <summary className="cursor-pointer text-base font-semibold">Todas las variables en cada evento ({columnas.length} columnas)</summary>
         <div className="mt-2 overflow-x-auto rounded border border-zinc-800">
           <table className={tabla}>
             <Cabecera evs={evs} resumen={resumen} onIr={onIr} />
             <tbody>
-              {resumen.columnas.map((c) => (
+              {columnas.map((c) => (
                 <tr key={c}>
                   <td className={`${td} text-zinc-300`}>
                     {etiqueta(c).nombre} <span className="font-mono text-xs text-zinc-500">{c}</span>

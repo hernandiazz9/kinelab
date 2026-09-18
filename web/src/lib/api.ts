@@ -214,12 +214,15 @@ async function pedir<T>(metodo: string, url: string): Promise<T> {
 }
 
 /** Una métrica del registro en `analysis.json`, con su sextuplo (CONTRATO.md).
- *  O tiene `value` con su unidad y su banda, o tiene `null_reason`: nunca las dos. */
+ *  O tiene `value` con su unidad y su banda, o tiene `null_reason`: nunca las dos.
+ *  El `method` de la banda es la frase del motor con la tolerancia real de cada
+ *  evento ancla; va opcional porque el archivo lo escribió otra versión del
+ *  contrato y la pantalla no lo puede suponer (es el rótulo que se muestra). */
 export interface Metrica {
   value: number | null;
   unit: string;
   confidence: { value: number; method: string } | null;
-  uncertainty: { low: number; high: number; method: string } | null;
+  uncertainty: { low: number; high: number; method?: string } | null;
   view: string;
   mdc: number | null;
   level: number;

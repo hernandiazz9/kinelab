@@ -1,5 +1,3 @@
-"use client";
-
 // «Con este archivo»: las métricas del registro, una por una, con su número o
 // con la razón por la que no hay número.
 //
@@ -7,14 +5,18 @@
 // en vez de una advertencia genérica, cada métrica dice si se pudo calcular y,
 // si no, qué le faltó — fps, vista, altura declarada. Sale de `analysis.json`,
 // que es donde el motor lo escribe (CONTRATO.md §El sextuplo de toda métrica).
+// El archivo lo baja `page.tsx`, que lo necesita también para los avisos de
+// arriba: acá llega ya leído.
 //
-// Nada se compara contra nada: no hay rango, no hay semáforo, no hay puntaje
-// (ADR-012). El MDC y el nivel se muestran como lo que son, la letra chica del
-// instrumento, y mientras la tasa de cuadros esté sin verificar ninguna puede
-// ser juicio (ADR-016).
+// Nada se compone acá: ni el rótulo de la banda —es `uncertainty.method`, la
+// frase que escribe el motor con la tolerancia real de cada evento ancla, que
+// no siempre es ±1 cuadro— ni la lectura del juicio, que es el nombre del campo
+// y nada más. Nada se compara contra nada: no hay rango, no hay semáforo, no hay
+// puntaje (ADR-012). El MDC y el nivel se muestran como lo que son, la letra
+// chica del instrumento, y mientras la tasa de cuadros esté sin verificar
+// ninguna puede ser juicio (ADR-016).
 
-import { useEffect, useState } from "react";
-import { bajarAnalysis, type Analysis, type Metrica } from "@/lib/api";
+import type { Analysis, Metrica } from "@/lib/api";
 import { METRICAS, PROCEDENCIA, fmt } from "@/lib/etiquetas";
 
 const DEC: Record<string, number> = { ms: 1, cm: 1, deg: 1, ratio: 2 };
@@ -27,6 +29,7 @@ function valor(m: Metrica): string {
 
 function Fila({ id, m }: { id: string; m: Metrica }) {
   const calculada = m.value !== null;
+  const dec = DEC[m.unit] ?? 2;
   return (
     <tr className={calculada ? undefined : "text-zinc-400"}>
       <td className="px-3 py-1.5 align-top">
@@ -39,7 +42,9 @@ function Fila({ id, m }: { id: string; m: Metrica }) {
             <span className="text-zinc-100">{valor(m)}</span>
             {m.uncertainty && (
               <span className="block text-xs text-zinc-500">
-                ±1 cuadro: {fmt(m.uncertainty.low, DEC[m.unit] ?? 2)} – {fmt(m.uncertainty.high, DEC[m.unit] ?? 2)}
+                {/* Sin `method` va el rango solo: antes que inventarle un rótulo, ninguno. */}
+                {m.uncertainty.method ? `${m.uncertainty.method}: ` : ""}
+                {fmt(m.uncertainty.low, dec)} – {fmt(m.uncertainty.high, dec)}
               </span>
             )}
           </>
@@ -51,7 +56,7 @@ function Fila({ id, m }: { id: string; m: Metrica }) {
         {calculada ? (
           <span className="text-zinc-500">
             nivel {m.level} · MDC {m.mdc === null ? "sin medir" : `${fmt(m.mdc, 2)} ${m.unit}`} · fps mínimo {fmt(m.fps_min, 0)} · vista {m.view} ·{" "}
-            {m.judgment_allowed ? "se puede comparar" : "descriptiva, no es juicio"}
+            {m.judgment_allowed ? "juicio habilitado (judgment_allowed)" : "descriptiva, no es juicio"}
           </span>
         ) : (
           <span className="text-amber-200/80">{m.null_reason}</span>
@@ -61,24 +66,7 @@ function Fila({ id, m }: { id: string; m: Metrica }) {
   );
 }
 
-export default function Metricas({ url }: { url: string }) {
-  const [analysis, setAnalysis] = useState<Analysis | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let vivo = true;
-    bajarAnalysis(url)
-      .then((a) => {
-        if (vivo) setAnalysis(a);
-      })
-      .catch((e: Error) => {
-        if (vivo) setError(e.message);
-      });
-    return () => {
-      vivo = false;
-    };
-  }, [url]);
-
+export default function Metricas({ analysis, error }: { analysis: Analysis | null; error: string | null }) {
   return (
     <div>
       <div className="mt-6 mb-2 flex flex-wrap items-baseline gap-x-3">
