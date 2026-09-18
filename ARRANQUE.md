@@ -61,10 +61,10 @@ para que la primera respuesta sea comprensión, no código.
 ## 3. Qué esperar
 
 La primera respuesta buena es la que encuentra al menos un hueco en los
-documentos. Los hay: el umbral exacto de `body_height_frac` está sin fijar a
-propósito (se mide en Fase 1), el nombre del proyecto es provisorio, y los
-bitrates de `CAPTURA.md` vienen de un sitio comercial. Un agente que dice "todo
-claro, arranco" no leyó.
+documentos. Los hay: el umbral de encuadre se fijó midiendo (717 px de cuerpo,
+`body_height_px_min`), el nombre del proyecto es provisorio, y los bitrates de
+`CAPTURA.md` vienen de un sitio comercial. Un agente que dice "todo claro,
+arranco" no leyó.
 
 La Fase 0 de agente debería cerrar en una sesión. La Fase 0 de humano depende
 de tener un golfista, un trípode, un cronómetro con milisegundos y una mañana

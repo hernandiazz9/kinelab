@@ -84,6 +84,7 @@ python3.12 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 # arnés de verdad (entorno separado, a propósito)
 cd truth && python3.12 -m venv .venv && .venv/bin/pip install -e .
 cd truth && .venv/bin/pytest -q
+truth/corridas.sh 10                        # 10 corridas del arnés; falla si alguna no sale con exit 0
 ```
 
 Los comandos de `service/` y `web/` se agregan en la Fase 4.
@@ -107,6 +108,14 @@ Todas medidas, ninguna teórica. La fuente de cada una está en `HERENCIA.md`
   los tres van dentro de `pose.npz`.
 - **Más hilos es más lento.** onnxruntime satura en 5 hilos en el M3 Pro y
   empeora 15–35% de 6 a 11. `intra_op_num_threads=5`, siempre.
+- **La telemetría de onnxruntime aborta el proceso al salir (exit 134).** Su
+  hilo de subida despacha un evento sobre un `recursive_mutex` que los
+  destructores estáticos ya destruyeron: `libc++abi: … recursive_mutex lock
+  failed`, SIGABRT y el cartel «Python se ha cerrado inesperadamente», siempre
+  **después** de que el trabajo quedó escrito. Medido: 7 de 10 corridas del
+  arnés. Lo apaga `kinelab/perception/__init__.py` con `ORT_DISABLE_TELEMETRY`,
+  antes de que onnxruntime se cargue; el que lo vigila es `truth/corridas.sh 10`.
+  No es la sesión de CoreML viva al salir: eso da exit 0 en 10 de 10.
 - **`rtmlib` descarga pesos en runtime por defecto**, y sus detectores por
   defecto están entrenados en Human-Art (CC BY-NC-SA 4.0). Pesos fijados por
   hash en local; detector entrenado en COCO.

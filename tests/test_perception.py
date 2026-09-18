@@ -471,3 +471,99 @@ def test_explore_arranca_de_un_pose_npz_sin_video_ni_estimador(tmp_path):
     assert tuple(int(v) for v in png[1900, 1060]) == FONDO_LISO, "una esquina sin dibujo es el fondo liso"
     fila_rotulo = png[: int(0.20 * 1920)]
     assert (fila_rotulo != np.array(FONDO_LISO, np.uint8)).any(), "el rótulo está quemado arriba"
+
+
+# --- el exit code del proceso entero -------------------------------------------
+
+
+def test_una_toma_rechazada_por_la_fase_1_se_vuelve_a_correr_con_overwrite(clips, capture_paths_yaml, tmp_path):
+    """El rechazo de la Fase 1 es suyo y se rehace; no le cierra la puerta a la
+    corrida siguiente.
+
+    La Fase 1 escribe sus tres chequeos en el MISMO `capture.json` que el gate
+    de ingesta, así que desde que el encuadre tiene umbral (encargo 17) una toma
+    rechazada por `body_height_px` quedaba trabada: la corrida siguiente leía el
+    veredicto `reject` que había escrito la anterior y se negaba a arrancar, ni
+    con `--overwrite`. Decisión del orquestador (encargo 30): para decidir si
+    arranca, `run_perception` mira sólo los chequeos de **ingesta**.
+    """
+    take = _take(clips, capture_paths_yaml, tmp_path)
+    primera = run_perception(take, GOLF, estimator=FakeEstimator(True))
+    assert primera.gate.verdict == "reject"
+    chk = next(c for c in primera.gate.checks if c.id == "body_height_px")
+    assert chk.passed is False and chk.value < 717
+
+    # y ahora la re-corrida: mismo take, mismo `capture.json` con el rechazo
+    # adentro, `--overwrite`. Tiene que correr y volver a escribir el chequeo.
+    segunda = run_perception(take, GOLF, estimator=FakeEstimator(True), overwrite=True)
+    assert segunda.gate.verdict == "reject"
+    chk2 = next(c for c in segunda.gate.checks if c.id == "body_height_px")
+    assert chk2.passed is False and chk2.value == chk.value and chk2.reason == chk.reason
+    cj = CaptureJson.model_validate_json((take / "capture.json").read_text(encoding="utf-8"))
+    assert [c.id for c in cj.gate.checks].count("body_height_px") == 1, "se reescribe, no se duplica"
+    assert cj.gate.reasons == segunda.gate.reasons
+
+    # lo que sí bloquea sigue bloqueando: un fallo de INGESTA en el mismo archivo
+    ingesta_mala = with_checks(cj.gate, [Check(id="vfr_ratio_le_1_10", passed=False, reason="El video tiene tasa variable.")], after="codec_matches_path")
+    (take / "capture.json").write_text(cj.model_copy(update={"gate": ingesta_mala}).model_dump_json(indent=2), encoding="utf-8")
+    with pytest.raises(PerceptionError, match="tasa variable"):
+        run_perception(take, GOLF, estimator=FakeEstimator(True), overwrite=True)
+
+
+def test_datos_en_un_subproceso_termina_con_exit_0(clips, tmp_path):
+    """`python -m kinelab datos` en un proceso propio, con onnxruntime de verdad.
+
+    Es el único test que ve el exit code del PROCESO. El aborto al salir (exit
+    134 en la terminal, `returncode -6` acá: SIGABRT) ocurre después de que todo
+    quedó escrito, así que un test que corre `explore` en el mismo intérprete lo
+    da en verde igual. Ver `kinelab/perception/__init__.py`: el hilo de
+    telemetría de onnxruntime tomando un `recursive_mutex` ya destruido.
+
+    Necesita los pesos reales: un estimador falso no carga onnxruntime y no
+    prueba nada de esto. Sin ellos, se saltea.
+    """
+    import subprocess
+    import sys
+
+    from kinelab.perception.models import DOWNLOAD_CMD, model_path
+
+    if "real30_h264" not in clips:
+        pytest.skip("sin fixture real30_h264")
+    faltan = [s.id for s in (MODELS["rtmpose-m-halpe26"], MODELS["yolox-m-coco"]) if not model_path(s).is_file()]
+    if faltan:
+        pytest.skip(f"faltan los pesos reales ({', '.join(faltan)}): {DOWNLOAD_CMD}")
+
+    out = tmp_path / "datos"
+    r = subprocess.run(
+        [sys.executable, "-m", "kinelab", "datos", str(clips["real30_h264"]), "--out", str(out)],
+        capture_output=True, text=True, timeout=900,
+    )
+    assert r.returncode == 0, (
+        f"`python -m kinelab datos` salió con {r.returncode} "
+        "(negativo = murió por una señal: -6 es el SIGABRT del exit 134). "
+        f"stderr: {r.stderr[-800:]}"
+    )
+    assert (out / "datos-eventos.json").is_file() and (out / "overlay.mp4").is_file()
+
+
+def test_importar_kinelab_perception_apaga_la_telemetria_de_onnxruntime():
+    """La variable tiene que quedar puesta por importar el paquete, y antes de
+    que onnxruntime se cargue.
+
+    Se prueba en un subproceso con la variable BORRADA del entorno: este
+    intérprete ya la tiene puesta por el propio import de los tests, así que
+    mirarla acá no probaría nada. Y se comprueba lo otro que hace falta: que
+    importar el paquete NO cargue onnxruntime, porque entonces el orden sería
+    al revés y la variable llegaría tarde.
+    """
+    import os
+    import subprocess
+    import sys
+
+    env = {k: v for k, v in os.environ.items() if k != "ORT_DISABLE_TELEMETRY"}
+    r = subprocess.run(
+        [sys.executable, "-c", "import sys, kinelab.perception, os; print(os.environ.get('ORT_DISABLE_TELEMETRY'), 'onnxruntime' in sys.modules)"],
+        capture_output=True, text=True, timeout=120, env=env,
+    )
+    assert r.returncode == 0, r.stderr
+    assert r.stdout.split() == ["1", "False"], r.stdout

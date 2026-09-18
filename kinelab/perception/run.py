@@ -4,6 +4,11 @@
 Hasta la Fase 4 no hay `master.mp4`: la pose se calcula sobre el original ya
 rotado como se ve, y `master_sha256` queda en null en la procedencia. Los
 índices de cuadro se refieren al stream decodificado del original.
+
+Para decidir si arranca mira **sólo los chequeos de ingesta** —los nueve de
+`CONTRATO.md` §capture.json—, no el veredicto entero: los de la Fase 1 los
+escribe esta misma función en ese mismo `capture.json` y se rehacen en cada
+corrida. Ver `_blocking_checks`.
 """
 
 from __future__ import annotations
@@ -17,7 +22,7 @@ import numpy as np
 
 from kinelab.ingest.gate import CaptureJson, Check, Gate, with_checks
 from kinelab.perception.estimator import EstimatorConfig, PoseEstimator, with_det_frequency
-from kinelab.perception.framing import FramingReport, framing_checks, framing_report
+from kinelab.perception.framing import CHECK_IDS as PHASE1_CHECK_IDS, FramingReport, framing_checks, framing_report
 from kinelab.perception.plausibility import plausibility_mask
 from kinelab.perception.posestore import POSE_FILE, PoseData, save_pose
 from kinelab.perception.tracking import SubjectTracker
@@ -39,6 +44,24 @@ class PerceptionResult:
     report: FramingReport
     checks: list[Check]
     gate: Gate
+
+
+def _blocking_checks(gate: Gate) -> list[Check]:
+    """Los chequeos fallados que impiden correr la percepción: los de **ingesta**.
+
+    Decisión del orquestador (encargo 30). Los tres de la Fase 1
+    (`PHASE1_CHECK_IDS`: encuadre, tasa de detección, una sola persona) los
+    escribe `run_perception` en el mismo `capture.json`, así que mirarlos acá es
+    negarse a arrancar por el resultado de la corrida anterior: desde que el
+    encuadre tiene umbral (encargo 17), una toma rechazada por encuadre no se
+    podía volver a correr ni con `--overwrite`. Se rehacen en cada corrida, así
+    que no deciden si hay corrida.
+
+    Lo que sí bloquea sigue bloqueando: codec, tasa variable, camino de captura,
+    fps mínimo del gesto, duración, rotación, vista y gesto. Un chequeo en
+    `passed: None` no es un fallo (CONTRATO.md §capture.json) y tampoco bloquea.
+    """
+    return [c for c in gate.checks if c.passed is False and c.id not in PHASE1_CHECK_IDS]
 
 
 def find_original(take_dir: Path) -> Path:
@@ -71,8 +94,10 @@ def run_perception(
     if not cj_path.is_file():
         raise PerceptionError(f"{take_dir}: no hay capture.json; ingestá el clip primero (python -m kinelab.ingest).")
     capture = CaptureJson.model_validate_json(cj_path.read_text(encoding="utf-8"))
-    if capture.gate.verdict != "ok":
-        raise PerceptionError(f"{take_dir}: el gate rechazó esta toma; no se corre pose sobre un clip rechazado. Razones: {' · '.join(capture.gate.reasons)}")
+    blocking = _blocking_checks(capture.gate)
+    if blocking:
+        razones = [c.reason or c.id for c in blocking]
+        raise PerceptionError(f"{take_dir}: la ingesta rechazó esta toma; no se corre pose sobre un clip rechazado. Razones: {' · '.join(razones)}")
     if capture.fps_real is None:
         raise PerceptionError(f"{take_dir}: capture.json no tiene fps_real (camino sin calibrar).")
     pose_path = take_dir / POSE_FILE
