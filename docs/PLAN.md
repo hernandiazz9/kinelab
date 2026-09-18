@@ -1,6 +1,14 @@
 # Plan
 
-Última ronda: 2026-09-18 (noche) — el método pasó a una skill genérica en
+Última ronda: 2026-09-19 — cerraron el 30 (el abort era la telemetría de
+onnxruntime, apagada al importar `kinelab.perception`; 381 tests) y el 29 (la
+deriva se reproduce en x y en y es 26–30 px, 2× el MDC de `lift`; hasta
++119 px en `vid1`). Escritos el 31 (follow_end dentro de su repetición, la
+banda visible, una señal en exploración, tres restos) y el 32 (experimento
+de máscara del sujeto, a pedido de Hernán: el palo, la escala, las
+etiquetas). Corren en paralelo.
+
+Ronda anterior, 2026-09-18 (noche) — el método pasó a una skill genérica en
 `~/.claude/skills/orquestador` (plantillas, reglas de sesión, cementerio del
 método, script de arranque) y el repo lleva su copia en `.claude/skills/`.
 Cambios que aplican desde ya: el informe lleva un «Resumen» de diez líneas
@@ -70,6 +78,20 @@ estado-fases.md`). **Ningún número del proyecto es hoy un juicio válido.**
   (para pasar de n = 1 a n = 3 y calibrar el archivo crudo de `DCIM`, no el
   recorte de la Mac). Después, para el S22 en Slow motion 240 por cable, no
   hace falta más.
+- 2026-09-19 · Del 29: `quality.camera_motion_px` mide sacudones, no deriva;
+  se **renombra** a `camera_jitter_px` en el encargo de deriva-en-el-análisis,
+  que por §Versionado pasa a ser **3.0.0** (renombrar es major) y va después
+  de la sesión. La auditoría subestimó la y: nota fechada bajo ADR-019 (31).
+- 2026-09-19 · Del 30: el análisis **sigue** negándose sobre una toma con el
+  gate en `reject` (sea de ingesta o de Fase 1); lo único re-corrible es la
+  percepción. La cola de telemetría de onnxruntime en
+  `~/Library/Application Support/Microsoft/DeveloperTools/.onnxruntime/` la
+  borra Hernán si quiere; ya no crece.
+- 2026-09-19 · Sacar el fondo del video para la pose: **no** (modelo
+  entrenado con fondos; el error va por bbox y plausibilidad; y el fondo es
+  la referencia de la deriva). Una máscara del sujeto se **mide** antes de
+  decidir: el palo, la escala y las etiquetas (32). Nada entra al motor sin
+  ese número.
 - 2026-09-18 · Del 17: un rechazo de la Fase 1 tiene que poder re-correrse
   (`run.py` decide sólo con los chequeos de ingesta; va en el 30). El
   chequeo usa la **mediana** de `body_height_px`, no el peor cuadro; `min` y
@@ -151,20 +173,23 @@ una sola sesión por vez.
   `cortado3` rechazado por 26 px (691); la guía con §7 «La sesión de
   validación» y el cronómetro sólo en la primera toma de cada vista. Corrió
   antes que el 30 porque ya estaba en marcha.
-- **R4** · [pendiente] **29** deriva-de-camara-censo — `kinelab/tools/
-  camera_drift.py` (nuevo), censo de los ocho clips, aceptación ±3 px contra
-  la auditoría. Solo: lee material.
-- **R5** · [pendiente] follow-end-en-su-repeticion — la cota del candidato
-  propio; `tol_frames` visible; `git rm kinelab/events/order.py`; y **una sola
-  señal y una sola escala en la pantalla**. Inventario del 16/9, verificado
-  contra HEAD: la tabla por cuadro usa `swing_signals` con `wrist_score_min`
-  0,0 y convierte a cm con `body_height_px` de cada cuadro, mientras los
-  eventos usan 0,55 y las métricas en cm usan `quality.scale_px` (el máximo de
-  la cadena del 14). Resultado: dos números en cm para el mismo evento que no
-  coinciden en la misma pantalla. Además `datos-eventos.json`, el overlay, las
-  fotos y el cero de los desplazamientos del CSV usan sólo la repetición 1
-  aunque haya más, y sin address el cero es el cuadro 0: decirlo en la
-  pantalla o elegir la repetición.
+- **R2** · [hecho] **30** abort-al-salir — `db46aa4`, `23fba14`. Telemetría
+  de onnxruntime; `truth/corridas.sh 10`; la percepción se re-corre tras un
+  rechazo de Fase 1.
+- **R4** · [hecho] **29** deriva-de-camara-censo — `83c152f`, `8faa9a6`.
+  Aceptado contra la auditoría en x; en y 26–30 px; censo hasta +119 px.
+- **R5** · [en curso] **31** follow-end-en-su-repeticion — la cota del
+  candidato propio; `tol_frames` en `datos-eventos.json` y en la tabla; una
+  señal en exploración; `git rm order.py`; docstring de `gate.py`; nota de la
+  y bajo ADR-019 ∥ [en curso] **32** mascara-del-sujeto — experimento en
+  `banco/`: máscara clásica estabilizada con el 29, el shaft contra etiquetas
+  a ojo en 20 cuadros, la escala coronilla-suela contra la cadena, y la tabla
+  de licencias sólo si lo clásico no alcanza.
+- [pendiente] una-sola-escala-en-la-pantalla — la tabla por cuadro convierte
+  a cm con `body_height_px` de cada cuadro y las métricas con
+  `quality.scale_px`: dos números en cm para el mismo evento en la misma
+  pantalla; y la repetición elegida (hoy siempre la 1, y sin address el cero
+  es el cuadro 0) dicha o elegible. Inventario del 16/9.
 - **R6** · [pendiente] escala-y-altura-trazables (analysis 2.1.0).
 - **R7** · [pendiente] fuente-de-la-calibracion — `calibration_clip_sha256` en
   capture-paths 1.2.0, `fps_calibration.same_file` en capture 1.3.0, aviso, y
@@ -223,6 +248,12 @@ la sesión del 18, sin informe; su punto 6 lo cierra el 27. Demo pública:
    (muestra `hip_line_rate_deg_s 3662,0`), no mostrar `cortado3` ni ninguna SD.
 6. Opcional: `git worktree remove` del worktree `wt16` de una sesión vieja
    (limpio, en `2e781be`, ya en main).
+7. **¿El chip del 29 anduvo?** Los commits están en `main` y no quedó
+   worktree: ¿lo abriste con el chip y la sesión hizo el `cd`, o lo corriste
+   por texto? Define si el chip entra a la skill como forma de entrega.
+8. **Dos definiciones de entrenador siguen sin respuesta** (punto 2): el 31
+   acota el fin del acompañamiento a su repetición, pero qué es el finish lo
+   tenés que decir vos.
 
 ## Aparcado
 
