@@ -3,6 +3,114 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 18 de septiembre de 2026 — encargo 17: el umbral de encuadre, en píxeles
+
+Prompt: `docs/prompts/17-gate-encuadre-en-px.md`. Informe:
+`docs/informes/2026-09-18-17-gate-encuadre-en-px.md`. **Sin sesión en paralelo**
+(lo pedía el prompt: este encargo edita `kinelab/` y corre el motor sobre
+material real). Commits: `6bae365` (código y documentos) y el de cierre, con este
+archivo y el informe.
+
+### Qué existe ahora
+
+- **El chequeo de encuadre tiene umbral por primera vez desde la Fase 1**, y son
+  **píxeles de cuerpo**, no fracción del cuadro:
+  `PerceptionGates.body_height_frac_min` → **`body_height_px_min`**
+  (`kinelab/sport.py`), validado `> 0` en vez del rango `(0, 1]`, y
+  `sports/golf/config.py` lo instancia en **717**. Procedencia `estimacion`:
+  arnés de **nivel 0**, sin estimador de pose, σ = 4,866 px, donde
+  `head_lift_top_cm` cruza su tolerancia de 5 cm (informe del 13 §3; le siguen
+  `head_sway_top_cm` a 608 y `thorax_sway_top_cm` a 552).
+- **El chequeo se llama `body_height_px`** (`kinelab/perception/framing.py`, y en
+  `CHECK_IDS`). `value` = mediana redondeada, `expected` = el umbral, y **la
+  fracción del cuadro va dentro de `reason`, también cuando pasa**, porque
+  `Check` no admite campos extra. Frase al fallar: «*El jugador mide N px de alto
+  en el cuadro y hacen falta 717: acercá el trípode. Son el M % del alto del
+  cuadro.*» Se borró `_finite_or_none`, que quedó sin uso.
+- **`CAPTURA.md`**: la fila del gate, el párrafo del umbral en §Encuadre con
+  procedencia y las dos cuentas del S22 (717 px = **37,3 % de 1920** en *Slow
+  motion* FHD 240, **30,9 % de 2320** en *Video* FHD), la columna «¿pasa los 717
+  px?» en la serie de seis clips, y las fracciones de `vid1` y `vid2`
+  desinvertidas (lo medido es **vid1 28,7 % · vid2 28,2 % · vid3 29,5 %**).
+  También se corrigió, con fecha, la afirmación «*un clip de este teléfono puede
+  pasar el gate entero*», que este cambio volvió falsa.
+- **`docs/filmacion-s22.md` §7 «La sesión de validación»**, nueva: trípode con
+  peso y sin tocar, toda estabilización apagada, un objeto chico y contrastado
+  fijo en el suelo, 25 s de escena vacía al armar cada vista, 2 s de pie derecho
+  al empezar cada toma, el cuerpo por encima del **37,3 %**, 25 s por toma en
+  todas, 10–20 swings por vista con pelota (la mitad sosteniendo la pose final
+  1–2 s), palo y altura declarados bien, y los originales de `DCIM/Camera` por
+  cable más un recorte de la Mac y **una toma por WhatsApp como video que tiene
+  que salir rechazada**. El §2 quedó reconciliado con la decisión del
+  orquestador del 18/9: **el cronómetro va en la primera toma de cada vista y en
+  la de la escena vacía, no en cada toma**, porque calibra el camino del teléfono
+  y no el video; y está escrito que con el camino medido nadie más necesita
+  cronómetro. El repaso final pasó a §8.
+
+### Medido
+
+- **Corrida real sobre `cortado3-lento.mp4`** en un `--data` de scratch: la
+  ingesta da **exit 0 · 9 de 9 · `gate: OK`**; la percepción da **exit 2 ·
+  `gate: RECHAZADO` · 11 de 12**, con `body_height_px` fallando **691 contra
+  717**. Es el resultado esperado: 26 px, medio paso de trípode.
+- **Los siete clips del repo, de sus reportes ya escritos, sin correr nada**:
+  pasan `vid3` 1132 px, `vid1` 1104, `vid2` 1083, `20260907_170638` 973 y
+  `cortado` 869; **no pasan** `cortado3-lento` 691 y `Cortado-lenta` 414. Los
+  cinco que pasan el encuadre se rechazan igual por `fps_min_for_gesture`; el
+  único que llega al fps es el que no pasa el encuadre. **Ningún clip del repo
+  pasa el gate completo.** Y la fracción engañaba: ordenarlos por fracción da un
+  orden distinto que por píxeles en **9 de los 21 pares**.
+- **El modo exploración no bloquea** y suma la frase a sus avisos, como se
+  esperaba: `datos` sobre `Cortado-lenta.mp4` sigue calculando todo y agrega
+  «*el gate diría: El jugador mide 413 px de alto… y hacen falta 717*».
+- **Suites: motor 360 pasados, 0 fallados, exit 0** (eran 357: +3 tests, 2
+  adaptados). Arnés **43 pasados, 0 fallados, exit 134** — el aborto
+  intermitente del encargo 30; no se tocó `truth/`.
+- **Mutación manual: 9 de 9 en rojo.** Dos de ellas (el valor desde el mínimo en
+  vez de la mediana, y el id viejo en la rama que pasa) **pasaron en verde en la
+  primera vuelta** y señalaban huecos de los tests: se agregó un clip sintético
+  con un tramo sostenido más chico (mediana 900, mínimo 600, tiene que pasar) y
+  la aserción del id en las cuatro ramas.
+- `rg body_height_frac` en `kinelab/`, `sports/`, `tests/`, `truth/`,
+  `service/`, `web/src/` y los seis documentos base: **cero**.
+
+### Qué falta o no se probó
+
+- **Una toma rechazada por encuadre no se puede volver a correr.** `run.py:74` se
+  niega a correr pose sobre un gate en `reject`, y la Fase 1 escribe su propio
+  rechazo en ese mismo `capture.json`: `python -m kinelab.perception TAKE
+  --overwrite` sale con `exit 1` citando la razón que escribió la corrida
+  anterior. Antes no pasaba porque el chequeo salía `passed: null`. Medido.
+  `run.py` no era archivo de este encargo; la decisión es del orquestador.
+- **El valor del chequeo depende del `fps_real` del camino declarado**: la
+  mediana móvil de `body_height_px` es de 1 segundo, o sea `1,0 × fps` cuadros.
+  `Cortado-lenta` da **414,1 px** con el camino calibrado (240,15 fps) y
+  **412,8 px** con `desconocido-video` (30,017). Son 1,2 px; acá no cambia
+  ningún veredicto, pero un clip a 2 px del umbral sí puede pasar o no según con
+  qué camino se lo declare.
+- **`ARRANQUE.md:64`** quedó con el nombre viejo y con una afirmación hoy falsa
+  («el umbral exacto de `body_height_frac` está sin fijar a propósito»). No es
+  archivo de este encargo; el texto de reemplazo está en el informe.
+- **`web/public/demo/…/capture.json`** todavía trae el id `body_height_frac`: es
+  un dato publicado, se rehace al regenerar la demo.
+- No se tocó `kinelab/ingest/gate.py`, `sports/golf/mdc.yaml`,
+  `kinelab/perception/run.py`, `kinelab/explore.py`, `service/`, `web/`,
+  `truth/`, `data/capture-paths.yaml` ni la toma de `data/sessions/`. **El 717
+  no se movió.** El front no se abrió (regla de trabajo).
+
+### Desviaciones
+
+- **Del contrato, ninguna.** El id del chequeo no aparece en `CONTRATO.md` —la
+  lista de §capture.json son los nueve chequeos de ingesta; los de la Fase 1 se
+  suman después y el contrato no los enumera—, así que no hubo qué poner al día.
+  Ningún campo entró ni salió de ningún schema.
+- **Del prompt, una hacia arriba.** Además del renombre que pedía, se corrigió
+  en `CAPTURA.md` §Lo que queda por verificar la afirmación de que
+  `cortado3-lento` pasa el gate entero: con el 717 puesto deja de ser cierta, y
+  un documento que dice algo falso es exactamente lo que este proyecto no hace.
+
+---
+
 ## 18 de septiembre de 2026 — encargo 28: la pantalla deja de decir cosas falsas
 
 Prompt: `docs/prompts/28-pantalla-sin-falsedades.md`. Informe:
