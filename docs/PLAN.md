@@ -1,6 +1,16 @@
 # Plan
 
-Última ronda: 2026-09-16 — **auditoría del primer juicio**
+Última ronda: 2026-09-18 — revisión de continuidad por el orquestador de la
+sesión original, después de que otra sesión orquestadora llevó el proyecto del
+16 al 26 y la auditoría. Nada corrió desde el 16/9: el árbol está limpio en
+`dfbf4a7` y el 27 y el 28 siguen sin correr. Se confirma el plan de abajo con
+un cambio de orden: Hernán filma la sesión de validación **ya**, sin esperar
+a R2 y R3 (la guía cubre las hipótesis de la deriva); el código de R2–R6 hace
+falta para analizarla, no para filmarla. Y se reduce la verificación previa de
+prompts a dos o tres agentes por prompt: siete por prompt fue lo que encontró
+los errores, pero cuesta más que el encargo.
+
+Ronda anterior, 2026-09-16 — **auditoría del primer juicio**
 (`docs/informes/2026-09-16-auditoria-primer-juicio.md`, 23 agentes). El 15/9
 `cortado3-lento.mp4` pasó el gate 9 de 9 y dio los primeros 21
 `judgment_allowed: true`. Reproducidos desde HEAD `f866c77`: **la aritmética es
