@@ -18,23 +18,28 @@ class PerceptionGates:
     Viven en la config del deporte y llegan a `kinelab.perception.framing` por
     parámetro: el motor no conoce ningún umbral de ningún deporte.
 
-    - `body_height_frac_min`: mínimo de `body_height_px / alto del cuadro`.
-      `None` = no evaluado todavía: el umbral se fija MIDIENDO sobre clips
-      reales (ESPECIFICACION 1.3), nunca a mano. Mientras sea `None`, el
-      chequeo `body_height_frac` se reporta con `passed=None` y su razón.
+    - `body_height_px_min`: mínimo de `body_height_px`, la altura del cuerpo en
+      PÍXELES, no la fracción del cuadro. La fracción engaña porque depende de
+      la resolución: en 4K un 28 % del alto son 1104 px, más que el 80 % de un
+      1080p (864 px). Lo que decide el error de una métrica es el píxel
+      (informe del 13, §3). `None` = no evaluado todavía: el umbral se fija
+      MIDIENDO (ESPECIFICACION 1.3), nunca a mano; mientras sea `None`, el
+      chequeo `body_height_px` se reporta con `passed=None` y su razón.
+      (Ojo: `FramingReport.body_height_px_min` es otra cosa —el mínimo
+      observado en el clip—; esto es el umbral que pide el deporte.)
     - `detection_rate_min`: fracción mínima de cuadros con el sujeto detectado
       (CAPTURA.md §El gate: 0,90).
     - `multi_subject_frac_max`: fracción máxima de cuadros con más de un
       candidato válido antes de declarar que hay más de una persona en cuadro.
     """
 
-    body_height_frac_min: float | None = None
+    body_height_px_min: float | None = None
     detection_rate_min: float = 0.90
     multi_subject_frac_max: float = 0.10
 
     def __post_init__(self) -> None:
-        if self.body_height_frac_min is not None and not (0.0 < self.body_height_frac_min <= 1.0):
-            raise ValueError(f"body_height_frac_min fuera de (0, 1]: {self.body_height_frac_min}")
+        if self.body_height_px_min is not None and not self.body_height_px_min > 0.0:
+            raise ValueError(f"body_height_px_min tiene que ser positivo: {self.body_height_px_min}")
         if not (0.0 <= self.detection_rate_min <= 1.0):
             raise ValueError(f"detection_rate_min fuera de [0, 1]: {self.detection_rate_min}")
         if not (0.0 <= self.multi_subject_frac_max <= 1.0):

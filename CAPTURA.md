@@ -116,12 +116,12 @@ Más fps con la muñeca borrosa es peor que menos fps con la muñeca nítida.
   **La serie medida, en orden de aparición** — seis clips reales, todos del
   mismo teléfono, todos `face_on`:
 
-  | clip | modo | cuerpo | % del alto | informe |
-  |---|---|---|---|---|
-  | `vid1` · `vid2` · `vid3` | Video UHD 60 | — | **28,2 / 28,7 / 29,5 %** | 11 |
-  | `20260907_170638` | Video FHD 30 | — | **41,9 %** | 11 |
-  | `Cortado-lenta` | Slow motion FHD 240 | 414 px | **21,6 %** — el peor | 24 |
-  | `cortado3-lento` | Slow motion FHD 240 | **691 px** | **36,0 %** | 26 |
+  | clip | modo | cuerpo | % del alto | ¿pasa los 717 px? | informe |
+  |---|---|---|---|---|---|
+  | `vid1` · `vid2` · `vid3` | Video UHD 60 | 1104 · 1083 · 1132 px | **28,7 / 28,2 / 29,5 %** | sí · sí · sí | 11 |
+  | `20260907_170638` | Video FHD 30 | 973 px | **41,9 %** | sí | 11 |
+  | `Cortado-lenta` | Slow motion FHD 240 | 414 px | **21,6 %** — el peor | **no** | 24 |
+  | `cortado3-lento` | Slow motion FHD 240 | **691 px** | **36,0 %** | **no**, por 26 px | 26 |
 
   El quinto es el peor de la serie y es justamente el que trajo la primera tasa
   de captura medida: el cronómetro se resolvió y el encuadre se perdió. El
@@ -129,12 +129,31 @@ Más fps con la muñeca borrosa es peor que menos fps con la muñeca nítida.
   cambiar de modo** — 691 px de cuerpo contra 414. La regla de campo funciona
   cuando se aplica; lo que falta no es una lente, es el metro de trípode.
 
-  **El umbral del gate no está fijado, y no se fija a ojo.** Lo que el motor
-  mide es `body_height_px` —altura del cuerpo en píxeles—, no la fracción del
-  cuadro; el número que decide sale del barrido de tamaño de sujeto del arnés
-  (`truth/`, encargo 13, en curso), que dice a partir de qué altura en píxeles
-  la métrica deja de estar por encima de su piso de ruido. Hasta que ese
-  barrido exista, `body_height_frac` (ESPECIFICACION 1.3) sigue sin umbral.
+  **El umbral del gate son 717 px de cuerpo, y se mide en píxeles, no en
+  fracción del cuadro.** Lo fijó el barrido de tamaño de sujeto del arnés
+  (informe del 13, §3): con σ = 4,866 px —el mismo ruido absoluto que el
+  nominal relativo al tamaño nominal de 811 px— `head_lift_top_cm` cruza su
+  tolerancia de 5 cm a **717 px**, y es la métrica que manda porque la cabeza es
+  el punto más ruidoso y su desplazamiento verdadero el más chico (3 cm). Le
+  siguen `head_sway_top_cm` a 608 px y `thorax_sway_top_cm` a 552. Las cuatro
+  duraciones, `tempo_ratio` y el sub-cuadro del impacto no cruzan nunca: su MDC
+  es cuantización de cuadros, no tamaño.
+
+  **Procedencia: `estimacion`.** Sale del arnés de **nivel 0** —una cadena
+  cinemática proyectada con ruido gaussiano, sin estimador de pose— con la
+  cámara virtual `iphone17pro-1080p120`, que no es el teléfono con el que se
+  filma. Se revisa cuando haya σ por keypoint medido en material real. Que esté
+  del lado conservador está medido: el jitter de la pose de `cortado3-lento`
+  en HEAD es de **3,7 px en y**, con la deriva de la cabeza incluida, por debajo
+  del σ nominal (auditoría del 16/9, §4).
+
+  **La fracción sigue sirviendo para apuntar el trípode**, y por eso viaja
+  dentro de la razón del chequeo: 717 px son el **37,3 % de 1920** en *Slow
+  motion* FHD 240 (cuadro 1080×1920) y el **30,9 % de 2320** en *Video* FHD
+  (cuadro 1080×2320). El mismo número de píxeles es una fracción distinta en
+  cada modo, y ahí está por qué el umbral no puede ser una fracción: en 4K un
+  28 % del alto son 1104 px, **más** que el 80 % de un 1080p (864 px). El
+  80–90 % de esta sección queda como objetivo de campo.
 - Trípode. Cámara a **altura de cintura a pecho**.
 - Dos vistas, cada una su propia sesión:
   - **`face_on`**: cámara perpendicular a la línea de tiro, mirando al pecho
@@ -327,7 +346,7 @@ pero se reportan todos.
 | `fps_min_for_gesture` | `fps_real ≥ sports.<g>.fps_min` (golf: 100). En un camino declarado el `fps_real` es el **asumido**, y el chequeo lo dice pase o falle | "A esta tasa no se pueden medir los tiempos del swing." |
 | `duration_plausible` | 3 s ≤ duración **real** ≤ 180 s. **En un modo estirado, la duración real es la de reproducción dividida por el `stretch_factor`**: con el ×8 del S22, 3 s reales son 24 s de grabación (ver abajo) | "La toma dura N s reales; se esperan entre 3 y 180." |
 | `rotation_normalized` | rotación aplicada en `master.mp4`; ancho/alto reales | |
-| `body_height_frac` (Fase 1) | `body_height_px / height ≥ umbral medido` | "El jugador ocupa X% del cuadro. Acercá la cámara." |
+| `body_height_px` (Fase 1) | `body_height_px ≥ sports.<d>.perception.body_height_px_min` (golf: **717**, procedencia `estimacion`; ver §Encuadre). **Píxeles, no fracción del cuadro.** La fracción viaja dentro de la razón, también cuando pasa — «691 px de cuerpo, 36 % del alto» | "El jugador mide N px de alto en el cuadro y hacen falta 717: acercá el trípode." |
 | `detection_rate` (Fase 1) | `≥ 0,90` | "Se perdió al jugador en el N% de los cuadros." |
 | `single_subject` (Fase 1) | una sola persona de tamaño dominante | "Hay más de una persona en cuadro." |
 | `view_declared` | `view ∈ sports.<d>.views` | |
@@ -413,11 +432,18 @@ distancias distintas.)
   dentro de su propio 1 σ y el residuo máximo de la recta acota a 1,3 cuadros
   de 598 cualquier tramo capturado a velocidad normal. El modo *Slow motion*
   (que no es *Super slow motion*) no mezcla velocidades.
-- *Si un clip de este teléfono puede pasar el gate entero.* **Puede.** Medido
-  el 15/9 sobre `cortado3-lento.mp4` (2977 cuadros, 12,40 s reales, mismo modo
-  y mismo camino): **9 de 9 chequeos, `verdict: ok`**, con
+- *Si un clip de este teléfono puede pasar el gate de ingesta entero.*
+  **Puede.** Medido el 15/9 sobre `cortado3-lento.mp4` (2977 cuadros, 12,40 s
+  reales, mismo modo y mismo camino): **9 de 9 chequeos, `verdict: ok`**, con
   `fps_provenance: medido_aqui` — el primer `capture.json` del proyecto que
-  pasa. Lo único que había separado al clip anterior del gate era la duración:
+  pasa.
+
+  **Desde el 18/9 ya no pasa el gate completo, y el que falla es el encuadre.**
+  Con `body_height_px_min = 717` puesto (encargo 17), la Fase 1 suma sus tres
+  chequeos a ese mismo `capture.json` y el clip queda en **11 de 12**: 691 px de
+  cuerpo contra 717, `verdict: reject`. Es el tercer umbral que este clip
+  encuentra y el único que le falta: fps y duración ya los pasa. Lo que hay que
+  mover sigue siendo el trípode, no el número. Lo único que había separado al clip anterior del gate era la duración:
   2,49 s reales contra los 3 que pide `duration_plausible`. **No se movió
   ningún umbral; se filmó más largo.** En ×8, 3 s reales son 24 s de
   grabación, y de ahí sale el mínimo de 25 s de `docs/filmacion-s22.md`.

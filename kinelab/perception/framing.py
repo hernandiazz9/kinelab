@@ -40,7 +40,7 @@ TORSO_TO_HEIGHT_DEFAULT = 3.0
 # debajo se usa el default.
 TORSO_RATIO_MIN_FRAMES = 5
 
-CHECK_IDS = ("body_height_frac", "detection_rate", "single_subject")
+CHECK_IDS = ("body_height_px", "detection_rate", "single_subject")
 
 
 def _rolling_nanmedian(x: np.ndarray, window: int) -> np.ndarray:
@@ -195,53 +195,51 @@ def _pct(x: float) -> int:
     return int(round(100.0 * x))
 
 
-def _finite_or_none(x: float) -> float | None:
-    return float(x) if math.isfinite(x) else None
-
-
 def framing_checks(report: FramingReport, gates: "PerceptionGates") -> list[Check]:
     """Los tres chequeos de la Fase 1, en el orden del gate (CAPTURA.md):
-    `body_height_frac`, `detection_rate`, `single_subject`.
+    `body_height_px`, `detection_rate`, `single_subject`.
 
-    Frases para el entrenador, en español. `body_height_frac` se reporta con
-    `passed=None` y razón "umbral sin medir" mientras
-    `gates.body_height_frac_min` sea `None`. Nunca lanza por un reporte vacío:
-    un clip sin sujeto falla con razones legibles.
+    Frases para el entrenador, en español. `body_height_px` mide PÍXELES de
+    cuerpo, no fracción del cuadro: la fracción depende de la resolución (en 4K
+    un 28 % del alto son 1104 px, más que el 80 % de un 1080p). La fracción
+    viaja igual, dentro de `reason` —también cuando el chequeo pasa—, porque
+    `Check` no admite campos extra y es lo que el entrenador reconoce cuando
+    mira el cuadro. Se reporta con `passed=None` y razón "umbral sin medir"
+    mientras `gates.body_height_px_min` sea `None`. Nunca lanza por un reporte
+    vacío: un clip sin sujeto falla con razones legibles.
     """
     checks: list[Check] = []
 
-    frac = report.frac_of_frame
-    threshold = gates.body_height_frac_min
-    frac_value = _finite_or_none(frac)
+    px = report.body_height_px_median
+    threshold = gates.body_height_px_min
+    px_value = None if not math.isfinite(px) else int(round(px))
+    encuadre = None if px_value is None else f"{px_value} px de cuerpo, {_pct(report.frac_of_frame)} % del alto"
     if threshold is None:
-        if frac_value is None:
+        if px_value is None:
             reason = "Sin evaluar: umbral sin medir (se fija midiendo sobre los clips reales, ESPECIFICACION 1.3), y no se detectó al jugador en ningún cuadro."
         else:
-            reason = (
-                f"Sin evaluar: umbral sin medir (se fija midiendo sobre los clips reales, ESPECIFICACION 1.3). "
-                f"El jugador ocupa {_pct(frac)} % del alto del cuadro."
-            )
-        checks.append(Check(id="body_height_frac", passed=None, value=frac_value, expected=None, reason=reason))
-    elif frac_value is None:
+            reason = f"Sin evaluar: umbral sin medir (se fija midiendo sobre los clips reales, ESPECIFICACION 1.3). {encuadre}."
+        checks.append(Check(id="body_height_px", passed=None, value=px_value, expected=None, reason=reason))
+    elif px_value is None:
         checks.append(
             Check(
-                id="body_height_frac",
+                id="body_height_px",
                 passed=False,
                 value=None,
                 expected=threshold,
-                reason="No se pudo medir cuánto ocupa el jugador: no se lo detectó en ningún cuadro.",
+                reason="No se pudo medir cuánto mide el jugador en el cuadro: no se lo detectó en ningún cuadro.",
             )
         )
-    elif frac >= threshold:
-        checks.append(Check(id="body_height_frac", passed=True, value=round(frac, 4), expected=threshold))
+    elif px_value >= threshold:
+        checks.append(Check(id="body_height_px", passed=True, value=px_value, expected=threshold, reason=f"{encuadre}."))
     else:
         checks.append(
             Check(
-                id="body_height_frac",
+                id="body_height_px",
                 passed=False,
-                value=round(frac, 4),
+                value=px_value,
                 expected=threshold,
-                reason=f"El jugador ocupa {_pct(frac)} % del alto del cuadro. Acercá la cámara.",
+                reason=f"El jugador mide {px_value} px de alto en el cuadro y hacen falta {threshold:g}: acercá el trípode. Son el {_pct(report.frac_of_frame)} % del alto del cuadro.",
             )
         )
 

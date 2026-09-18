@@ -5,6 +5,7 @@ sintético. Lo que necesita modelos reales o clips con personas se prueba a mano
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import shutil
 from datetime import date
@@ -122,11 +123,67 @@ def test_framing_report_and_checks():
     rep = framing_report(track, 120.0, 1080, camera_motion_px=0.3)
     assert rep.frac_of_frame == pytest.approx(390 / 1080, abs=0.005)
     checks = framing_checks(rep, PerceptionGates())
-    assert [c.id for c in checks] == ["body_height_frac", "detection_rate", "single_subject"]
+    assert [c.id for c in checks] == ["body_height_px", "detection_rate", "single_subject"]
     assert checks[0].passed is None and "sin medir" in checks[0].reason
     assert checks[1].passed is False and "15 %" in checks[1].reason
-    strict = framing_checks(rep, PerceptionGates(body_height_frac_min=0.5, detection_rate_min=0.8))
-    assert strict[0].passed is False and "Acercá" in strict[0].reason and strict[1].passed is True
+    strict = framing_checks(rep, PerceptionGates(body_height_px_min=717, detection_rate_min=0.8))
+    assert strict[0].passed is False and "acercá el trípode" in strict[0].reason and strict[1].passed is True
+
+
+def test_body_height_px_check_measures_pixels_not_fraction():
+    """El chequeo mide PÍXELES: el mismo cuerpo de 600 px se rechaza y el de
+    900 px pasa, y la fracción del cuadro viaja dentro de `reason` en los dos
+    casos porque `Check` no admite campos extra. Golf pide 717 px
+    (`sports/golf/config.py`), que es donde `head_lift_top_cm` cruza su
+    tolerancia con σ = 4,866 px (informe del 13, §3)."""
+    T, H_FRAME = 10, 1920
+
+    def _rep(px: float):
+        k = np.stack([person(scale=px / 78.0)] * T)  # `person` mide 78 unidades de alto
+        track = SimpleNamespace(keypoints=k, scores=np.full((T, K.J), 0.9), detected_mask=np.ones(T, bool), candidates=np.ones(T, int), detection_rate=1.0)
+        return framing_report(track, 120.0, H_FRAME, camera_motion_px=0.2)
+
+    chico = framing_checks(_rep(600.0), GOLF.perception)[0]
+    assert chico.id == "body_height_px" and chico.passed is False
+    assert chico.value == pytest.approx(600, abs=1) and chico.expected == 717
+    assert "600 px de alto" in chico.reason and "hacen falta 717" in chico.reason and "acercá el trípode" in chico.reason
+    assert "31 %" in chico.reason, "la fracción del cuadro va adentro de la razón"
+
+    grande = framing_checks(_rep(900.0), GOLF.perception)[0]
+    assert grande.passed is True and grande.value == pytest.approx(900, abs=1) and grande.expected == 717
+    assert "900 px de cuerpo" in grande.reason and "47 % del alto" in grande.reason, "también cuando pasa"
+
+    # 4K contra 1080p: la fracción se invierte respecto de los píxeles, y manda el píxel.
+    en_4k = framing_report(SimpleNamespace(keypoints=np.stack([person(scale=1104 / 78.0)] * T), scores=np.full((T, K.J), 0.9), detected_mask=np.ones(T, bool), candidates=np.ones(T, int), detection_rate=1.0), 120.0, 3840, camera_motion_px=None)
+    assert en_4k.frac_of_frame < 0.30 and framing_checks(en_4k, GOLF.perception)[0].passed is True
+
+    # Decide la MEDIANA, no el peor cuadro: un tramo en el que el jugador se
+    # aleja (o se pierde un tobillo) no tira abajo la toma entera. Es la misma
+    # mediana que informa `quality.body_height_px.median`.
+    n, corto = 300, 60
+    variable = framing_report(SimpleNamespace(keypoints=np.stack([person(scale=(900.0 if i < n - corto else 600.0) / 78.0) for i in range(n)]), scores=np.full((n, K.J), 0.9), detected_mask=np.ones(n, bool), candidates=np.ones(n, int), detection_rate=1.0), 120.0, H_FRAME, camera_motion_px=None)
+    assert variable.body_height_px_min == pytest.approx(600, abs=1)
+    assert variable.body_height_px_min < 717 <= variable.body_height_px_median
+    con_tramo_chico = framing_checks(variable, GOLF.perception)[0]
+    assert con_tramo_chico.passed is True and con_tramo_chico.value == pytest.approx(900, abs=1)
+
+    vacio = framing_report(SimpleNamespace(keypoints=np.full((T, K.J, 2), np.nan), scores=np.zeros((T, K.J)), detected_mask=np.zeros(T, bool), candidates=np.zeros(T, int), detection_rate=0.0), 120.0, H_FRAME, camera_motion_px=None)
+    sin_sujeto = framing_checks(vacio, GOLF.perception)[0]
+    assert sin_sujeto.passed is False and sin_sujeto.value is None
+    assert "no se lo detectó en ningún cuadro" in sin_sujeto.reason
+
+    # El id es el mismo en las cuatro ramas: pasa, falla, sin sujeto y sin umbral.
+    sin_umbral = framing_checks(_rep(900.0), PerceptionGates())[0]
+    assert {c.id for c in (chico, grande, con_tramo_chico, sin_sujeto, sin_umbral)} == {"body_height_px"}
+    assert sin_umbral.passed is None and "sin medir" in sin_umbral.reason and "900 px de cuerpo" in sin_umbral.reason
+
+
+def test_body_height_px_min_has_to_be_positive():
+    with pytest.raises(ValueError, match="body_height_px_min"):
+        PerceptionGates(body_height_px_min=0.0)
+    with pytest.raises(ValueError, match="body_height_px_min"):
+        PerceptionGates(body_height_px_min=-1.0)
+    assert PerceptionGates(body_height_px_min=1200.0).body_height_px_min == 1200.0  # un umbral de 4K es legal
 
 
 # --- pose.npz y frontera JSON ---------------------------------------------------
@@ -249,8 +306,15 @@ def _take(clips, capture_paths_yaml, tmp_path, key="hevc120"):
 
 def test_run_perception_ok_and_timestamps(clips, capture_paths_yaml, tmp_path):
     take = _take(clips, capture_paths_yaml, tmp_path)
-    res = run_perception(take, GOLF, estimator=FakeEstimator(True))
+    # El clip sintético mide 100×100 px y `FakeEstimator` pone una persona de
+    # ~78 px de cuerpo: con el umbral de golf (717 px) el gate lo rechazaría, y
+    # lo que este test mira es el eje del tiempo, no el encuadre. Se corre con
+    # un deporte sin umbral de encuadre, que es el caso que el chequeo reporta
+    # con `passed=None`. El umbral se prueba aparte.
+    sport = dataclasses.replace(GOLF, perception=PerceptionGates())
+    res = run_perception(take, sport, estimator=FakeEstimator(True))
     assert res.frames == 480 and res.gate.verdict == "ok", res.gate.reasons
+    assert res.checks[0].id == "body_height_px" and res.checks[0].passed is None
     d = load_pose(take)
     assert d.keypoints.shape == (480, K.J, 2) and d.timestamps_s[1] - d.timestamps_s[0] == 1.0 / 120.0
     assert d.timestamps_s[-1] == pytest.approx(479 / 120.0)
@@ -259,8 +323,23 @@ def test_run_perception_ok_and_timestamps(clips, capture_paths_yaml, tmp_path):
     ids = [c.id for c in cj.gate.checks]
     assert ids.index("detection_rate") == ids.index("rotation_normalized") + 2 and ids[-1] == "gesture_known"
     with pytest.raises(PerceptionError, match="ya existe"):
-        run_perception(take, GOLF, estimator=FakeEstimator(True))
+        run_perception(take, sport, estimator=FakeEstimator(True))
     assert d.provenance["source_sha256"] == cj.sha256_original and d.provenance["fps_real"] == 120.0
+
+
+def test_run_perception_rejects_a_take_with_the_subject_too_small(clips, capture_paths_yaml, tmp_path):
+    """El mismo clip y el mismo estimador que el test de arriba, pero con el
+    umbral de golf puesto: 78 px de cuerpo contra 717 y el gate pasa a
+    `reject`, con la razón en `capture.json` (ESPECIFICACION 1.3, aceptación de
+    la Fase 1: «el gate rechaza un clip con el sujeto al 15 % del alto»)."""
+    take = _take(clips, capture_paths_yaml, tmp_path)
+    res = run_perception(take, GOLF, estimator=FakeEstimator(True))
+    assert res.gate.verdict == "reject"
+    assert any("acercá el trípode" in r for r in res.gate.reasons), res.gate.reasons
+    cj = CaptureJson.model_validate_json((take / "capture.json").read_text(encoding="utf-8"))
+    chk = next(c for c in cj.gate.checks if c.id == "body_height_px")
+    assert chk.passed is False and chk.expected == 717 and chk.value < 717
+    assert (take / "pose.npz").exists(), "la pose cruda se escribe igual: el rechazo es del gate, no del modelo"
 
 
 def test_run_perception_without_subject_rejects_but_writes_pose(clips, capture_paths_yaml, tmp_path):
