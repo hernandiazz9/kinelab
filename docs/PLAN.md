@@ -1,6 +1,12 @@
 # Plan
 
-Última ronda: 2026-09-18 (noche) — el 17 cerró (ver R3). Sigue el 30, solo,
+Última ronda: 2026-09-18 (noche) — el método pasó a una skill genérica en
+`~/.claude/skills/orquestador` (plantillas, reglas de sesión, cementerio del
+método, script de arranque) y el repo lleva su copia en `.claude/skills/`.
+Cambios que aplican desde ya: el informe lleva un «Resumen» de diez líneas
+arriba; el prompt lleva un campo «Front» que se le pregunta a Hernán; las
+sesiones nunca terminan sin commitear y no queman fechas ni conteos en tests.
+Se prueba la entrega por chip con el 29. El 17 cerró (ver R3). Sigue el 30, solo,
 con dos cosas chicas del 17 sumadas; después el 29.
 
 Ronda anterior, 2026-09-18 (tarde) — el 27 y el 28 cerraron: 0 de 21 juicios

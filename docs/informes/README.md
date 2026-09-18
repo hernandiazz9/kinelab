@@ -7,6 +7,7 @@ Con números: el orquestador no lee código ni CSVs, decide con lo que diga acá
 
 ```
 # <slug> — <fecha>
+Resumen: <hasta diez líneas, arriba de todo: qué quedó, los tres o cuatro números que importan, qué está abierto y qué hay que decidir o probar. Si el orquestador lee sólo esto, tiene que poder decidir el próximo paso>
 Encargo: <una línea: qué pedía el prompt>
 Hecho: <3–8 líneas; commits con hash>
 Probado: <qué se corrió de verdad y qué dio, con números>

@@ -1,6 +1,6 @@
 ---
 name: encargo
-description: Corre un encargo numerado de kinelab escrito por el orquestador (docs/prompts/NN-<slug>.md) con las reglas fijas del proyecto - lectura de los documentos base en orden, la regla del front de Hernán (nunca levantarlo ni abrirlo), commits con rutas explícitas, ESTADO.md al día y el informe corto en docs/informes/. Usar siempre que Hernán escriba "/encargo NN", "hacé el encargo NN", "corré docs/prompts/NN-...", o pegue un prompt que diga "Para correr - /encargo NN", aunque no use la palabra encargo.
+description: Corre un encargo numerado de kinelab escrito por el orquestador (docs/prompts/NN-<slug>.md) con las reglas fijas del proyecto - lectura de los documentos base en orden, las reglas de trabajo de Hernán (el front lo prueba quien diga el prompt), commits con rutas explícitas, ESTADO.md al día y el informe corto en docs/informes/. Usar siempre que Hernán escriba "/encargo NN", "hacé el encargo NN", "corré docs/prompts/NN-...", o pegue un prompt que diga "Para correr - /encargo NN", aunque no use la palabra encargo.
 ---
 
 # Encargo de trabajo
@@ -26,17 +26,17 @@ quedó todo). Después, los archivos de código que el prompt nombre, y sólo es
 al principio. Son unas 1.900 líneas; se leen una vez y evitan repetir errores
 que ya se midieron (el cementerio de `HERENCIA.md` existe por eso).
 
-## 3. La regla de trabajo de Hernán (no negociable)
+## 3. Reglas de trabajo de Hernán
 
-Trabajá normal: probá la funcionalidad de verdad (corré videos por el pipeline,
-medí, verificá que los números den, escribí tests), y usá subagentes y
-workflows cuando convengan. Lo ÚNICO que no hacés es levantar el frontend,
-abrirlo en el navegador, sacar capturas de pantalla o leer la página: eso quema
-el contexto. El front lo prueba Hernán y va diciendo cómo está; vos lo dejás
-listo con los comandos para levantarlo y una lista corta de "probá esto, esto
-y esto". Excepción: sólo si él lo pide explícitamente. El backend
-(`.venv/bin/python -m service`) sí se puede levantar para probar con `curl`
-o con el TestClient: lo que no se levanta es `next dev` ni el navegador.
+- Trabajá normal: probá la funcionalidad de verdad (corré videos por el
+  pipeline, medí, verificá que los números den, escribí tests), y usá
+  subagentes y workflows cuando convengan.
+- **Front:** el prompt dice, en su campo «Front», si lo probás vos o lo
+  prueba Hernán. Si no dice nada, lo prueba Hernán: lo dejás listo con los
+  comandos para levantarlo y una lista corta de "probá esto, esto y esto",
+  sin abrir el navegador ni sacar capturas. El backend
+  (`.venv/bin/python -m service`) siempre se puede levantar para probar con
+  `curl` o con el TestClient: eso no es "probar el front".
 
 ## 4. Lo que aplica siempre (además de `AGENTS.md`)
 
@@ -87,6 +87,12 @@ solo y el índice de git también, así que:
   la palabra «passed».
 - En `ESTADO.md` tu sección lleva el número del encargo en el título. No
   edites secciones de otros encargos en curso.
+- Nada de fechas, conteos ni valores quemados en un test que puedan cambiar
+  solos (la fecha, el número de métricas del registro): afirmá contra la
+  fuente que cambia. Pasó dos veces el 15/9.
+- Nunca termines sin commitear. Si no podés cerrar, commiteá lo que está
+  entero y en el informe decí qué quedó afuera y en qué archivo. El 16
+  terminó sin commitear y otra sesión tuvo que hacerlo.
 
 ## 6. Material de prueba que existe
 
@@ -113,7 +119,8 @@ En este orden, y no está terminado hasta el último punto:
    <título>`, con qué existe ahora, qué falta o no se probó, y las
    desviaciones. Es lo que la sesión siguiente lee para saber dónde quedó.
 3. El informe en `docs/informes/<AAAA-MM-DD>-NN-<slug>.md` con el formato de
-   `docs/informes/README.md`. Números, no adjetivos: el orquestador no lee
+   `docs/informes/README.md`, **con el resumen de diez líneas arriba**.
+   Números, no adjetivos: el orquestador no lee
    código ni CSVs, decide sólo con lo que pongas ahí. Si algo quedó abierto o
    hay una decisión que no era tuya, va en su campo.
 4. Commit(s) con rutas explícitas y mensaje en español que diga qué cambió y
