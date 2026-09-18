@@ -132,6 +132,105 @@ tocó, y no se desplegó nada. Commit del código: `9107e5b`.
 
 ---
 
+## 18 de septiembre de 2026 — encargo 27: contención del juicio (ADR-019)
+
+Prompt: `docs/prompts/27-contencion-del-juicio.md`. Informe:
+`docs/informes/2026-09-18-27-contencion-del-juicio.md`. Corrió en paralelo con el
+**28**, que toca sólo `web/`. No se editó ningún archivo suyo.
+
+Commits: `843d1f4` (código, documentos y el ejemplo regenerado), y el de cierre
+con este archivo y el informe.
+
+### Qué existe ahora
+
+- **ADR-019 escrito en `DECISIONES.md`**, y `judgment_allowed` con **dos
+  condiciones nuevas e independientes** (`kinelab/metrics/registry.py`), cada una
+  con su comentario y su test:
+  - `Metric.mdc_validation`, enum de dos valores (`sin_validar` por default,
+    `material_real` el único que habilita), validado en `__post_init__` como ya
+    se valida `level`. **No es una procedencia**: `PROVENANCES` y el enum de
+    `fps_provenance` del schema quedaron intactos.
+  - rango obligatorio: `reference is not None`, `kind == "range"` y procedencia
+    fuera de `estimacion`/`sin_verificar` (`WEAK_PROVENANCES`). La condición
+    vieja —`ref is None or ref.range_width is None`— es de donde salieron los 21.
+- **`registry_version` de golf 0.2.0 → 0.3.0**, con el porqué al lado del número.
+  El registro genérico del motor queda en 0.1.0. `schema_version` sigue en 2.0.0
+  y ningún `metric_version` se movió: **ningún valor cambió**.
+- **Dos avisos nuevos en `warnings[]`**, que se suman a los de fps de ADR-016 y
+  no los reemplazan. El de la regla sale de lo que el archivo dice —si alguna
+  métrica tuviera juicio, no se escribe— y el del MDC lo declara el deporte en
+  `Registry.mdc_note`, para que el motor no nombre el arnés ni el modelo de
+  cámara (invariante 13).
+- **Repetibilidad en `null` con razón** mientras no haya piso de ruido medido
+  (`kinelab/metrics/generic.py`), en escalares y en curvas, conservando `n`. El
+  CLI imprime la razón en vez de «SD None».
+- **El `source` del MDC del sub-cuadro** dice de qué arnés viene y que no está
+  validado; la `provenance` sigue en `medido_aqui`, que es de dónde sale el
+  número y lo único que el schema admite ahí.
+- `pyproject.toml` sin `addopts = "-q"`; notas fechadas de ADR-018 en
+  `ESPECIFICACION.md` 3.2 y Fase 5; `CONTRATO.md` §El sextuplo, §summary,
+  §subframe y §Versionado, y `CONTEXTO.md` §Vocabulario e invariante 4,
+  alineados.
+- **`data/sessions/` existe por primera vez.** `cortado3-lento.mp4` vive en
+  `data/sessions/hernan/2026-09-15/driver/face_on/take-01`, con gate 9 de 9,
+  `pose.npz` y `analysis.json`.
+
+### Medido
+
+- **0 de 21 `judgment_allowed`** en cortado3, y **24 de 24 valores idénticos** a
+  `docs/informes/auditoria-2026-09-16/reproduccion.md` §3 (21 con valor y 3
+  `null`). Mismos cuadros de evento, misma escala (783,9 px, cuadro 1594), misma
+  calidad `confiable`.
+- **Suites:** motor **357 pasados, 0 fallados, exit 0** (eran 345: +12 tests
+  nuevos, 11 adaptados sin perder ninguna aserción). Arnés **43 pasados, 0
+  fallados** en tres corridas, con **exit 134 en una de las tres**, después del
+  resumen: el aborto conocido al cerrar el intérprete es **intermitente**, no
+  sistemático. No se tocó.
+- **Mutación manual: 5 de 5 en rojo.** Sacar la condición (a) → 1 rojo; sacar la
+  (b) entera → 3; dejar pasar la procedencia floja → 2; `mdc_validation` con
+  default `material_real` → 3; la repetibilidad volviendo a publicar la SD → 2.
+- **El punto 6 del encargo 16 cerró acá.** `datos` con `--altura-m 1.75` sobre
+  `~/Desktop/cortado.mp4` y `data/incoming/vid1.mp4`, contra la columna «ahora»
+  del informe 14 §4. En **vid1 los siete valores no se mueven** (a lo sumo 0,1 cm
+  de redondeo). En **cortado se mueven 0,0 a 1,8 cm**, todos por debajo de su
+  propio MDC, y la causa es el encargo 18: el top pasó de 33 a **35**. La única
+  que no se mueve es `pelvis_sway_impact_cm`, que no se ancla al top. La tabla
+  está en el informe.
+
+### Qué falta o no se probó
+
+- **La tabla del informe 26 §4 no es una medición**, y tampoco ninguna SD entre
+  repeticiones. Los 21 `judgment_allowed: true` que publicó tienen aritmética
+  exacta y ninguno resiste como juicio: `docs/informes/2026-09-16-auditoria-primer-juicio.md`
+  §1. No se usa como referencia de nada.
+- **Re-habilitar juicio es métrica por métrica**: `mdc_validation="material_real"`
+  más un `Reference("range", …)` con procedencia, cada uno con la tabla que lo
+  respalde. No hay bandera global, a propósito.
+- **`follow_end` y la deriva de cámara siguen abiertos** (encargos propios). El
+  `follow_end` 1978 de la rep 1 de cortado3 sigue cayendo en la quietud previa al
+  swing siguiente; no se tocó nada de eso.
+- **`kinelab/events/order.py` sigue huérfano** (lo anotó el 18). No es archivo de
+  este encargo.
+- No se tocó `web/`, `service/`, `truth/`, `sports/golf/mdc.yaml` ni
+  `data/capture-paths.yaml`. El front no se abrió (regla de trabajo).
+
+### Desviaciones
+
+- **Del contrato, ninguna.** `summary.metrics` es un objeto libre en el schema,
+  así que el `null_reason` de la repetibilidad entra sin tocarlo, y el sextuplo
+  no cambió: la razón por la que algo no es juicio va a `warnings[]`.
+- **Del prompt, una, y es de redacción del aviso.** El prompt pedía los dos
+  avisos «siempre que haya al menos una métrica con valor». El primero se escribe
+  además **sólo si ninguna métrica del análisis tiene juicio**: si alguna lo
+  tuviera, la frase «ninguno de estos números es un juicio» sería falsa, y un
+  aviso bien escrito sobre algo falso es exactamente el error del prototipo
+  anterior (`HERENCIA.md` §Prohibido portar). Con el registro de golf la
+  condición se cumple siempre; hay un test que prueba las dos ramas.
+- **Del prompt, una segunda, de arquitectura.** El aviso del MDC nombra el arnés,
+  su nivel y el modelo de cámara, y eso no puede vivir en `kinelab/`
+  (invariante 13). Se agregó `Registry(version, *, mdc_note=None)`: el deporte
+  declara la frase, el motor la transcribe sin saber qué dice.
+
 ## 15 de septiembre de 2026 — encargo 18: la señal de manos pesada por confianza, la banda del top y el MDC del sub-cuadro
 
 Prompt: `docs/prompts/18-senal-de-manos.md`. Informe:
