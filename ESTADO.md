@@ -3,6 +3,116 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 18 de septiembre de 2026 — encargo 31: el fin del acompañamiento, dentro de su repetición
+
+Prompt: `docs/prompts/31-follow-end-en-su-repeticion.md`. Informe:
+`docs/informes/2026-09-18-31-follow-end-en-su-repeticion.md`. **En paralelo con el
+32** (que escribe sólo en `banco/` y en `data/incoming/*/`). Commits: `513194c`
+(motor, deporte, exploración, front y tests), `6bea1fb` (los tres restos) y el de
+cierre, con este archivo y el informe.
+
+### Qué existe ahora
+
+- **`stable_window_start` tiene cota**: `before: int | None`, y la ventana de
+  quietud tiene que caber **entera** en `(after, before]` — una racha que arranca
+  adentro y sigue después del tope cuenta sólo hasta el tope. `None` = la firma
+  anterior.
+- **El deporte le pasa el fin de su propio candidato de segmentación** (auditoría
+  del 16/9 §6 D-4). No hizo falta cambiar ninguna firma: `detect_golf_events(sig,
+  cand, params)` ya recibía el `RepCandidate` entero y `cand.end` estaba ahí. El
+  prompt suponía lo contrario («hoy no llega hasta ahí»).
+- **`MissingEvent(id, reason)`** en `kinelab/events/primitives.py`: un evento
+  ausente **con** su razón, **falso en un booleano** a propósito. En
+  `analysis.json` sale `null` —`$defs/event` es `additionalProperties: false`— y
+  la razón va a `warnings[]`, como las de ADR-019, con el texto que escribe el
+  deporte (el motor no sabe qué umbral se usó: invariante 13).
+- **El `method` del `follow_end` dice `stable_window_in_rep`**, porque lo que se
+  marca es el **inicio** de la quietud del finish. Qué es el finish para el
+  entrenador —llegar a la pose o soltarla, ≈380 ms— sigue sin decidirse, y ahora
+  el código lo dice en vez de suponerlo. `settle_forward` también se acota al fin
+  de la repetición.
+- **`tol_frames` de cada evento llega a `datos-eventos.json`**
+  (`eventos_tol_frames`) **y a la tabla por evento** de la pantalla, al lado del
+  cuadro: «cuadro 722 · 12,028 s · ± 4 cuadros». Si el motor no la mandó (trabajo
+  anterior a hoy) no se muestra nada: no se inventa el ±1 fijo que la auditoría
+  marcó como falso.
+- **Una sola señal de manos**: `per_frame_table` recibe el `wrist_score_min` del
+  deporte, así que el CSV, el overlay y los eventos salen de la misma. El default
+  sigue en 0,0 —la firma vieja, que usa `truth/`, que no tiene deporte—.
+- **Tres restos cerrados**: `kinelab/events/order.py` dado de baja (huérfano desde
+  ADR-018, nadie lo importaba); el docstring de `kinelab/ingest/gate.py` dice la
+  verdad sobre los chequeos de la Fase 1 (existen desde el 17 y los escribe
+  `perception/run.py`); y una nota fechada bajo ADR-019 con la deriva en y medida
+  por el 29.
+
+### Medido
+
+- **Antes → después, desde el `pose.npz` guardado** (invariante 1, el modelo no se
+  volvió a correr): `cortado3-lento` / `take-01` rep 1 **1978 → `null`** y
+  `follow_duration_ms` **2556,7 ms → `null`**; **`vid1` 931 → `null`**, que es el
+  mismo bug y **no estaba en la auditoría**; `20260907_170638` conserva **188**;
+  `cortado`, `vid2` y `cortado3` rep 2 ya eran `null`.
+- **Address, top e impacto no se movieron ni un cuadro en ningún clip.** En
+  `take-01` la única métrica que cambió es `follow_duration_ms`: `scale_px` sigue
+  en **783,9 px del cuadro 1594** y las ocho métricas en cm quedaron idénticas,
+  aunque el `frame_end` de la rep 1 bajó de 1978 a 1765.
+- **Por qué `cortado3` rep 1 da `null`**: entre el impacto (1364) y el fin del
+  candidato (1765) la única racha de quietud es 1507–1566, **60 cuadros** a 240,15
+  fps contra los **72** que pide `follow_still_s`. La que el motor elegía antes
+  empieza en **1947**: es el address de la rep 2 (2322). Rep 2: racha 2790–2844,
+  **55 cuadros**.
+- **Por qué `vid1`**: impacto 741, candidato hasta **834**, y la primera quietud de
+  18 cuadros empieza en **929** — adentro del candidato **siguiente** (773–983),
+  que el motor había descartado como repetición.
+- **Punto 3, cuántos cuadros del CSV cambian**: los que tienen al menos una muñeca
+  bajo 0,55, que son exactamente los que cambian de posición de manos —
+  **22** de 76 (`cortado`) · **84** de 265 (`20260907_170638`) · **39** de 1066
+  (`vid1`) · **7** de 292 (`vid2`) · **109** de 2977 (`cortado3` y `take-01`)—, con
+  corrimientos de hasta **126,4 px**. La velocidad filtrada cambia numéricamente en
+  casi todos los cuadros (el Butterworth con `filtfilt` no es causal) y supera el
+  1 % del pico en 32 / 81 / 66 / 18 / 155.
+- **Suites: motor 390 pasados, 0 fallados, exit 0** (eran 381: +9 tests, ninguna
+  aserción existente tocada). Arnés **43 pasados, 0 fallados, exit 0**. `cd web &&
+  pnpm lint && pnpm build` en verde.
+- **Mutación manual: 6 bugs inyectados, 6 en rojo, control en verde.** `before`
+  ignorado en la primitiva → 2 tests; el deporte sin pasar la cota → 2;
+  `MissingEvent` verdadero en un booleano → 4; `per_frame_table` ignorando el
+  umbral → 1; `datos-eventos.json` sin `eventos_tol_frames` → 1; `settle_forward`
+  sin acotar → 1. Ese último no lo agarraba nada y se le escribió su test: con
+  `refine_s` 0,15 s contra `follow_still_s` 0,3 s el límite nunca llega a morder,
+  así que el caso se construye con la velocidad a mano.
+
+### Qué falta o no se probó
+
+- **En cuatro de los cinco clips reales no hay `follow_end`** —sólo lo tiene
+  `20260907_170638`—, así que `follow_duration_ms` no se mide en ninguna toma del
+  repo. Antes había un número en dos de ellas y era falso. Lo que lo desbloquea es
+  la **definición del finish**, que decide Hernán, no un umbral.
+- **`follow_still_s`, `still_speed_max` y `wrist_score_min` no se tocaron** (lo
+  prohibía el prompt, y con n = 1 corresponde). La pausa del finish mide 60 y 55
+  cuadros contra los 72 que pide el umbral: con la sesión de validación filmada
+  habrá con qué decidir si 0,3 s es el número.
+- **La razón del hueco no viaja en el evento**, porque `$defs/event` es
+  `additionalProperties: false`: va a `warnings[]`. Ponerla pegada al evento en la
+  pantalla pide un campo nuevo en el schema y un bump; el prompt lo prohibía.
+- **El front no se abrió** (regla de trabajo): lo prueba Hernán, con la lista del
+  informe. Los trabajos que ya están en `data/exploracion/` son anteriores y no
+  traen `eventos_tol_frames`; hay que subir uno nuevo para ver la columna.
+- No se tocó `kinelab/metrics/`, `sports/golf/metrics.py`, el schema, `service/`,
+  `truth/`, ningún umbral, ni se re-corrió percepción sobre ninguna toma.
+
+### Desviaciones
+
+- **Del contrato, ninguna.** No entra ni sale ningún campo de ningún schema;
+  `analysis.json` sigue en 2.0.0 y `eventos_tol_frames` es de
+  `datos-eventos.json`, que el contrato no describe. Lo único que cambia de valor
+  es `follow_duration_ms`, que pasa a `null` donde el número era falso.
+- **Del prompt, una.** Decía que el fin del candidato «hoy no llega» al detector y
+  pedía llevarlo por `GolfEventParams` o por la firma. Ya llegaba (`cand.end`), así
+  que no se cambió ninguna firma. Queda dicho acá y en el informe.
+
+---
+
 ## 18 de septiembre de 2026 — encargo 29: la deriva de cámara, medida
 
 Prompt: `docs/prompts/29-deriva-de-camara-censo.md`. Informe:
