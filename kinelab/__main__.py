@@ -24,7 +24,12 @@ def _print_summary(a: dict) -> None:
     print(f"  calidad: {q['verdict']}" + (f" · {' · '.join(q['reasons'])}" if q["reasons"] else ""))
     print(f"  repeticiones: {a['summary']['rep_count']} (descartadas {a['summary']['reps_rejected']['count']}: {a['summary']['reps_rejected']['reasons']})")
     for mid, m in list(a["summary"]["metrics"].items())[:6]:
-        print(f"    {mid}: mediana {m['median']} {m['unit']} · n {m['n']} · SD {m['repeatability']['value']} · MDC {m['mdc']}")
+        # La repetibilidad puede venir en `null` con su razón (ADR-019: sin piso
+        # de ruido medido no es una medición). Se imprime la razón, no "SD None",
+        # que se lee como si el número no hubiera salido por casualidad.
+        rep = m["repeatability"]
+        sd = f"SD {rep['value']}" if rep["value"] is not None else f"sin repetibilidad ({rep.get('null_reason') or 'sin razón declarada'})"
+        print(f"    {mid}: mediana {m['median']} {m['unit']} · n {m['n']} · {sd} · MDC {m['mdc']}")
     for e in a["events"]:
         parts = [f"{k} {e[k]['frame']}{'*' if e[k]['manual'] else ''}" if e.get(k) else f"{k} —" for k in ("address", "top", "impact", "follow_end")]
         print(f"    rep {e['rep']}: " + " · ".join(parts))

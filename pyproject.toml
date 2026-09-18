@@ -43,5 +43,8 @@ service = ["static/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q"
+# Sin `addopts = "-q"`: sumado al `-q` que todos los comandos del proyecto pasan
+# en la línea de órdenes da `-qq`, que NO imprime el conteo de pasados y
+# fallados. Los tests se leen por exit code y conteo, así que la línea de
+# resumen no es decorativa (auditoría del 16/9, §7).
 pythonpath = ["."]  # tests/helpers importable como tests.helpers

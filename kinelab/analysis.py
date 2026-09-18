@@ -213,6 +213,24 @@ def build_analysis(take_dir: Path, capture: CaptureJson, pose: PoseData, sport: 
             vals = [v for v in per_metric[m.id] if v is not None]
             summary_metrics[m.id] = {"median": round(float(np.median(vals)), 3) if vals else None, "n": len(vals), "mdc": m.mdc, "unit": m.unit, "level": m.level, "repeatability": repeatability_scalar(per_metric[m.id])}
         summary_metrics["hands_speed_curve_top_to_impact"] = {"median": None, "n": len(curves), "mdc": None, "unit": "bh/s", "level": 1, "repeatability": repeatability_curves(curves)}
+        # ADR-019: dos avisos, y son dos cosas distintas a propósito. El primero
+        # es la REGLA —ningún número de acá se compara contra nada— y sale de lo
+        # que el archivo realmente dice, no de una constante: si alguna métrica
+        # llegara con juicio habilitado, la frase sería falsa y no se escribe. El
+        # segundo es el ESTADO de la tabla de MDC del deporte, que el registro
+        # declara en `mdc_note` (el motor no sabe qué dice: invariante 13).
+        # Se SUMAN a los avisos de fps de ADR-016, que siguen yendo primero.
+        if any(v is not None for vs in per_metric.values() for v in vs):
+            if not any(mv["judgment_allowed"] for r in reps for mv in r["metrics"].values()):
+                warnings.append(
+                    "Ninguno de estos números es un juicio: se muestran como descriptivos, con su banda, y no se "
+                    "comparan contra ningún rango. Para que una métrica pueda juzgarse hay que validar su MDC sobre "
+                    "material real —el mismo estimador, el mismo camino de captura, los eventos contra etiquetas "
+                    "humanas, la deriva de cámara medida y la escala trazable— y tener un rango de referencia con "
+                    "procedencia. Hasta entonces, comparar dos tomas es mirar, no medir (ADR-019)."
+                )
+            if registry.mdc_note and any(m.mdc_validation == "sin_validar" for m in registry):
+                warnings.append(f"El MDC que viaja con cada número todavía no está validado en material real: {registry.mdc_note}.")
     # Antes de cualquier número, por qué la tasa de cuadros no está verificada
     # (ADR-016). Son DOS casos distintos y el aviso no los puede mezclar:
     #

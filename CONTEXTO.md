@@ -48,7 +48,9 @@ fallaron por tratarlo como una app.
   Ver `CONTRATO.md` §Niveles.
 - **descriptivo / juicio** — un número descriptivo se muestra con unidad y
   confianza; un juicio lo compara contra un rango. Sólo una métrica de nivel 1
-  con MDC medido puede ser juicio.
+  **con MDC validado en material real y con rango de referencia con
+  procedencia** puede ser juicio (ADR-019). Tener MDC ya no alcanza: el del
+  arnés mide la matemática, no el estimador sobre un swing filmado.
 - **repetibilidad** — variación de una métrica entre repeticiones de la misma
   sesión. Desvío estándar absoluto para escalares; DTW normalizado para curvas.
   Siempre con el piso de ruido del propio pipeline restado y declarado.
@@ -79,8 +81,13 @@ fallaron por tratarlo como una app.
    se infiere el factor de estiramiento del contenedor.
 3. **Nunca un float solo.** Toda métrica viaja como
    `{value, unit, confidence, view, mdc, level}`.
-4. **Sin MDC medido no hay juicio.** Y si el MDC es mayor que el ancho del rango
-   de referencia, tampoco. La métrica se muestra, a lo sumo, como descriptiva.
+4. **Sin MDC validado en material real (ADR-019) y sin rango de referencia con
+   procedencia no hay juicio; si el MDC es mayor que el ancho del rango,
+   tampoco.** La métrica se muestra, a lo sumo, como descriptiva. Validado en
+   material real = medido con el estimador real, sobre material real, por el
+   camino de captura de la toma, con los eventos contra etiquetas humanas, la
+   deriva de cámara medida, la escala trazable y los intrínsecos calibrados con
+   tablero; un MDC del arnés, de cualquier nivel, no lo está.
 5. **Gate de plausibilidad anatómica antes de cualquier promedio.** Los rechazos
    se cuentan y se muestran; nunca se descartan en silencio.
 6. **Cada métrica declara sus vistas válidas.** El motor devuelve `null` con

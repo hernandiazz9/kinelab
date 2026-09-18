@@ -2,7 +2,7 @@
   "header": {
     "schema_version": "2.0.0",
     "engine_version": "0.0.1",
-    "registry_version": "0.2.0",
+    "registry_version": "0.3.0",
     "generated_at": "2026-09-12T12:00:00+00:00",
     "source": {
       "pose_sha256": "551dfffa2498247a44cd88c6bac3a3ac0cf6c2afa65b3165b252224b099cad58",
@@ -99,7 +99,7 @@
             "value": 2.927,
             "unit": "ms",
             "provenance": "medido_aqui",
-            "source": "sports/golf/mdc.yaml §events.impact.subframe (arnés, nivel 0, 16 semillas)"
+            "source": "sports/golf/mdc.yaml §events.impact.subframe (arnés nivel 0: proyección y ruido, sin estimador, cámara iphone17pro-1080p120 sin verificar, 16 semillas) · NO validado en material real (ADR-019)"
           },
           "null_reason": null
         }
@@ -172,7 +172,7 @@
             "value": 2.927,
             "unit": "ms",
             "provenance": "medido_aqui",
-            "source": "sports/golf/mdc.yaml §events.impact.subframe (arnés, nivel 0, 16 semillas)"
+            "source": "sports/golf/mdc.yaml §events.impact.subframe (arnés nivel 0: proyección y ruido, sin estimador, cámara iphone17pro-1080p120 sin verificar, 16 semillas) · NO validado en material real (ADR-019)"
           },
           "null_reason": null
         }
@@ -245,7 +245,7 @@
             "value": 2.927,
             "unit": "ms",
             "provenance": "medido_aqui",
-            "source": "sports/golf/mdc.yaml §events.impact.subframe (arnés, nivel 0, 16 semillas)"
+            "source": "sports/golf/mdc.yaml §events.impact.subframe (arnés nivel 0: proyección y ruido, sin estimador, cámara iphone17pro-1080p120 sin verificar, 16 semillas) · NO validado en material real (ADR-019)"
           },
           "null_reason": null
         }
@@ -282,7 +282,7 @@
           "fps_min": 120.0,
           "fps_min_met": true,
           "fps_provenance": "medido_aqui",
-          "judgment_allowed": true,
+          "judgment_allowed": false,
           "confidence": null,
           "uncertainty": {
             "low": 908.3,
@@ -301,7 +301,7 @@
           "fps_min": 120.0,
           "fps_min_met": true,
           "fps_provenance": "medido_aqui",
-          "judgment_allowed": true,
+          "judgment_allowed": false,
           "confidence": null,
           "uncertainty": {
             "low": 458.3,
@@ -320,7 +320,7 @@
           "fps_min": 60.0,
           "fps_min_met": true,
           "fps_provenance": "medido_aqui",
-          "judgment_allowed": true,
+          "judgment_allowed": false,
           "confidence": null,
           "uncertainty": {
             "low": 1.912,
@@ -339,7 +339,7 @@
           "fps_min": 120.0,
           "fps_min_met": true,
           "fps_provenance": "medido_aqui",
-          "judgment_allowed": true,
+          "judgment_allowed": false,
           "confidence": null,
           "uncertainty": {
             "low": 400.0,
@@ -358,7 +358,7 @@
           "fps_min": 30.0,
           "fps_min_met": true,
           "fps_provenance": "medido_aqui",
-          "judgment_allowed": true,
+          "judgment_allowed": false,
           "confidence": {
             "value": 0.9,
             "method": "keypoint_scores_at_anchors"
@@ -380,7 +380,7 @@
           "fps_min": 30.0,
           "fps_min_met": true,
           "fps_provenance": "medido_aqui",
-          "judgment_allowed": true,
+          "judgment_allowed": false,
           "confidence": {
             "value": 0.9,
             "method": "keypoint_scores_at_anchors"
@@ -402,7 +402,7 @@
           "fps_min": 30.0,
           "fps_min_met": true,
           "fps_provenance": "medido_aqui",
-          "judgment_allowed": true,
+          "judgment_allowed": false,
           "confidence": {
             "value": 0.9,
             "method": "keypoint_scores_at_anchors"
@@ -424,7 +424,7 @@
           "fps_min": 30.0,
           "fps_min_met": true,
           "fps_provenance": "medido_aqui",
-          "judgment_allowed": true,
+          "judgment_allowed": false,
           "confidence": {
             "value": 0.9,
             "method": "keypoint_scores_at_anchors"
@@ -446,7 +446,7 @@
           "fps_min": 30.0,
           "fps_min_met": true,
           "fps_provenance": "medido_aqui",
-          "judgment_allowed": true,
+          "judgment_allowed": false,
           "confidence": {
             "value": 0.9,
             "method": "keypoint_scores_at_anchors"
@@ -483,7 +483,7 @@
           "fps_min": 30.0,
           "fps_min_met": true,
           "fps_provenance": "medido_aqui",
-          "judgment_allowed": true,
+          "judgment_allowed": false,
           "confidence": {
             "value": 0.9,
             "method": "keypoint_scores_at_anchors"
@@ -505,7 +505,7 @@
           "fps_min": 30.0,
           "fps_min_met": true,
           "fps_provenance": "medido_aqui",
-          "judgment_allowed": true,
+          "judgment_allowed": false,
           "confidence": {
             "value": 0.9,
             "method": "keypoint_scores_at_anchors"
@@ -537,7 +537,7 @@
           "fps_min": 120.0,
           "fps_min_met": true,
           "fps_provenance": "medido_aqui",
-          "judgment_allowed": true,
+          "judgment_allowed": false,
           "confidence": null,
           "uncertainty": {
             "low": 900.0,
@@ -556,7 +556,7 @@
           "fps_min": 120.0,
           "fps_min_met": true,
           "fps_provenance": "medido_aqui",
-          "judgment_allowed": true,
+          "judgment_allowed": false,
           "confidence": null,
           "uncertainty": {
             "low": 458.3,
@@ -575,7 +575,7 @@
           "fps_min": 60.0,
           "fps_min_met": true,
           "fps_provenance": "medido_aqui",
-          "judgment_allowed": true,
+          "judgment_allowed": false,
           "confidence": null,
           "uncertainty": {
             "low": 1.895,
@@ -594,7 +594,7 @@
           "fps_min": 120.0,
           "fps_min_met": true,
           "fps_provenance": "medido_aqui",
-          "judgment_allowed": true,
+          "judgment_allowed": false,
           "confidence": null,
           "uncertainty": {
             "low": 408.3,
@@ -613,7 +613,7 @@
           "fps_min": 30.0,
           "fps_min_met": true,
           "fps_provenance": "medido_aqui",
-          "judgment_allowed": true,
+          "judgment_allowed": false,
           "confidence": {
             "value": 0.9,
             "method": "keypoint_scores_at_anchors"
@@ -635,7 +635,7 @@
           "fps_min": 30.0,
           "fps_min_met": true,
           "fps_provenance": "medido_aqui",
-          "judgment_allowed": true,
+          "judgment_allowed": false,
           "confidence": {
             "value": 0.9,
             "method": "keypoint_scores_at_anchors"
@@ -657,7 +657,7 @@
           "fps_min": 30.0,
           "fps_min_met": true,
           "fps_provenance": "medido_aqui",
-          "judgment_allowed": true,
+          "judgment_allowed": false,
           "confidence": {
             "value": 0.9,
             "method": "keypoint_scores_at_anchors"
@@ -679,7 +679,7 @@
           "fps_min": 30.0,
           "fps_min_met": true,
           "fps_provenance": "medido_aqui",
-          "judgment_allowed": true,
+          "judgment_allowed": false,
           "confidence": {
             "value": 0.9,
             "method": "keypoint_scores_at_anchors"
@@ -701,7 +701,7 @@
           "fps_min": 30.0,
           "fps_min_met": true,
           "fps_provenance": "medido_aqui",
-          "judgment_allowed": true,
+          "judgment_allowed": false,
           "confidence": {
             "value": 0.9,
             "method": "keypoint_scores_at_anchors"
@@ -738,7 +738,7 @@
           "fps_min": 30.0,
           "fps_min_met": true,
           "fps_provenance": "medido_aqui",
-          "judgment_allowed": true,
+          "judgment_allowed": false,
           "confidence": {
             "value": 0.9,
             "method": "keypoint_scores_at_anchors"
@@ -760,7 +760,7 @@
           "fps_min": 30.0,
           "fps_min_met": true,
           "fps_provenance": "medido_aqui",
-          "judgment_allowed": true,
+          "judgment_allowed": false,
           "confidence": {
             "value": 0.9,
             "method": "keypoint_scores_at_anchors"
@@ -792,7 +792,7 @@
           "fps_min": 120.0,
           "fps_min_met": true,
           "fps_provenance": "medido_aqui",
-          "judgment_allowed": true,
+          "judgment_allowed": false,
           "confidence": null,
           "uncertainty": {
             "low": 900.0,
@@ -811,7 +811,7 @@
           "fps_min": 120.0,
           "fps_min_met": true,
           "fps_provenance": "medido_aqui",
-          "judgment_allowed": true,
+          "judgment_allowed": false,
           "confidence": null,
           "uncertainty": {
             "low": 466.7,
@@ -830,7 +830,7 @@
           "fps_min": 60.0,
           "fps_min_met": true,
           "fps_provenance": "medido_aqui",
-          "judgment_allowed": true,
+          "judgment_allowed": false,
           "confidence": null,
           "uncertainty": {
             "low": 1.862,
@@ -849,7 +849,7 @@
           "fps_min": 120.0,
           "fps_min_met": true,
           "fps_provenance": "medido_aqui",
-          "judgment_allowed": true,
+          "judgment_allowed": false,
           "confidence": null,
           "uncertainty": {
             "low": 400.0,
@@ -868,7 +868,7 @@
           "fps_min": 30.0,
           "fps_min_met": true,
           "fps_provenance": "medido_aqui",
-          "judgment_allowed": true,
+          "judgment_allowed": false,
           "confidence": {
             "value": 0.9,
             "method": "keypoint_scores_at_anchors"
@@ -890,7 +890,7 @@
           "fps_min": 30.0,
           "fps_min_met": true,
           "fps_provenance": "medido_aqui",
-          "judgment_allowed": true,
+          "judgment_allowed": false,
           "confidence": {
             "value": 0.9,
             "method": "keypoint_scores_at_anchors"
@@ -912,7 +912,7 @@
           "fps_min": 30.0,
           "fps_min_met": true,
           "fps_provenance": "medido_aqui",
-          "judgment_allowed": true,
+          "judgment_allowed": false,
           "confidence": {
             "value": 0.9,
             "method": "keypoint_scores_at_anchors"
@@ -934,7 +934,7 @@
           "fps_min": 30.0,
           "fps_min_met": true,
           "fps_provenance": "medido_aqui",
-          "judgment_allowed": true,
+          "judgment_allowed": false,
           "confidence": {
             "value": 0.9,
             "method": "keypoint_scores_at_anchors"
@@ -956,7 +956,7 @@
           "fps_min": 30.0,
           "fps_min_met": true,
           "fps_provenance": "medido_aqui",
-          "judgment_allowed": true,
+          "judgment_allowed": false,
           "confidence": {
             "value": 0.9,
             "method": "keypoint_scores_at_anchors"
@@ -993,7 +993,7 @@
           "fps_min": 30.0,
           "fps_min_met": true,
           "fps_provenance": "medido_aqui",
-          "judgment_allowed": true,
+          "judgment_allowed": false,
           "confidence": {
             "value": 0.9,
             "method": "keypoint_scores_at_anchors"
@@ -1015,7 +1015,7 @@
           "fps_min": 30.0,
           "fps_min_met": true,
           "fps_provenance": "medido_aqui",
-          "judgment_allowed": true,
+          "judgment_allowed": false,
           "confidence": {
             "value": 0.9,
             "method": "keypoint_scores_at_anchors"
@@ -1045,9 +1045,10 @@
         "level": 1,
         "repeatability": {
           "kind": "sd_abs",
-          "value": 4.85,
+          "value": null,
           "n": 3,
-          "noise_floor": null
+          "noise_floor": null,
+          "null_reason": "sin piso de ruido medido del pipeline: una SD entre repeticiones no separa la variación del atleta de la del instrumento (CONTEXTO.md §piso de ruido, ADR-019)"
         }
       },
       "downswing_duration_ms": {
@@ -1058,9 +1059,10 @@
         "level": 1,
         "repeatability": {
           "kind": "sd_abs",
-          "value": 4.792,
+          "value": null,
           "n": 3,
-          "noise_floor": null
+          "noise_floor": null,
+          "null_reason": "sin piso de ruido medido del pipeline: una SD entre repeticiones no separa la variación del atleta de la del instrumento (CONTEXTO.md §piso de ruido, ADR-019)"
         }
       },
       "tempo_ratio": {
@@ -1071,9 +1073,10 @@
         "level": 1,
         "repeatability": {
           "kind": "sd_abs",
-          "value": 0.026,
+          "value": null,
           "n": 3,
-          "noise_floor": null
+          "noise_floor": null,
+          "null_reason": "sin piso de ruido medido del pipeline: una SD entre repeticiones no separa la variación del atleta de la del instrumento (CONTEXTO.md §piso de ruido, ADR-019)"
         }
       },
       "follow_duration_ms": {
@@ -1084,9 +1087,10 @@
         "level": 1,
         "repeatability": {
           "kind": "sd_abs",
-          "value": 4.792,
+          "value": null,
           "n": 3,
-          "noise_floor": null
+          "noise_floor": null,
+          "null_reason": "sin piso de ruido medido del pipeline: una SD entre repeticiones no separa la variación del atleta de la del instrumento (CONTEXTO.md §piso de ruido, ADR-019)"
         }
       },
       "pelvis_sway_top_cm": {
@@ -1097,9 +1101,10 @@
         "level": 1,
         "repeatability": {
           "kind": "sd_abs",
-          "value": 0.0,
+          "value": null,
           "n": 3,
-          "noise_floor": null
+          "noise_floor": null,
+          "null_reason": "sin piso de ruido medido del pipeline: una SD entre repeticiones no separa la variación del atleta de la del instrumento (CONTEXTO.md §piso de ruido, ADR-019)"
         }
       },
       "pelvis_sway_impact_cm": {
@@ -1110,9 +1115,10 @@
         "level": 1,
         "repeatability": {
           "kind": "sd_abs",
-          "value": 0.0,
+          "value": null,
           "n": 3,
-          "noise_floor": null
+          "noise_floor": null,
+          "null_reason": "sin piso de ruido medido del pipeline: una SD entre repeticiones no separa la variación del atleta de la del instrumento (CONTEXTO.md §piso de ruido, ADR-019)"
         }
       },
       "pelvis_lift_top_cm": {
@@ -1123,9 +1129,10 @@
         "level": 1,
         "repeatability": {
           "kind": "sd_abs",
-          "value": 0.0,
+          "value": null,
           "n": 3,
-          "noise_floor": null
+          "noise_floor": null,
+          "null_reason": "sin piso de ruido medido del pipeline: una SD entre repeticiones no separa la variación del atleta de la del instrumento (CONTEXTO.md §piso de ruido, ADR-019)"
         }
       },
       "thorax_sway_top_cm": {
@@ -1136,9 +1143,10 @@
         "level": 1,
         "repeatability": {
           "kind": "sd_abs",
-          "value": 0.0,
+          "value": null,
           "n": 3,
-          "noise_floor": null
+          "noise_floor": null,
+          "null_reason": "sin piso de ruido medido del pipeline: una SD entre repeticiones no separa la variación del atleta de la del instrumento (CONTEXTO.md §piso de ruido, ADR-019)"
         }
       },
       "thorax_lift_top_cm": {
@@ -1149,9 +1157,10 @@
         "level": 1,
         "repeatability": {
           "kind": "sd_abs",
-          "value": 0.0,
+          "value": null,
           "n": 3,
-          "noise_floor": null
+          "noise_floor": null,
+          "null_reason": "sin piso de ruido medido del pipeline: una SD entre repeticiones no separa la variación del atleta de la del instrumento (CONTEXTO.md §piso de ruido, ADR-019)"
         }
       },
       "pelvis_thrust_top_cm": {
@@ -1164,7 +1173,8 @@
           "kind": "sd_abs",
           "value": null,
           "n": 0,
-          "noise_floor": null
+          "noise_floor": null,
+          "null_reason": "sin piso de ruido medido del pipeline: una SD entre repeticiones no separa la variación del atleta de la del instrumento (CONTEXTO.md §piso de ruido, ADR-019)"
         }
       },
       "head_sway_top_cm": {
@@ -1175,9 +1185,10 @@
         "level": 1,
         "repeatability": {
           "kind": "sd_abs",
-          "value": 0.0,
+          "value": null,
           "n": 3,
-          "noise_floor": null
+          "noise_floor": null,
+          "null_reason": "sin piso de ruido medido del pipeline: una SD entre repeticiones no separa la variación del atleta de la del instrumento (CONTEXTO.md §piso de ruido, ADR-019)"
         }
       },
       "head_lift_top_cm": {
@@ -1188,9 +1199,10 @@
         "level": 1,
         "repeatability": {
           "kind": "sd_abs",
-          "value": 0.0,
+          "value": null,
           "n": 3,
-          "noise_floor": null
+          "noise_floor": null,
+          "null_reason": "sin piso de ruido medido del pipeline: una SD entre repeticiones no separa la variación del atleta de la del instrumento (CONTEXTO.md §piso de ruido, ADR-019)"
         }
       },
       "hands_speed_curve_top_to_impact": {
@@ -1201,9 +1213,10 @@
         "level": 1,
         "repeatability": {
           "kind": "dtw_normalized",
-          "value": 0.0042,
+          "value": null,
           "n": 3,
-          "noise_floor": null
+          "noise_floor": null,
+          "null_reason": "sin piso de ruido medido del pipeline: una SD entre repeticiones no separa la variación del atleta de la del instrumento (CONTEXTO.md §piso de ruido, ADR-019)"
         }
       }
     }
@@ -1589,6 +1602,7 @@
       "gap_fill_max_frames": 5,
       "speed_unit": "body_heights",
       "signal": "hands_center",
+      "wrist_score_min": 0.55,
       "noise_floor_bh_s": 0.0,
       "segmentation": {
         "min_gap_s": 2.0,
@@ -1618,7 +1632,9 @@
     }
   },
   "warnings": [
-    "Ejemplo generado desde un swing SINTÉTICO (tests/helpers/gen_analysis_example.py): sirve para el schema, no como referencia de valores."
+    "Ejemplo generado desde un swing SINTÉTICO (tests/helpers/gen_analysis_example.py): sirve para el schema, no como referencia de valores.",
+    "Ninguno de estos números es un juicio: se muestran como descriptivos, con su banda, y no se comparan contra ningún rango. Para que una métrica pueda juzgarse hay que validar su MDC sobre material real —el mismo estimador, el mismo camino de captura, los eventos contra etiquetas humanas, la deriva de cámara medida y la escala trazable— y tener un rango de referencia con procedencia. Hasta entonces, comparar dos tomas es mirar, no medir (ADR-019).",
+    "El MDC que viaja con cada número todavía no está validado en material real: los midió el arnés de verdad en su nivel 0 —un esqueleto proyectado con una cámara virtual más ruido, sin estimador de pose en el medio— y con una cámara (iphone17pro-1080p120) que no es la que filmó y que nadie verificó. Sirven para ordenar magnitudes; no describen todavía el error de este teléfono sobre un swing real (sports/golf/mdc.yaml, ADR-019)."
   ],
   "deviations": []
 }

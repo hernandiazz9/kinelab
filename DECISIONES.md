@@ -550,3 +550,88 @@ reabre con un ADR nuevo y su barrido.
 - No hay `analysis.json` que migrar: los únicos que existen están en
   `data/exploracion/` y en las carpetas `.kinelab`, que se rehacen con un
   comando, y el ejemplo del repo se regeneró.
+
+---
+
+## ADR-019 · Ninguna métrica es juicio hasta validar su MDC en material real, y sin rango no hay contra qué juzgar
+
+**Decisión.** Además de lo que ya exigen ADR-007 (nivel 1, MDC medido, y MDC no
+mayor que el ancho del rango) y ADR-016 (`fps_provenance: medido_aqui`),
+`judgment_allowed` suma **dos condiciones independientes**, cada una con su
+campo en el registro y su test:
+
+- **(a) El MDC está validado en material real.** Campo nuevo
+  `Metric.mdc_validation`, con dos valores —`sin_validar` (el default, que es el
+  conservador) y `material_real`— y sólo el segundo habilita juicio. *Validado
+  en material real* quiere decir, todo junto: **medido con el estimador real**,
+  **sobre material real**, **por el camino de captura de la toma**, con los
+  **eventos contra etiquetas humanas**, la **deriva de cámara medida**, la
+  **escala trazable** y los **intrínsecos del teléfono calibrados con tablero**
+  (auditoría del 16/9, §6 D-2). Un MDC del **arnés no está validado**, de
+  cualquier nivel y aunque los intrínsecos estén calibrados.
+- **(b) Hay un rango de referencia con procedencia fuerte.** `reference` existe,
+  `reference.kind == "range"` y su `provenance` no es `estimacion` ni
+  `sin_verificar`. Que el rango sea válido —`(low, high)` con `low < high`— ya lo
+  garantiza `Reference.__post_init__`.
+
+Hoy eso da **0 de 21**: ninguna métrica de golf declara `mdc_validation` y las
+catorce llevan `Reference("descriptive", "estimacion", …)` sin rango
+(`sports/golf/metrics.py`). **Ningún valor cambia**: lo único que se apaga es la
+bandera que dice que ese valor se puede comparar contra algo.
+
+**Por qué (a).** `sports/golf/mdc.yaml` es del **nivel 0** del arnés: una cadena
+cinemática proyectada con una cámara virtual más ruido gaussiano, **sin
+estimador de pose**, y con la cámara `iphone17pro-1080p120` —que no es el
+teléfono con el que se filmó— **sin verificar**. Entre esos puntos proyectados y
+la salida de RTMPose sobre un swing filmado está justamente lo que el MDC tiene
+que medir, y la auditoría del 16/9 lo midió en el único clip que llegó a tener
+juicio (`cortado3-lento.mp4`): la imagen **deriva 8–25 px** durante cada swing y
+contamina los siete desplazamientos en cm por encima de su MDC; el `follow_end`
+de la repetición 1 cae en la quietud previa al swing siguiente; y los eventos de
+manos difieren **4–16 cuadros** de los del palo, contra MDC de 12,6 y 13,0 ms en
+las duraciones. Los 21 `judgment_allowed: true` tienen aritmética exacta —21 de
+21 reproducidos por tres implementaciones independientes— y **ninguno resiste
+como juicio**. La regla vieja sólo preguntaba si el MDC *existía*.
+
+**Por qué (b).** `CONTEXTO.md` §Vocabulario define juicio como **comparar contra
+un rango**, y la invariante 12 dice que un rango sin procedencia no entra: ante
+la duda, el hueco. El código decía otra cosa: `ref is None or ref.range_width is
+None` **pasaba**, así que una referencia descriptiva sin rango habilitaba juicio
+—que es exactamente de dónde salieron los 21—. Sin rango no hay contra qué
+juzgar; con un rango de procedencia `estimacion` hay un número inventado, que es
+lo que ADR-012 prohíbe. «Cambio detectable entre dos tomas del mismo atleta» es
+otro concepto, con su propio nombre, y no es esto.
+
+**Por qué la validación va en un campo propio y no en la procedencia.**
+`CONTEXTO.md` define procedencia como «de dónde sale un número». Con esa
+definición el MDC del arnés **sí** es `medido_aqui`: lo medimos nosotros, con
+nuestro código, en esta máquina. Así lo usan ADR-007, `CONTRATO.md` §El registro
+y `truth/kinelab_truth/calibrate.py`, y en `fps_provenance` el mismo valor
+significa «cronómetro filmado». Darle a `medido_aqui` un significado más fuerte
+sólo para el MDC haría que un valor del mismo enum (`PROVENANCES`) diga tres
+cosas distintas según dónde aparezca. La procedencia sigue diciendo de dónde
+sale un número; **si está validado es otra pregunta, y tiene su propio campo**.
+Por eso también el enum de `PROVENANCES` y el de `fps_provenance` del schema
+quedan intactos.
+
+**Sustituye en parte a ADR-007.** «MDC medido en el arnés» ya no alcanza para
+juicio: alcanza para mostrar el número con su banda, que es lo que el contrato
+llama descriptivo. Todo lo demás de ADR-007 —los niveles, el nivel 3 que no se
+construye, MDC ≤ ancho del rango— sigue igual. No toca ADR-016: sus dos
+condiciones se suman a la de la procedencia del fps, no la reemplazan. Y es la
+forma de ADR-012 llevada al código: la disciplina de los rangos con procedencia
+deja de ser un documento y pasa a ser una condición que se puede romper con un
+test.
+
+**Consecuencia.** `registry_version` del registro de golf pasa a **0.3.0** (el
+genérico del motor queda en 0.1.0); el `schema_version` de `analysis.json` **no
+se toca** —no entra ni sale ningún campo— y `metric_version` tampoco, porque
+ninguna métrica cambió de valor. La razón legible **no** va al sextuplo
+(`$defs/metric` es `additionalProperties: false`): va a `warnings[]`, con dos
+avisos que se suman a los de ADR-016 y no los reemplazan. El MDC del instante
+sub-cuadro del impacto conserva `provenance: medido_aqui` —lo midió el arnés, es
+literalmente cierto, y el schema de `subframe.mdc` no admite campos nuevos— y lo
+que cambia es su `source`, que dice de qué arnés sale y que no está validado.
+Re-habilitar juicio es escribir `mdc_validation="material_real"` y un
+`Reference("range", …)` con procedencia, métrica por métrica, con la tabla que
+lo respalde; no hay bandera global.

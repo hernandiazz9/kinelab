@@ -111,8 +111,13 @@ def _subframe_mdc() -> dict | None:
         "value": round(float(value), 3),
         "unit": str(row.get("unit") or "ms"),
         # El MDC sale del arnés; el VALOR del sub-cuadro sigue siendo `estimacion`.
+        # `medido_aqui` es de dónde sale el número y es literalmente cierto —lo
+        # midió el arnés, acá—, y además el schema de `subframe.mdc` no admite
+        # campos nuevos. Lo que **no** es, y lo dice el `source`, es un MDC
+        # validado en material real (ADR-019): el arnés nivel 0 proyecta puntos y
+        # les suma ruido, sin estimador de pose, con una cámara sin verificar.
         "provenance": "medido_aqui",
-        "source": "sports/golf/mdc.yaml §events.impact.subframe (arnés, nivel 0, 16 semillas)",
+        "source": "sports/golf/mdc.yaml §events.impact.subframe (arnés nivel 0: proyección y ruido, sin estimador, cámara iphone17pro-1080p120 sin verificar, 16 semillas) · NO validado en material real (ADR-019)",
     }
 
 

@@ -10,8 +10,10 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from functools import partial
+
 from kinelab.__main__ import main as kinelab_main
-from kinelab.analysis import analyze_take, swing_signals
+from kinelab.analysis import analyze_take, build_analysis, swing_signals
 from kinelab.contract.validate import validate_analysis
 from kinelab.events.manual import Edit, EventCollisionError, apply_edits
 from kinelab.events.primitives import direction_change_farthest, direction_changes, subframe_crossing
@@ -19,7 +21,9 @@ from kinelab.events.segmentation import SegmentationParams, segment_reps
 from kinelab.events.signal import principal_axis
 from kinelab.ingest.__main__ import ingest_clip
 from kinelab.ingest.capture_paths import load_capture_paths
+from kinelab.ingest.gate import CaptureJson
 from kinelab.metrics.core import MetricContext, evaluate
+from kinelab.metrics.generic import duration_ms, repeatability_curves, repeatability_scalar
 from kinelab.metrics.registry import FPS_MIN_TOL, Metric, Reference, Registry, fps_min_met, judgment_allowed
 from kinelab.perception.gaps import interpolate_gaps
 from kinelab.perception.keypoints import H, J
@@ -154,7 +158,9 @@ def test_registry_rules_and_judgment():
     r = Registry("t")
     with pytest.raises(ValueError, match="nivel 3"):
         Metric(id="x_factor", unit="deg", level=3, views=("face_on",), fps_min=60, anchored_to=(), reference_frame="image_px")
-    m = r.register(Metric(id="sway_cm", unit="cm", level=1, views=("face_on",), fps_min=60, anchored_to=("address", "top"), reference_frame="image_px", mdc=1.5, reference=Reference("range", "pares", "x", "y", range=(0.0, 4.0))))
+    # ADR-019: para llegar a `True` la métrica declara además el MDC validado en
+    # material real; el rango con procedencia `pares` ya lo tenía.
+    m = r.register(Metric(id="sway_cm", unit="cm", level=1, views=("face_on",), fps_min=60, anchored_to=("address", "top"), reference_frame="image_px", mdc=1.5, mdc_validation="material_real", reference=Reference("range", "pares", "x", "y", range=(0.0, 4.0))))
     ok = dict(view="face_on", fps_real=120, fps_provenance="medido_aqui")
     assert judgment_allowed(m, **ok) is True
     assert judgment_allowed(m, view="down_the_line", fps_real=120, fps_provenance="medido_aqui") is False
@@ -162,7 +168,7 @@ def test_registry_rules_and_judgment():
     # ADR-016: con la tasa de cuadros sin verificar no hay juicio, aunque estén
     # el MDC, el fps y la vista. El eje del tiempo es un supuesto.
     assert judgment_allowed(m, view="face_on", fps_real=120, fps_provenance="sin_verificar") is False
-    wide = Metric(id="wide", unit="cm", level=1, views=("face_on",), fps_min=60, anchored_to=(), reference_frame="image_px", mdc=5.0, reference=Reference("range", "pares", "x", "y", range=(0.0, 4.0)))
+    wide = Metric(id="wide", unit="cm", level=1, views=("face_on",), fps_min=60, anchored_to=(), reference_frame="image_px", mdc=5.0, mdc_validation="material_real", reference=Reference("range", "pares", "x", "y", range=(0.0, 4.0)))
     assert judgment_allowed(wide, **ok) is False, "MDC mayor que el rango: no es juicio"
     with pytest.raises(ValueError, match="repetida"):
         r.register(m)
@@ -177,7 +183,14 @@ def test_registry_rules_and_judgment():
 
 
 def _fps_metric(fps_min: float) -> Metric:
-    return Metric(id="m", unit="cm", level=1, views=("face_on",), fps_min=fps_min, anchored_to=(), reference_frame="image_px", mdc=1.0)
+    """Una métrica que tiene TODO lo demás en orden, para que lo único que decida
+    `judgment_allowed` sea el fps. Desde ADR-019 «todo lo demás» incluye el MDC
+    validado en material real y un rango con procedencia fuerte."""
+    return Metric(
+        id="m", unit="cm", level=1, views=("face_on",), fps_min=fps_min, anchored_to=(),
+        reference_frame="image_px", mdc=1.0, mdc_validation="material_real",
+        reference=Reference("range", "pares", "registro de prueba", "métrica de prueba", range=(0.0, 4.0)),
+    )
 
 
 @pytest.mark.parametrize(
@@ -309,19 +322,53 @@ def test_schema_rejects_renamed_field(clips, capture_paths_yaml, tmp_path):
     assert any("rep_cnt" in e for e in errs) and any("rep_count" in e for e in errs)
 
 
+def _judgeable_registry() -> Registry:
+    """Un registro de prueba con UNA métrica que sí cumple ADR-019: MDC validado
+    en material real y rango de referencia con procedencia `pares`.
+
+    Existe porque desde ADR-019 el registro de golf **no tiene ninguna métrica de
+    juicio**, y sin al menos una no habría nada que apagar: el test de ADR-016
+    pasaría por vacío y dejaría de probar lo suyo. El rango es ancho a propósito
+    (600–1200 ms contra un MDC de 12,601): lo que se prueba acá es la procedencia
+    del fps, no el ancho del rango, que tiene su propio test."""
+    reg = Registry("test-adr-016", mdc_note="registro de prueba")
+    reg.register(
+        Metric(
+            id="backswing_duration_ms", unit="ms", level=1, views=("face_on", "down_the_line"),
+            fps_min=120.0, anchored_to=("address", "top"), reference_frame="image_px",
+            compute=partial(duration_ms, start="address", end="top"),
+            mdc=12.601, mdc_validation="material_real",
+            reference=Reference("range", "pares", "registro de prueba", "tiempo de address a top", range=(600.0, 1200.0)),
+        )
+    )
+    return reg
+
+
+def _analyze_with(take: Path, registry: Registry) -> dict:
+    """`analyze_take` no acepta un registro (usa el del deporte); esto es lo mismo
+    un escalón más abajo, leyendo el `capture.json` y el `pose.npz` del take."""
+    capture = CaptureJson.model_validate_json((take / "capture.json").read_text(encoding="utf-8"))
+    return build_analysis(take, capture, load_pose(take), GOLF, registry=registry, height_m=1.80)
+
+
 def test_a_declared_path_keeps_the_numbers_and_kills_every_judgment(clips, capture_paths_yaml, tmp_path):
     """ADR-016 de punta a punta: con la MISMA pose y el MISMO fps, cambiar la
     procedencia de `medido_aqui` a `sin_verificar` no mueve un valor y apaga
-    todos los juicios. Y el aviso queda primero en `warnings`."""
+    todos los juicios. Y el aviso queda primero en `warnings`.
+
+    Corre con un registro de prueba (`_judgeable_registry`) y no con el de golf:
+    desde ADR-019 el de golf no habilita ningún juicio, y este test necesita uno
+    encendido para poder demostrar que el camino declarado lo apaga."""
     take, _ = _synthetic_take(clips, capture_paths_yaml, tmp_path)
-    calibrado = analyze_take(take, GOLF, write=False, height_m=1.80)
+    reg = _judgeable_registry()
+    calibrado = _analyze_with(take, reg)
     con_mdc = [mid for mid, v in calibrado["reps"][0]["metrics"].items() if v["judgment_allowed"]]
     assert con_mdc, "el fixture tiene que llegar con al menos una métrica de juicio"
 
     cj = json.loads((take / "capture.json").read_text(encoding="utf-8"))
     cj["capture_path_calibrated"], cj["fps_provenance"] = False, "sin_verificar"
     (take / "capture.json").write_text(json.dumps(cj), encoding="utf-8")
-    declarado = analyze_take(take, GOLF, write=False, height_m=1.80)
+    declarado = _analyze_with(take, reg)
 
     a, b = calibrado["reps"][0]["metrics"], declarado["reps"][0]["metrics"]
     assert [a[mid]["value"] for mid in a] == [b[mid]["value"] for mid in a], "la medición no cambia"
@@ -331,6 +378,13 @@ def test_a_declared_path_keeps_the_numbers_and_kills_every_judgment(clips, captu
     assert declarado["warnings"][0].startswith("Tasa de cuadros sin verificar")
     assert "reproduce a la velocidad de captura" in declarado["warnings"][0]
     assert not any(w.startswith("Tasa de cuadros sin verificar") for w in calibrado["warnings"])
+
+    # Y el registro de golf, sobre la misma toma calibrada, no enciende ninguno
+    # (ADR-019): es la otra mitad de lo mismo, con el gate y el fps en orden.
+    cj["capture_path_calibrated"], cj["fps_provenance"] = True, "medido_aqui"
+    (take / "capture.json").write_text(json.dumps(cj), encoding="utf-8")
+    golf = analyze_take(take, GOLF, write=False, height_m=1.80)
+    assert all(not v["judgment_allowed"] for r in golf["reps"] for v in r["metrics"].values())
 
 
 def test_a_calibrated_path_without_gate_says_the_gate_did_not_run(clips, capture_paths_yaml, tmp_path):
@@ -390,6 +444,125 @@ def test_schema_requires_fps_provenance_in_header_and_in_every_metric(clips, cap
     assert any("a_ojo" in e for e in validate_analysis(mal)), "procedencia fuera del enum"
 
 
+# --- ADR-019: contención del juicio (encargo 27) -------------------------------
+#
+# Dos condiciones INDEPENDIENTES, cada una con su test. Una mira el instrumento
+# (¿el MDC está validado contra material real?) y la otra mira contra qué se
+# compara (¿hay rango, y de dónde salió?). Los 21 `judgment_allowed: true` del
+# 15/9 salieron de que la segunda no existía: una referencia descriptiva sin
+# rango pasaba.
+
+
+def _judgeable(**over) -> Metric:
+    """Una métrica que cumple TODO lo que pide ADR-019, para poder sacarle una
+    cosa por vez."""
+    base = dict(
+        id="m", unit="cm", level=1, views=("face_on",), fps_min=60.0, anchored_to=(),
+        reference_frame="image_px", mdc=1.0, mdc_validation="material_real",
+        reference=Reference("range", "pares", "fuente de prueba", "definición de prueba", range=(0.0, 4.0)),
+    )
+    return Metric(**{**base, **over})
+
+
+_OK = dict(view="face_on", fps_real=120.0, fps_provenance="medido_aqui")
+
+
+def test_a_metric_with_both_adr_019_conditions_is_judgment():
+    """El caso positivo, que es el que hace que los negativos signifiquen algo."""
+    assert judgment_allowed(_judgeable(), **_OK) is True
+
+
+def test_an_unvalidated_mdc_is_not_judgment_even_with_everything_else_in_place():
+    """Es el estado de las catorce métricas de golf: MDC medido en el arnés
+    nivel 0 —proyección más ruido, sin estimador— y por eso `sin_validar`."""
+    m = _judgeable(mdc_validation="sin_validar")
+    assert m.mdc is not None and judgment_allowed(m, **_OK) is False
+    assert Metric(id="x", unit="cm", level=1, views=("face_on",), fps_min=30.0, anchored_to=(), reference_frame="image_px").mdc_validation == "sin_validar", "el default es el conservador"
+    with pytest.raises(ValueError, match="mdc_validation"):
+        _judgeable(mdc_validation="medido_aqui")  # no es una procedencia: es otro enum
+
+
+def test_a_validated_mdc_without_a_range_is_not_judgment():
+    """La condición que faltaba. `CONTEXTO.md` define juicio como comparar contra
+    un rango: sin rango no hay contra qué juzgar. La regla vieja
+    (`ref is None or ref.range_width is None`) daba `True` en los dos casos de acá."""
+    assert judgment_allowed(_judgeable(reference=None), **_OK) is False
+    descriptiva = Reference("descriptive", "pares", "fuente de prueba", "definición de prueba")
+    assert judgment_allowed(_judgeable(reference=descriptiva), **_OK) is False
+
+
+@pytest.mark.parametrize("provenance", ["estimacion", "sin_verificar"])
+def test_a_range_with_a_weak_provenance_is_not_judgment(provenance):
+    """Invariante 12: ante la duda, el hueco antes que el número inventado. Es el
+    caso de las referencias de golf, todas `estimacion`."""
+    ref = Reference("range", provenance, "fuente de prueba", "definición de prueba", range=(0.0, 4.0))
+    assert judgment_allowed(_judgeable(reference=ref), **_OK) is False
+
+
+@pytest.mark.parametrize("provenance", ["medido_aqui", "pares", "fabricante"])
+def test_a_range_with_a_strong_provenance_is_judgment(provenance):
+    ref = Reference("range", provenance, "fuente de prueba", "definición de prueba", range=(0.0, 4.0))
+    assert judgment_allowed(_judgeable(reference=ref), **_OK) is True
+
+
+def test_no_golf_metric_is_judgment_today():
+    """0 de 21 (ADR-019). Con la vista, el fps y la procedencia del fps todos en
+    orden —que es el caso de `cortado3-lento.mp4`, el único clip que pasó el gate
+    entero—, ninguna de las métricas de golf habilita juicio."""
+    assert len(GOLF_METRICS) > 0
+    for m in GOLF_METRICS:
+        for view in m.views:
+            assert judgment_allowed(m, view=view, fps_real=240.15, fps_provenance="medido_aqui") is False, m.id
+        assert m.mdc_validation == "sin_validar", m.id
+    assert GOLF_METRICS.version == "0.3.0"
+
+
+def test_repeatability_without_a_noise_floor_is_null_with_a_reason():
+    """`CONTEXTO.md` §piso de ruido: sin el piso del propio pipeline, una SD entre
+    repeticiones no separa al atleta del instrumento. `n` se conserva."""
+    escalar = repeatability_scalar([10.0, 12.0, 14.0])
+    assert escalar["value"] is None and escalar["noise_floor"] is None
+    assert escalar["n"] == 3 and "piso de ruido" in escalar["null_reason"]
+    assert escalar["kind"] == "sd_abs"
+
+    curvas = repeatability_curves([np.linspace(0, 1, 20), np.linspace(0, 2, 30), np.array([1.0, 2.0])])
+    assert curvas["value"] is None and curvas["noise_floor"] is None
+    assert curvas["n"] == 2, "la curva de 2 puntos no entra, y eso el n lo sigue diciendo"
+    assert "piso de ruido" in curvas["null_reason"] and curvas["kind"] == "dtw_normalized"
+
+
+def test_the_two_adr_019_warnings_reach_the_analysis(clips, capture_paths_yaml, tmp_path):
+    """Los dos avisos son dos cosas distintas: la regla (nada de esto es juicio) y
+    el estado de la tabla de MDC del deporte. Y el aviso de la regla no se escribe
+    si el archivo se contradice: con un registro que sí habilita juicio, no sale."""
+    take, _ = _synthetic_take(clips, capture_paths_yaml, tmp_path)
+    a = analyze_take(take, GOLF, write=False, height_m=1.80)
+    regla = [w for w in a["warnings"] if "Ninguno de estos números es un juicio" in w]
+    tabla = [w for w in a["warnings"] if "no está validado en material real" in w]
+    assert len(regla) == 1 and len(tabla) == 1, a["warnings"]
+    assert "ADR-019" in regla[0] and "material real" in regla[0]
+    assert "sin estimador de pose" in tabla[0] and "nadie verificó" in tabla[0]
+    assert all(isinstance(w, str) for w in a["warnings"])
+    assert validate_analysis(json.loads(json.dumps(a, default=lambda o: o.tolist()))) == []
+
+    con_juicio = _analyze_with(take, _judgeable_registry())
+    assert any(v["judgment_allowed"] for r in con_juicio["reps"] for v in r["metrics"].values())
+    assert not any("Ninguno de estos números es un juicio" in w for w in con_juicio["warnings"]), "un aviso que se contradice con el archivo no se escribe"
+
+
+def test_the_subframe_mdc_says_it_is_not_validated():
+    """El MDC del cruce conserva `provenance: medido_aqui` —lo midió el arnés, y
+    el schema de `subframe.mdc` no admite campos nuevos—, y es el `source` el que
+    dice de qué arnés viene y que no está validado (ADR-019)."""
+    from sports.golf.events import _subframe_mdc
+
+    mdc = _subframe_mdc()
+    assert mdc is not None and mdc["provenance"] == "medido_aqui"
+    assert "mdc.yaml" in mdc["source"], "lo fija tests/test_eventos_senal.py"
+    assert "arnés nivel 0" in mdc["source"] and "sin estimador" in mdc["source"]
+    assert "sin verificar" in mdc["source"] and "ADR-019" in mdc["source"]
+
+
 # --- contrato 2.0.0: lo que murió y lo que entró (ADR-018, encargo 16) ---------
 
 
@@ -444,11 +617,12 @@ def test_schema_requires_metric_version_and_scale_px(clips, capture_paths_yaml, 
 
 def test_metric_version_travels_from_the_registry_to_the_json(clips, capture_paths_yaml, tmp_path):
     """Las ocho métricas en cm están en 1.1.0 (encargo 14: cambió la convención de
-    escala) y el resto en 1.0.0; el registro de golf, en 0.2.0. Lo que declara el
-    registro es lo que viaja al JSON, incluso en una métrica en `null`."""
+    escala) y el resto en 1.0.0; el registro de golf, en 0.3.0 (ADR-019, que no
+    movió ningún valor y por eso no movió ningún `metric_version`). Lo que declara
+    el registro es lo que viaja al JSON, incluso en una métrica en `null`."""
     take, _ = _synthetic_take(clips, capture_paths_yaml, tmp_path)
     a = analyze_take(take, GOLF, write=False, height_m=1.80)
-    assert a["header"]["registry_version"] == "0.2.0"
+    assert a["header"]["registry_version"] == "0.3.0"
     m = a["reps"][0]["metrics"]
     en_cm = sorted(mid for mid in m if m[mid]["unit"] == "cm")
     assert len(en_cm) == 8, en_cm
@@ -509,7 +683,7 @@ def test_repo_example_is_valid():
     # el ejemplo se genera con el motor (tests/helpers/gen_analysis_example.py), no
     # a mano: hasta el encargo 16 se editaba a mano y quedó con `gain`, con
     # `sequence_order` y con el `method` que ADR-017 había reemplazado.
-    assert d["header"]["schema_version"] == "2.0.0" and d["header"]["registry_version"] == "0.2.0"
+    assert d["header"]["schema_version"] == "2.0.0" and d["header"]["registry_version"] == "0.3.0"
     assert "gain" not in d["summary"] and all("sequence_order" not in e for e in d["events"])
     assert all(e["top"]["method"] == "direction_change_farthest" for e in d["events"])
     assert d["quality"]["scale_px"]["value"] is not None
@@ -523,7 +697,13 @@ def test_metrics_in_analysis(clips, capture_paths_yaml, tmp_path):
     m = a["reps"][0]["metrics"]
     bs = m["backswing_duration_ms"]
     assert abs(bs["value"] - 900.0) <= 25 and bs["unit"] == "ms" and bs["null_reason"] is None
-    assert bs["judgment_allowed"] is (bs["mdc"] is not None), "juicio sólo con MDC de la tabla del arnés"
+    # Antes de ADR-019 esto era `bs["judgment_allowed"] is (bs["mdc"] is not None)`:
+    # tener MDC alcanzaba. Ahora no: el MDC de la tabla del arnés existe y sigue
+    # viajando en el sextuplo, pero no está validado en material real y la
+    # referencia de golf no tiene rango, así que no hay juicio.
+    assert bs["mdc"] is not None, "el MDC de la tabla del arnés sigue viajando en el sextuplo"
+    assert bs["judgment_allowed"] is False, "MDC del arnés sin validar y sin rango: no es juicio (ADR-019)"
+    assert all(v["judgment_allowed"] is False for v in m.values()), "0 de 0 juicios con el registro de golf"
     # La procedencia del fps viaja en cada métrica y en el header (ADR-016).
     assert bs["fps_provenance"] == "medido_aqui" and "medido_aqui" in bs["uncertainty"]["method"]
     assert a["header"]["source"]["fps_provenance"] == "medido_aqui"
@@ -533,6 +713,10 @@ def test_metrics_in_analysis(clips, capture_paths_yaml, tmp_path):
     assert abs(m["pelvis_sway_top_cm"]["value"]) < 1.0, "la pelvis sintética no se mueve"
     assert a["summary"]["metrics"]["backswing_duration_ms"]["repeatability"]["kind"] == "sd_abs"
     assert a["summary"]["metrics"]["hands_speed_curve_top_to_impact"]["repeatability"]["n"] == 2
+    # ADR-019: sin piso de ruido medido, la repetibilidad no es una medición.
+    for mid in ("backswing_duration_ms", "hands_speed_curve_top_to_impact"):
+        rep = a["summary"]["metrics"][mid]["repeatability"]
+        assert rep["value"] is None and rep["noise_floor"] is None and "piso de ruido" in rep["null_reason"], mid
     b = analyze_take(take, GOLF, write=False)
     assert b["reps"][0]["metrics"]["pelvis_sway_top_cm"]["value"] is None and "altura" in b["reps"][0]["metrics"]["pelvis_sway_top_cm"]["null_reason"]
 

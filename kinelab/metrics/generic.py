@@ -70,23 +70,41 @@ def dtw_normalized(a: np.ndarray, b: np.ndarray) -> float:
     return float(D[n, m] / (n + m))
 
 
+# Por qué la repetibilidad sale en `null` mientras no haya piso de ruido medido
+# (CONTRATO.md §summary, ADR-019). `CONTEXTO.md` §piso de ruido: "si la señal es
+# menor que el piso, la métrica no existe, por más que el código la calcule", y
+# la repetibilidad **siempre** lleva el piso del propio pipeline restado y
+# declarado. Devolver la SD con `noise_floor: None` al lado publica como
+# variación del atleta algo que puede ser entero del instrumento: en
+# `cortado3-lento.mp4` la SD del backswing entre dos repeticiones dio 17,7 ms y
+# la ambigüedad de los eventos que la producen es de 4 a 16 cuadros. El `n` se
+# conserva: decir cuántas repeticiones entraron no afirma nada sobre el valor.
+NO_NOISE_FLOOR = (
+    "sin piso de ruido medido del pipeline: una SD entre repeticiones no separa "
+    "la variación del atleta de la del instrumento (CONTEXTO.md §piso de ruido, ADR-019)"
+)
+
+
 def repeatability_scalar(values: list[float]) -> dict:
     v = np.asarray([x for x in values if x is not None and np.isfinite(x)], float)
-    if v.size < 2:
-        return {"kind": "sd_abs", "value": None, "n": int(v.size), "noise_floor": None}
-    return {"kind": "sd_abs", "value": round(float(v.std(ddof=1)), 3), "n": int(v.size), "noise_floor": None}
+    return {"kind": "sd_abs", "value": None, "n": int(v.size), "noise_floor": None, "null_reason": NO_NOISE_FLOOR}
 
 
-def repeatability_curves(curves: list[np.ndarray], samples: int = 50) -> dict:
-    """DTW normalizado medio entre pares de curvas remuestreadas a `samples` puntos
-    (normalizadas en tiempo 0–1: compara forma, no duración)."""
+def resample_curves(curves: list[np.ndarray], samples: int = 50) -> list[np.ndarray]:
+    """Las curvas con al menos 4 puntos finitos, remuestreadas a `samples` puntos
+    y normalizadas en tiempo 0–1 (compara forma, no duración). Es la entrada del
+    DTW por pares: sigue acá para el día que haya piso de ruido medido."""
     rs = []
     for c in curves:
         c = np.asarray(c, float)
         c = c[np.isfinite(c)]
         if c.size >= 4:
             rs.append(np.interp(np.linspace(0, 1, samples), np.linspace(0, 1, c.size), c))
-    if len(rs) < 2:
-        return {"kind": "dtw_normalized", "value": None, "n": len(rs), "noise_floor": None}
-    d = [dtw_normalized(rs[i], rs[j]) for i in range(len(rs)) for j in range(i + 1, len(rs))]
-    return {"kind": "dtw_normalized", "value": round(float(np.mean(d)), 4), "n": len(rs), "noise_floor": None}
+    return rs
+
+
+def repeatability_curves(curves: list[np.ndarray], samples: int = 50) -> dict:
+    """DTW normalizado medio entre pares de curvas. Mismo motivo que en
+    `repeatability_scalar`: sin piso de ruido medido, `null` con razón, y `n`
+    —cuántas curvas entraron— se conserva."""
+    return {"kind": "dtw_normalized", "value": None, "n": len(resample_curves(curves, samples)), "noise_floor": None, "null_reason": NO_NOISE_FLOOR}

@@ -142,6 +142,15 @@ Las dos cosas van juntas a propósito: cada métrica se agrega con su barrido.
   deltas de flexión de rodilla y postura respecto del address; repetibilidad
   (SD absoluta para escalares, DTW normalizado para la curva de velocidad de
   muñeca); ganancia de velocidad angular pelvis→tórax→brazo.
+
+  > **Nota del 18 de septiembre de 2026.** La **ganancia** que nombra esta
+  > línea salió del motor y del arnés: ADR-018 la retiró porque el arnés midió
+  > que la velocidad angular de una línea en el plano de imagen es el largo
+  > proyectado del segmento disfrazado de °/s (11110 °/s contra 139,6
+  > verdaderos desde `down_the_line`). El concepto sigue siendo el correcto
+  > —`CONTEXTO.md` §Vocabulario, `CONTRATO.md` §Niveles—; lo que murió es
+  > medirlo con una cámara sola. El texto de arriba queda como estaba: dice qué
+  > lista de métricas se planificó, y esta nota dice cuál de ellas ya no existe.
 - 3.3 La tabla de sesgo / límites de acuerdo / MDC por métrica y condición es
   el entregable. **De ahí se escriben `fps_min` y `views` en el registro, no a
   mano.** Si el barrido muestra que una métrica muere, se borra.
@@ -191,6 +200,12 @@ Las dos cosas van juntas a propósito: cada métrica se agrega con su barrido.
 
 - Repetibilidad primero; descriptivos con confianza después; ganancia; nunca
   puntaje, nunca texto autogenerado.
+
+  > **Nota del 18 de septiembre de 2026.** La **ganancia** de esta línea no
+  > existe más en el motor (ADR-018); ver la nota de 3.2. Lo que queda en pie de
+  > la frase es el orden: repetibilidad primero, descriptivos después. Y hoy la
+  > repetibilidad sale en `null` con su razón mientras no haya piso de ruido
+  > medido del pipeline (ADR-019, `CONTRATO.md` §summary).
 - Comparación lado a lado de dos repeticiones sincronizadas por evento (portar
   `compare.py`).
 - Cada número lleva su banda, y una métrica descriptiva se ve distinta de un

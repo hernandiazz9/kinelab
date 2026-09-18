@@ -324,7 +324,12 @@ geométrica es un cruce y no un cuadro. Hoy lo tiene sólo el impacto de golf.
   **evento** —y no una métrica del registro— lleva MDC: el registro es de
   métricas y un instante entre cuadros no es una. Tener el MDC no lo vuelve
   juicio: eso lo sigue decidiendo `judgment_allowed` de las métricas ancladas, y
-  con un camino sin calibrar es `false` igual (ADR-016).
+  con un camino sin calibrar es `false` igual (ADR-016). Y el MDC de este cruce
+  **es del arnés y no está validado en material real** (ADR-019): lo midió el
+  nivel 0 —proyección más ruido, sin estimador de pose— con una cámara que no es
+  la que filmó y que nadie verificó. La `provenance` sigue siendo `medido_aqui`,
+  que es literalmente cierta y dice de dónde sale el número; lo que aclara de qué
+  arnés viene y que no está validado es el `source`.
 - Una corrección manual de `frame` **no** toca `subframe`: describe la señal,
   con sus dos cuadros escritos al lado.
 
@@ -387,12 +392,41 @@ judgment_allowed = level == 1
                    and fps_min_met
                    and fps_provenance == "medido_aqui"
                    and view in metric.views
-                   and (reference is None or mdc <= reference.range_width)
+                   and mdc_validation == "material_real"
+                   and reference is not None
+                   and reference.kind == "range"
+                   and reference.provenance not in ("estimacion", "sin_verificar")
+                   and mdc <= reference.range_width
 ```
 
-La condición de la procedencia es ADR-016: con la tasa de cuadros sin verificar
-el número se muestra —es descriptivo— pero no se compara contra nada, porque el
-eje del tiempo es un supuesto y no una medición.
+La condición de la procedencia del fps es ADR-016: con la tasa de cuadros sin
+verificar el número se muestra —es descriptivo— pero no se compara contra nada,
+porque el eje del tiempo es un supuesto y no una medición.
+
+Las cuatro últimas son **ADR-019**, y son dos preguntas independientes: una
+mira el instrumento y la otra, contra qué se compara.
+
+- `mdc_validation` es un campo del registro con dos valores, `sin_validar` (el
+  default) y `material_real`, y **no es una procedencia**: la procedencia dice
+  de dónde sale un número —y el MDC del arnés es `medido_aqui`, lo medimos
+  nosotros—, esto dice contra qué se lo validó. Vale `material_real` cuando el
+  MDC se midió con el estimador real, sobre material real, por el camino de
+  captura de la toma, con los eventos contra etiquetas humanas, la deriva de
+  cámara medida, la escala trazable y los intrínsecos del teléfono calibrados
+  con tablero. Un MDC del arnés, de cualquier nivel, **no** alcanza.
+- **Esta fórmula corrige la línea que decía `reference is None or mdc <=
+  reference.range_width`**, que dejaba pasar una referencia descriptiva sin
+  rango. `CONTEXTO.md` §Vocabulario define juicio como *comparar contra un
+  rango*: sin rango no hay contra qué juzgar, y la condición vieja habilitaba
+  juicio justamente en el caso en que no hay nada contra qué comparar. De ahí
+  salieron los 21 `judgment_allowed: true` del 15/9 que la auditoría del 16/9
+  revisó uno por uno: aritmética exacta en los 21, ninguno defendible.
+- Las procedencias `estimacion` y `sin_verificar` quedan afuera por la
+  invariante 12: ante la duda, el hueco antes que el número inventado.
+
+La razón por la que una métrica **no** es juicio no viaja en el sextuplo:
+`$defs/metric` es `additionalProperties: false` y agregarle un campo sería un
+bump de schema. Va a `warnings[]`, en frases para el entrenador.
 
 ### `summary`
 
@@ -402,10 +436,17 @@ eje del tiempo es un supuesto y no una medición.
   "reps_rejected": {"count": 2, "reasons": {"plausibility": 1, "manual_discard": 1}},
   "metrics": {
     "backswing_duration_ms": {"median": 871.0, "sd_abs": 34.2, "n": 10, "mdc": 21.0,
-                              "repeatability": {"kind": "sd_abs", "value": 34.2, "noise_floor": 9.1}}
+                              "repeatability": {"kind": "sd_abs", "value": null, "n": 10, "noise_floor": null,
+                                                "null_reason": "sin piso de ruido medido del pipeline: …"}}
   }
 }
 ```
+
+**Mientras no haya piso de ruido medido, `repeatability.value` es `null` con su
+`null_reason`** (ADR-019). El `n` se conserva —decir cuántas repeticiones
+entraron no afirma nada sobre el valor— y vale igual para
+`repeatability_scalar` y para `repeatability_curves`. `summary.metrics` es un
+objeto libre en el schema, así que el campo entra sin tocar el contrato.
 
 **`summary.gain` no está más** (ADR-018). El arnés midió que la velocidad
 angular de una línea en el plano de imagen es el largo proyectado del segmento
@@ -418,7 +459,10 @@ vistas. La ganancia sigue siendo el **concepto** correcto (§Niveles, y
 La repetibilidad **siempre** lleva `noise_floor`: el piso de ruido del propio
 pipeline, medido corriendo el mismo clip con jitter o dos clips del mismo
 gesto. Sin ese número, una parte de la "inconsistencia" es el instrumento, no
-el atleta.
+el atleta. Por eso, hoy que ese piso no existe, el motor no publica una SD con
+`noise_floor: null` al lado: publica `value: null` con la razón. Medido en
+`cortado3-lento.mp4`: la SD del backswing entre dos repeticiones dio 17,7 ms, y
+la ambigüedad de los eventos que la producen es de 4 a 16 cuadros.
 
 ---
 
@@ -595,9 +639,18 @@ homografía.
 - `registry_version` aparte, y `metric_version` por métrica. Con un solo
   número, mejorar una métrica invalida el historial del atleta. Los dos viajan
   en el JSON: `registry_version` en el `header`, `metric_version` en cada
-  sextuplo. Hoy: registro de golf **0.2.0**; las ocho métricas en cm en
+  sextuplo. Hoy: registro de golf **0.3.0**; las ocho métricas en cm en
   **1.1.0** y las seis restantes (cuatro duraciones, tempo y dos rodillas) en
   1.0.0.
+- **`registry_version` del registro de golf `0.2.0 → 0.3.0` por ADR-019**, en un
+  bump **minor**. La regla de `judgment_allowed` sumó dos condiciones y las
+  catorce métricas pasaron de "podrían ser juicio" a "no lo son": 21 de 21 se
+  apagaron en `cortado3-lento.mp4`. Es minor y no major porque **ningún valor
+  cambia** —por eso tampoco se mueve ningún `metric_version`, y el
+  `schema_version` de `analysis.json` sigue en 2.0.0: no entra ni sale ningún
+  campo—; lo único que se apaga es la bandera que decía que ese valor se podía
+  comparar contra algo. El registro genérico del motor
+  (`kinelab/metrics/registry.py`) queda en 0.1.0: sigue vacío.
 - **Cambiar la convención de escala (§La escala) es `metric_version` minor en
   las siete métricas en cm** — `1.0.0 → 1.1.0` — y `registry_version` minor
   (`0.1.0 → 0.2.0`). `schema_version` de `analysis.json` **no** se toca: no se
