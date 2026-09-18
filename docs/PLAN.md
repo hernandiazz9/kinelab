@@ -1,7 +1,15 @@
 # Plan
 
-Última ronda: 2026-09-18 — revisión de continuidad por el orquestador de la
-sesión original, después de que otra sesión orquestadora llevó el proyecto del
+Última ronda: 2026-09-18 (tarde) — el 27 y el 28 cerraron: 0 de 21 juicios
+con los 24 valores intactos, 357 tests; la pantalla sin las tres columnas
+retiradas ni el «±1 cuadro» fijo. Escritos el 29 (deriva de cámara) y el 30
+(exit 134); el 17 corre primero y solo. Decisión sobre el cronómetro: es
+calibración del camino, una vez, nunca del usuario; en la sesión de
+validación va sólo en la primera toma de cada vista (17 lo escribe en la
+guía). Sin material nuevo todavía.
+
+Ronda anterior, 2026-09-18 (mañana) — revisión de continuidad por el
+orquestador de la sesión original, después de que otra sesión orquestadora llevó el proyecto del
 16 al 26 y la auditoría. Nada corrió desde el 16/9: el árbol está limpio en
 `dfbf4a7` y el 27 y el 28 siguen sin correr. Se confirma el plan de abajo con
 un cambio de orden: Hernán filma la sesión de validación **ya**, sin esperar
@@ -43,6 +51,20 @@ estado-fases.md`). **Ningún número del proyecto es hoy un juicio válido.**
 - No se regenera `data/exploracion/` ni la demo más de una vez.
 
 ## Decisiones del orquestador
+
+- 2026-09-18 · **El cronómetro nunca es del usuario.** Calibra un camino
+  (teléfono + modo + transferencia) una vez y queda en `capture-paths.yaml`;
+  quien filma después con ese camino lo elige en la pantalla y no filma nada
+  más. Un reloj puesto por software no sirve: nada en el archivo registra el
+  tiempo real, sólo algo en la imagen. En la sesión de validación el
+  cronómetro va sólo en la primera toma de cada vista y en la escena vacía
+  (para pasar de n = 1 a n = 3 y calibrar el archivo crudo de `DCIM`, no el
+  recorte de la Mac). Después, para el S22 en Slow motion 240 por cable, no
+  hace falta más.
+- 2026-09-18 · Del 27: el aviso condicional está bien; `Registry.mdc_note`
+  se queda; el `follow_end` 1978 de cortado3 se muestra con aviso propio
+  cuando lo arregle el encargo de follow_end (R4), no antes. Del 28: el
+  despliegue a mano tiene que quedar en `data/publicados.json`; entra en R10.
 
 - 2026-09-16 · **ADR-019** (lo escribe el 27): juicio sólo con MDC validado en
   material real del camino (campo propio `mdc_validation: material_real`, **no**
@@ -98,17 +120,18 @@ estado-fases.md`). **Ningún número del proyecto es hoy un juicio válido.**
 Máximo dos sesiones a la vez, sin archivos compartidos. `CONTRATO.md` lo edita
 una sola sesión por vez.
 
-- **R1** · [pendiente] **27** contencion-del-juicio (ADR-019) ∥ [pendiente]
-  **28** pantalla-sin-falsedades (sólo `web/`). Después del 28, Hernán
-  despliega la demo con el comando que deja su informe.
+- **R1** · [hecho] **27** contencion-del-juicio — `843d1f4`, `4340a06` ∥
+  [hecho] **28** pantalla-sin-falsedades — `9107e5b`, `e4acf3a`. Hernán
+  despliega la demo con el comando del informe del 28 (¿hecho?).
 - **R2** · [pendiente] **17** gate-encuadre-en-px, **solo**: edita `kinelab/`
   y corre el motor sobre `cortado3`, así que no coincide con nadie que haga
-  cualquiera de las dos cosas.
-- **R3** · [pendiente] deriva-de-camara-censo — `kinelab/tools/camera_drift.py`
-  (archivo nuevo): homografía del fondo con el sujeto enmascarado, deriva en las
-  filas de caderas, hombros, cabeza y pies; censo de los ocho clips reales;
-  aceptación contra los rangos de la auditoría ±3 px ∥ [pendiente]
-  exit-134-del-arnes — sólo `truth/`, sin material real.
+  cualquiera de las dos cosas. Prompt actualizado el 18/9 con la regla del
+  cronómetro en la guía.
+- **R3** · [pendiente] **29** deriva-de-camara-censo — `kinelab/tools/
+  camera_drift.py` (nuevo), censo de los ocho clips, aceptación ±3 px contra
+  la auditoría ∥ [pendiente] **30** exit-134-del-arnes — diagnóstico por
+  bisección y arreglo en `truth/`; si la causa es la carga del estimador al
+  importar `kinelab.perception`, deja el diff para un encargo del motor.
 - **R4** · [pendiente] follow-end-en-su-repeticion — la cota del candidato
   propio; `tol_frames` visible; `git rm kinelab/events/order.py`; y **una sola
   señal y una sola escala en la pantalla**. Inventario del 16/9, verificado

@@ -97,7 +97,15 @@ admite campos extra) y `:423-433` (sólo lectura), `kinelab/explore.py:332-345`
      address.
    - El cuerpo en más del 37,3 % del alto en Slow motion FHD: un paso más cerca
      que `cortado3`, que dio 36 %.
-   - Cronómetro andando dentro del cuadro en cada toma, y 25 s por toma.
+   - 25 s por toma, en todas. El cronómetro andando dentro del cuadro va
+     **sólo en la primera toma de cada vista y en la toma de la escena
+     vacía**, no en cada toma (decisión del orquestador del 18/9: el
+     cronómetro calibra el camino del teléfono, una vez; hoy n = 1 y desde un
+     recorte de la Mac, y con esas dos tomas más una de `DCIM/Camera` queda
+     n = 3 y el camino del teléfono crudo). Reconciliá con esto el §2 de la
+     guía, que hoy dice «en cada toma», y dejá escrito en una línea que quien
+     filme después con el mismo teléfono, modo y cable **no necesita
+     cronómetro**: elige el camino en la pantalla y listo.
    - 10–20 swings `face_on` y 10–20 `down_the_line`, con pelota. En la mitad,
      sostener la pose final 1–2 s.
    - El palo declarado bien. La altura medida con cinta.
