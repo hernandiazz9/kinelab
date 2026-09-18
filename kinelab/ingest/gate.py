@@ -18,9 +18,13 @@ dice: la tasa de captura se asume igual a la de reproducción efectiva
 Un `slomo` sin calibrar se rechaza: sin cronómetro el factor de estiramiento es
 desconocido.
 
-Los chequeos de la Fase 1 (encuadre, tasa de detección, una sola persona)
-todavía no existen: necesitan pose, y la pose necesita clips reales que hayan
-pasado por acá primero.
+Los chequeos de la Fase 1 —`body_height_px`, `detection_rate`, `single_subject`—
+**existen desde el encargo 17** y los escribe `kinelab.perception.run`, en el
+mismo `capture.json`, después de correr la pose. Este módulo no los evalúa: acá
+todavía no hay pose. Se rehacen en cada corrida de percepción, así que no
+deciden si esa corrida arranca: lo que la bloquea son los de ingesta, los nueve
+de `CONTRATO.md` §capture.json (`kinelab.perception.run._blocking_checks`,
+encargo 30).
 """
 
 from __future__ import annotations

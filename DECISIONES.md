@@ -593,6 +593,22 @@ las duraciones. Los 21 `judgment_allowed: true` tienen aritmética exacta —21 
 21 reproducidos por tres implementaciones independientes— y **ninguno resiste
 como juicio**. La regla vieja sólo preguntaba si el MDC *existía*.
 
+**Nota del 18 de septiembre de 2026: la deriva es más grande que lo que dice el
+párrafo de arriba, y la conclusión no cambia.** Los «8–25 px» de la auditoría son
+los de **x**. Medidos con la herramienta del encargo 29
+(`kinelab.tools.camera_drift`, homografía del fondo con el sujeto enmascarado,
+SIFT + RANSAC, cuatro filas de la imagen), en el impacto de la repetición 1 de
+`cortado3-lento.mp4` la imagen se corre **26–30 px en y** —`scale_px` 783,9 y
+1,75 m de estatura, o sea **5,9–6,7 cm**, **2,1–2,4×** el MDC 2,769 de
+`pelvis_lift_top_cm`— contra 3,4–5,0 cm en x (MDC 2,416 de
+`pelvis_sway_impact_cm`). En x la auditoría acertó (+13,5 a +22,2 px medidos
+contra su +14 a +23); en y se quedó corta por un factor 2,5–3, porque decía
+«unos 10 px». Nada de esto ablanda ADR-019: la deriva es **más** grande, así que
+los siete desplazamientos en cm están contaminados **más** por encima de su MDC,
+y `judgment_allowed` sigue apagado en las 21. La deriva se mide y **no se
+compensa** (auditoría §6 D-6); integrarla al análisis tiene su propio encargo.
+Ver `docs/informes/2026-09-18-29-deriva-de-camara-censo.md`.
+
 **Por qué (b).** `CONTEXTO.md` §Vocabulario define juicio como **comparar contra
 un rango**, y la invariante 12 dice que un rango sin procedencia no entra: ante
 la duda, el hueco. El código decía otra cosa: `ref is None or ref.range_width is
