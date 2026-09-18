@@ -1,8 +1,8 @@
 # 29 — La deriva de la cámara, medida: herramienta y censo de los ocho clips reales
 
-Para correr: `/encargo 29` en una sesión nueva, **después de que cierre el
-17** (edita `kinelab/` y corre el motor sobre material; vos leés material).
-Puede correr en paralelo con el 30 (sólo `truth/`). Leé antes
+Para correr: `/encargo 29` en una sesión nueva, **solo, después de que
+cierren el 30 y el 17** (los dos editan `kinelab/perception/`, que vos
+importás para leer material). Leé antes
 `docs/informes/2026-09-16-auditoria-primer-juicio.md` §1 («La cámara», «Lo
 que no lo detecta») y `docs/informes/auditoria-2026-09-16/reproduccion.md`.
 
@@ -110,6 +110,6 @@ enmascarado y los inliers dibujados en dos cuadros (address e impacto).
 
 ## En paralelo
 
-El 30 toca `truth/` y nada de `kinelab/`. Vos: `kinelab/tools/camera_drift.py`
+Ninguno. Vos: `kinelab/tools/camera_drift.py`
 (nuevo), `tests/test_camera_drift.py` (nuevo), `ESTADO.md` (tu sección) y
 tu informe. Nada más.

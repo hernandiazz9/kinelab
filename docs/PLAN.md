@@ -123,16 +123,20 @@ una sola sesión por vez.
 - **R1** · [hecho] **27** contencion-del-juicio — `843d1f4`, `4340a06` ∥
   [hecho] **28** pantalla-sin-falsedades — `9107e5b`, `e4acf3a`. Hernán
   despliega la demo con el comando del informe del 28 (¿hecho?).
-- **R2** · [pendiente] **17** gate-encuadre-en-px, **solo**: edita `kinelab/`
-  y corre el motor sobre `cortado3`, así que no coincide con nadie que haga
-  cualquiera de las dos cosas. Prompt actualizado el 18/9 con la regla del
-  cronómetro en la guía.
-- **R3** · [pendiente] **29** deriva-de-camara-censo — `kinelab/tools/
+- **R2** · [pendiente] **30** abort-al-salir, **solo** y primero: Hernán ve
+  seguido el cartel «Python se ha cerrado inesperadamente»; es el teardown de
+  CoreML con una sesión viva al salir (servidor con Ctrl-C, arnés, quizá
+  `datos`). Diagnóstico por bisección y arreglo en la raíz
+  (`kinelab/perception/estimator.py`, `__init__.py`, cierre en `explore`,
+  `run` y el servidor), más un test por subproceso. Reescrito el 18/9: antes
+  era sólo `truth/`.
+- **R3** · [pendiente] **17** gate-encuadre-en-px, **solo**: edita `kinelab/`
+  y corre el motor sobre `cortado3`. Prompt actualizado el 18/9 con la regla
+  del cronómetro en la guía.
+- **R4** · [pendiente] **29** deriva-de-camara-censo — `kinelab/tools/
   camera_drift.py` (nuevo), censo de los ocho clips, aceptación ±3 px contra
-  la auditoría ∥ [pendiente] **30** exit-134-del-arnes — diagnóstico por
-  bisección y arreglo en `truth/`; si la causa es la carga del estimador al
-  importar `kinelab.perception`, deja el diff para un encargo del motor.
-- **R4** · [pendiente] follow-end-en-su-repeticion — la cota del candidato
+  la auditoría. Solo: lee material.
+- **R5** · [pendiente] follow-end-en-su-repeticion — la cota del candidato
   propio; `tol_frames` visible; `git rm kinelab/events/order.py`; y **una sola
   señal y una sola escala en la pantalla**. Inventario del 16/9, verificado
   contra HEAD: la tabla por cuadro usa `swing_signals` con `wrist_score_min`
@@ -143,8 +147,8 @@ una sola sesión por vez.
   fotos y el cero de los desplazamientos del CSV usan sólo la repetición 1
   aunque haya más, y sin address el cero es el cuadro 0: decirlo en la
   pantalla o elegir la repetición.
-- **R5** · [pendiente] escala-y-altura-trazables (analysis 2.1.0).
-- **R6** · [pendiente] fuente-de-la-calibracion — `calibration_clip_sha256` en
+- **R6** · [pendiente] escala-y-altura-trazables (analysis 2.1.0).
+- **R7** · [pendiente] fuente-de-la-calibracion — `calibration_clip_sha256` en
   capture-paths 1.2.0, `fps_calibration.same_file` en capture 1.3.0, aviso, y
   `ingest/__main__.py:103` que lee `capture-paths.yaml` de `--data`.
 - **Hernán filma la sesión de validación** (ver Preguntas). Puede filmar ya: la
