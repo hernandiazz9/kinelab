@@ -3,6 +3,127 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 18 de septiembre de 2026 — encargo 30: el exit 134 era la telemetría de onnxruntime
+
+Prompt: `docs/prompts/30-exit-134-del-arnes.md`. Informe:
+`docs/informes/2026-09-18-30-exit-134-del-arnes.md`. **Sin sesión en paralelo**
+(lo pedía el prompt). Commits: el del código y documentos, y el de cierre con
+este archivo y el informe. El del código: `db46aa4`.
+
+### Qué existe ahora
+
+- **El aborto al salir tiene causa, y no era ninguna de las tres que suponía el
+  prompt.** No es la sesión de CoreML viva, ni una carga ansiosa del paquete, ni
+  algo del arnés: es la **telemetría de onnxruntime 1.30**, que desde esa
+  versión existe también en macOS (`core/platform/posix/telemetry.cc`, con el SDK
+  1DS de Microsoft adentro de `onnxruntime_pybind11_state.so`). Su hilo de subida
+  despacha un evento cuando el intérprete ya corrió los destructores estáticos y
+  el `recursive_mutex` del despachador ya no existe → `libc++abi`, SIGABRT, exit
+  134, siempre **después** de que el trabajo quedó escrito. Los **23** informes
+  de macOS del proyecto (12/9 al 18/9) tienen todos **la misma pila**.
+- **`kinelab/perception/__init__.py` pone `ORT_DISABLE_TELEMETRY` antes de que
+  onnxruntime se cargue.** Importar cualquier módulo del paquete ejecuta primero
+  ese `__init__`, así que llega siempre a tiempo; y el `__init__` sigue sin
+  importar nada (no trae onnxruntime ni los pesos). Sin telemetría no hay hilo, y
+  sin hilo esa pila es imposible. No se tapó nada: no hay `os._exit` ni se ignora
+  ningún exit code.
+- **`truth/tests/conftest.py`** (nuevo): importa `kinelab.perception` antes que
+  cualquier test del arnés. Hoy es red de seguridad —los tests ya lo importan por
+  otro camino, medido— y no una segunda copia de la razón, que vive en un solo
+  lugar.
+- **`truth/corridas.sh N`** (nuevo, default 10): corre N veces la suite del
+  arnés, imprime el exit de cada una y falla si alguna no da 0. Está en
+  `AGENTS.md` §Comandos, y la causa en §Cosas que muerden.
+- **Dos tests nuevos del motor que miran lo que los otros no pueden**:
+  `test_datos_en_un_subproceso_termina_con_exit_0` (el exit del **proceso**, con
+  onnxruntime de verdad; los tests de `explore` corren en el mismo intérprete y
+  el aborto es posterior a todo) y
+  `test_importar_kinelab_perception_apaga_la_telemetria_de_onnxruntime`.
+- **Punto 3a del prompt, decisión del orquestador:** `run_perception` ya no mira
+  el veredicto entero del `capture.json` sino **sólo los chequeos de ingesta**
+  (`_blocking_checks` en `kinelab/perception/run.py`); los tres de la Fase 1 los
+  escribe esa misma función en ese mismo archivo y se rehacen en cada corrida.
+  Una toma rechazada por encuadre se vuelve a correr con `--overwrite`.
+- **Punto 3b:** `ARRANQUE.md:64` dice ahora que el umbral de encuadre se fijó
+  midiendo (717 px, `body_height_px_min`), con el texto del informe del 17.
+
+### Medido
+
+- **Diagnóstico, diez corridas de cada comando antes de tocar nada.** Aborta
+  **7 de 10** `cd truth && .venv/bin/pytest` (`0 134 0 134 134 134 0 134 134
+  134`), con 43 pasados en las diez. **Cero** abortos en: `datos` (0 ×10),
+  `kinelab.perception` (2 ×10), `service` con SIGINT sin trabajos y con un
+  trabajo listo (0 ×10 cada uno), `import kinelab.perception`, `import
+  onnxruntime`, `import cv2`, sesión CoreML creada y no usada, y sesión CoreML +
+  inferencia viva al salir (0 ×10 cada uno). Ningún archivo de `truth/tests`
+  aborta solo; la combinación de cuatro abortó 3 de 6.
+- **Que es la telemetría, con `HOME` aislado**: `import onnxruntime` **crea** su
+  almacén (`…/Microsoft/DeveloperTools/.onnxruntime/` con `deviceid` y
+  `onnxruntime.db`); con `import kinelab.perception` antes, **no lo crea**, ni
+  con sesión ni con `PoseEstimator`. Sobre el `HOME` real: una corrida del arnés
+  sin el arreglo suma **3 eventos** a la cola (844 → 847), con el arreglo suma
+  **0** y no toca el archivo. Había **847 eventos en cola** desde el 12/9 y
+  bajaron a 295 durante las pruebas: **se están subiendo**.
+- **Después del arreglo**: `truth/corridas.sh 10` → 10 de 10 exit 0. `datos` 0
+  ×10, `kinelab.perception --overwrite` diez veces sobre el mismo take → 2 ×10
+  (ninguna vez 1 ni 134), `service` 0 ×10 y 0 ×10, imports y sesiones 0 ×10.
+- **El 3a sobre material real**, en una copia de la toma de `cortado3-lento`
+  (2977 cuadros, para no re-correr la definitiva): la regla vieja de HEAD levanta
+  `PerceptionError` sobre el `capture.json` ya rechazado; la nueva **corre** (40 s,
+  `exit 2`, 691 px contra 717) y **reescribe** el chequeo, sin duplicarlo. Lo que
+  bloquea sigue bloqueando: con `vfr_ratio_le_1_10` en `false` se niega.
+- **Suites: motor 363 pasados, 0 fallados, exit 0** (eran 360: +3 tests, ninguna
+  aserción tocada). Arnés **43 pasados, 0 fallados, exit 0** — y ahora en las 10
+  corridas, que es como se lee.
+- **Mutación manual: 4 en rojo y 1 control en verde.** Sin la variable → 1 rojo;
+  `_blocking_checks` con la regla vieja → 1; sin bloquear nunca → 2; el
+  subproceso apuntado a un video que no existe → 1. `truth/corridas.sh 2` con un
+  test del arnés roto a propósito → exit 1 en las dos. Control: sin
+  `truth/tests/conftest.py` la suite sigue en verde y la variable sigue en `'1'`.
+
+### Qué falta o no se probó
+
+- **No hay reproductor a pedido del aborto.** Se reproducía a las 13:02 (7 de 10)
+  y dejó de hacerlo a las 13:11, **con o sin el arreglo**: sacándolo a mano a las
+  14:05 dio 10 de 10 exit 0, y con la telemetría en frío (`HOME` nuevo), 6 de 6.
+  Así que el antes/después estadístico es 7 de 10 → nada que comparar. Lo que
+  vale es la medición determinista: sin telemetría no existe el hilo de la pila.
+  Probable causa del silencio: la cola de eventos bajó de 847 a 295 mientras se
+  subían, y el aborto ocurre al decodificar una **respuesta**.
+- **La carpeta de telemetría de Microsoft** (295 eventos y un `deviceid` de esta
+  Mac) sigue donde estaba, fuera del repo. No se borró: es decisión de Hernán.
+- **`kinelab/ingest/gate.py` tiene un docstring hoy falso** («los chequeos de la
+  Fase 1 todavía no existen»), y es donde debería vivir un `INGEST_CHECK_IDS` con
+  los nueve del contrato; `run.py` los toma por el complemento de
+  `framing.CHECK_IDS`. No era archivo de este encargo.
+- **`kinelab/analysis.py:271` sigue negándose a analizar una toma con el gate en
+  `reject`**: una toma rechazada por encuadre se re-corre por percepción pero no
+  se analiza. Estaba en el NO del prompt.
+- **El `capture.json` de la toma de `data/sessions/` todavía trae el id viejo
+  `body_height_frac` con `passed: null`**, de antes del 17. No molesta y se va al
+  re-correr percepción, que la auditoría pidió no hacer sobre esa toma.
+- No se tocó `kinelab/explore.py`, `service/exploracion.py` ni
+  `service/__main__.py`, ni ningún umbral, ni `sports/`, `web/`,
+  `kinelab/metrics/`, `kinelab/events/`, `kinelab/analysis.py` ni
+  `kinelab/perception/framing.py`. **No cambió ningún número de ninguna
+  corrida.** El front no se abrió (regla de trabajo).
+
+### Desviaciones
+
+- **Del contrato, ninguna.** Ningún campo entró ni salió de ningún schema y
+  ningún valor cambió. Los nueve chequeos de ingesta de `CONTRATO.md`
+  §capture.json siguen siendo los mismos; lo único que cambió es cuáles de ellos
+  deciden si la percepción arranca.
+- **Del prompt, una, y es la principal.** El punto 2 pedía el arreglo bajo tres
+  hipótesis («si es la sesión viva al salir…», «si el paquete carga el estimador
+  al importar…», «si el arnés queda con algo vivo…»). Las tres están medidas y
+  las tres son falsas: la causa es la telemetría de onnxruntime. Por eso **no** se
+  agregó `close()`, ni `del` de la sesión, ni `atexit`: no arreglan nada y serían
+  ruido. Sí se respetó lo que el prompt prohíbe — nada de `os._exit`, ningún exit
+  code ignorado, el aborto no se escondió.
+
+---
+
 ## 18 de septiembre de 2026 — encargo 17: el umbral de encuadre, en píxeles
 
 Prompt: `docs/prompts/17-gate-encuadre-en-px.md`. Informe:
