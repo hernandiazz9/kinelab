@@ -50,7 +50,18 @@ __init__.py` (qué carga al importar el paquete), `kinelab/perception/run.py`,
    `truth/tests/` que lo libere en `pytest_sessionfinish`. **No** es
    aceptable `os._exit` para tapar el abort, ni ignorar el exit code en
    ningún script.
-3. **Que no vuelva sin que se note.** Un script `truth/corridas.sh` (o en
+3. **Dos cosas chicas del 17, en archivos tuyos.** (a) `kinelab/perception/
+   run.py:74` se niega a correr pose sobre una toma cuyo gate dice `reject`,
+   pero desde el 17 la Fase 1 escribe su propio rechazo (`body_height_px`) en
+   el mismo `capture.json`, y una toma rechazada por encuadre ya no se puede
+   volver a correr ni con `--overwrite`. Decisión del orquestador: al decidir
+   si arranca, `run.py` mira sólo los chequeos de **ingesta** (los nueve de
+   `CONTRATO.md` §capture.json); los de la Fase 1 son suyos y se rehacen en
+   cada corrida. Test: una toma con `body_height_px` en `false` se re-corre
+   con `--overwrite` y el chequeo se reescribe. (b) `ARRANQUE.md:64` dice que
+   el umbral de `body_height_frac` está sin fijar: reemplazá esa línea por el
+   texto del informe del 17 (punto 3 de «Queda abierto»).
+4. **Que no vuelva sin que se note.** Un script `truth/corridas.sh` (o en
    `banco/`) que corra N veces `cd truth && pytest` y falle si algún exit no
    es 0; y en `tests/`, un test del motor que lance `python -m kinelab datos`
    sobre el clip sintético en un subproceso y afirme exit 0 (hoy el test de
@@ -72,8 +83,9 @@ al terminar `datos`; si aparece igual, decir en qué momento exacto.
 
 ## En paralelo
 
-Ninguno. Vos: `kinelab/perception/estimator.py`, `__init__.py`, `run.py`,
-`kinelab/explore.py` (sólo el cierre del estimador), `service/exploracion.py`
-y `service/__main__.py` (sólo el apagado), `truth/tests/conftest.py`,
-`truth/corridas.sh`, tus tests, `AGENTS.md` (una línea), `ESTADO.md` (tu
-sección) y tu informe.
+Ninguno. Vos: `kinelab/perception/estimator.py`, `__init__.py`, `run.py`
+(el cierre del estimador y el punto 3a), `kinelab/explore.py` (sólo el cierre
+del estimador), `service/exploracion.py` y `service/__main__.py` (sólo el
+apagado), `truth/tests/conftest.py`, `truth/corridas.sh`, tus tests,
+`tests/test_perception.py` (el test del 3a), `AGENTS.md` (una línea),
+`ARRANQUE.md` (una línea), `ESTADO.md` (tu sección) y tu informe.

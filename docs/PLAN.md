@@ -1,6 +1,9 @@
 # Plan
 
-Última ronda: 2026-09-18 (tarde) — el 27 y el 28 cerraron: 0 de 21 juicios
+Última ronda: 2026-09-18 (noche) — el 17 cerró (ver R3). Sigue el 30, solo,
+con dos cosas chicas del 17 sumadas; después el 29.
+
+Ronda anterior, 2026-09-18 (tarde) — el 27 y el 28 cerraron: 0 de 21 juicios
 con los 24 valores intactos, 357 tests; la pantalla sin las tres columnas
 retiradas ni el «±1 cuadro» fijo. Escritos el 29 (deriva de cámara) y el 30
 (exit 134); el 17 corre primero y solo. Decisión sobre el cronómetro: es
@@ -61,6 +64,14 @@ estado-fases.md`). **Ningún número del proyecto es hoy un juicio válido.**
   (para pasar de n = 1 a n = 3 y calibrar el archivo crudo de `DCIM`, no el
   recorte de la Mac). Después, para el S22 en Slow motion 240 por cable, no
   hace falta más.
+- 2026-09-18 · Del 17: un rechazo de la Fase 1 tiene que poder re-correrse
+  (`run.py` decide sólo con los chequeos de ingesta; va en el 30). El
+  chequeo usa la **mediana** de `body_height_px`, no el peor cuadro; `min` y
+  `max` viajan en el reporte por si hace falta mirarlos. Anotado y aparcado:
+  el valor depende 1,2 px del `fps_real` declarado por la ventana de 1 s del
+  suavizado. Ningún clip del repo pasa hoy el pipeline entero: los de Video
+  no llegan al fps y los de Slow motion no llegan a los 717 px. Es lo que el
+  umbral tiene que hacer.
 - 2026-09-18 · Del 27: el aviso condicional está bien; `Registry.mdc_note`
   se queda; el `follow_end` 1978 de cortado3 se muestra con aviso propio
   cuando lo arregle el encargo de follow_end (R4), no antes. Del 28: el
@@ -130,9 +141,10 @@ una sola sesión por vez.
   (`kinelab/perception/estimator.py`, `__init__.py`, cierre en `explore`,
   `run` y el servidor), más un test por subproceso. Reescrito el 18/9: antes
   era sólo `truth/`.
-- **R3** · [pendiente] **17** gate-encuadre-en-px, **solo**: edita `kinelab/`
-  y corre el motor sobre `cortado3`. Prompt actualizado el 18/9 con la regla
-  del cronómetro en la guía.
+- **R3** · [hecho] **17** gate-encuadre-en-px — `6bae365`, `faac07b`. 717 px;
+  `cortado3` rechazado por 26 px (691); la guía con §7 «La sesión de
+  validación» y el cronómetro sólo en la primera toma de cada vista. Corrió
+  antes que el 30 porque ya estaba en marcha.
 - **R4** · [pendiente] **29** deriva-de-camara-censo — `kinelab/tools/
   camera_drift.py` (nuevo), censo de los ocho clips, aceptación ±3 px contra
   la auditoría. Solo: lee material.
