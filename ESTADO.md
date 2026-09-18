@@ -3,6 +3,135 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 18 de septiembre de 2026 — encargo 28: la pantalla deja de decir cosas falsas
+
+Prompt: `docs/prompts/28-pantalla-sin-falsedades.md`. Informe:
+`docs/informes/2026-09-18-28-pantalla-sin-falsedades.md`. Corrió en paralelo con
+el **27**, que toca `kinelab/`, `sports/`, los documentos base, `pyproject.toml`,
+`tests/` y `data/examples/`. **Esta sesión tocó sólo `web/src/`**, más este
+archivo y su informe. No se corrió `pytest`: el motor estaba a medio escribir en
+el árbol de la otra sesión, y correrlo habría dado números de un código que no
+es HEAD (es la regla de la auditoría del 16). Ningún archivo de `kinelab/`,
+`sports/`, `service/`, `truth/`, `data/exploracion/` ni `web/public/demo/` se
+tocó, y no se desplegó nada. Commit del código: `9107e5b`.
+
+### Qué existe ahora
+
+- **`web/src/lib/retirados.ts`**, el único lugar con las claves que ADR-018
+  retiró: `hip_line_rate_deg_s`, `shoulder_line_rate_deg_s`,
+  `arm_left_rate_deg_s`, más `gain` y `sequence_order`, que hoy no aparecen en
+  ningún dato y están para que no aparezcan si alguien los vuelve a agregar.
+  Exporta `esRetirado`, `sinRetirados`, `retiradosEn`, y también
+  `contratoAnterior` / `CONTRATO_VIGENTE` ("2.0.0"), que es la otra pregunta del
+  mismo tipo: qué de este archivo ya no vale.
+- **Se aplica en los tres lugares**: la tabla de picos y el desplegable «Todas
+  las variables en cada evento» (`TablaEventos.tsx`) y las columnas del CSV
+  (`TablaCuadros.tsx`, que además cuenta las que muestra y no las del archivo).
+  **No se oculta lo desconocido**: lo que el motor mide y la pantalla no sabe
+  nombrar sigue saliendo con su identificador (encargo 01).
+- **La banda de cada métrica es `uncertainty.method`**, la frase del motor
+  (`kinelab/metrics/core.py:241`), en vez del «±1 cuadro:» fijo que tenía
+  `Metricas.tsx:42`. Sin `method` va el rango sin rótulo: no se inventa uno. Y
+  con `judgment_allowed: true` la pantalla dice «juicio habilitado
+  (judgment_allowed)»; la frase «se puede comparar», que prometía una
+  comparación que la pantalla no hace, no existe más.
+- **Los avisos son `analysis.warnings` entero, en orden y tal cual.** `Avisos.tsx`
+  ya no muestra `aviso`, `fps_aviso` ni `gate_diria` de `datos-eventos.json`,
+  que son copias de entradas de esa misma lista: las reemplaza. `fps_note`, que
+  viene de `capture.json` y no está en `warnings`, queda como estaba. Sin
+  `analysis.json` —y mientras se está bajando— queda el comportamiento de hoy,
+  que es un subconjunto: en el peor caso se ve de menos por un instante, nunca
+  un número sin su aviso.
+- **`analysis.json` se baja en `page.tsx`**, no en `Metricas.tsx`, que va abajo
+  de todo: los avisos de arriba lo necesitan. Una sola lectura, guardada con su
+  URL al lado para que la respuesta de un trabajo anterior nunca se aplique al
+  que se está viendo. `Metricas` pasó a recibirlo por prop.
+- **Dos líneas nuevas arriba del resultado**, separadas de lo que escribe el
+  motor porque las compone la pantalla y hablan de la pantalla: que el trabajo se
+  calculó con un contrato anterior (con las dos versiones y que se corrige
+  re-analizando) y que trae campos que ya no son una medición y no se muestran,
+  con sus nombres.
+- **El ± del sub-cuadro tiene nombre: «precisión interna del cruce».** En
+  `page.tsx` (el instante del impacto) y en `textoSubcuadro` de `etiquetas.ts`,
+  que es lo que se ve también en las fotos por evento y en la cabecera de la
+  tabla. Con una línea al lado que dice qué es y qué no: no incluye el sesgo
+  contra el contacto con la pelota, que no está medido. **Sin números**: el
+  único que existe salió de un informe, no del motor.
+- **`web/src/lib/retirados.verificar.mjs`**, verificador sin framework de tests
+  (ADR-015), con el patrón de `pose3d.verificar.mjs`:
+  `cd web && node --experimental-strip-types src/lib/retirados.verificar.mjs`.
+
+### Medido
+
+- **Verificador: exit 0, 0 fallas.** Sobre los tres trabajos de la demo, el
+  filtro saca **exactamente** las tres `*_rate_deg_s` y ninguna otra, en las tres
+  fuentes: `columnas` de `datos-eventos.json`, `picos`, y el encabezado de
+  `datos-por-cuadro.csv`. vid1 109 → 106 columnas, los dos del mocap 118 → 115;
+  picos 4 → 1 y 5 → 2. Los números que dejan de verse: `hip_line_rate_deg_s`
+  **3662,0** · 4202,5 · 3243,74; `shoulder_line_rate_deg_s` 2228,31 · 2307,46 ·
+  453,07; `arm_left_rate_deg_s` 1026,43 · 3694,02 · 532,56. La lista esperada
+  está escrita a mano en el verificador desde ADR-018: comparar el módulo contra
+  sí mismo no comprueba nada.
+- **Control del otro lado**: `data/incoming/vid1.kinelab` (2.0.0, re-analizado
+  con HEAD) pierde **0 de 115** columnas y 0 de 2 picos, y
+  `data/examples/analysis.example.json` (2.0.0) no saca el aviso de contrato
+  anterior. Los tres de la demo sí: son 1.2.0.
+- **Mutación manual: 7 de 7 ponen el verificador en rojo** (sacar una clave de
+  la lista, agregar una que no es de ADR-018, `sinRetirados` que no filtra,
+  `retiradosEn` vacío, `contratoAnterior` siempre falso, con el `<` al revés, y
+  `CONTRATO_VIGENTE` en 1.0.0), con 3 a 12 fallas cada una. Restaurado, vuelve a
+  0.
+- **Ninguna frase se repite en los tres trabajos.** vid1 pasa de 3 a 4 frases
+  arriba, y la que gana estaba en `analysis.warnings` y no en ninguna de las tres
+  copias: «Sin altura declarada del atleta: las métricas en cm quedan en null…».
+  Los dos del mocap quedan en 3 y 3. Las tres copias de `datos-eventos.json`
+  están todas adentro de `analysis.warnings` en los tres: reemplazarlas no pierde
+  nada.
+- **Grep sobre los chunks del build de demo, antes y después.** Antes:
+  `grep -rl '1 cuadro: '` y `grep -rl 'se puede comparar'` encuentran
+  `out/_next/static/chunks/app/page-88a59fb9ab051a85.js`. Después: **nada, las
+  dos** (exit 1). Y las frases nuevas sí están en el chunk nuevo
+  (`page-aaa6c870f51f5f04.js`), buscándolas con el `\xf3` con el que el
+  compilador escribe la «ó». En `web/out/demo/` los `analysis.json` siguen
+  diciendo «±1 cuadro en cada evento ancla…» en `uncertainty.method`: es dato del
+  motor y es lo que la pantalla ahora muestra.
+- **`pnpm lint` exit 0 · `pnpm build` exit 0 · `NEXT_PUBLIC_KINELAB_MODO=demo
+  pnpm build` exit 0.**
+
+### Qué falta o no se probó
+
+- **La demo no se regeneró y no se desplegó**, por diseño: el arreglo es sólo de
+  código. El comando de un solo tirón está en el informe. `armar_salida` y
+  `raiz_repo` existen con esos nombres en `kinelab/tools/publicar.py` (:238
+  y :150).
+- **`data/publicados.json` marca los tres trabajos con `despliegue: null`** y
+  `despliegue_null_reason` «--solo-construir». El sitio vivo existe igual: lo
+  desplegó el orquestador a mano el 15/9. El registro no lo sabe.
+- **En la demo la banda de `tempo_ratio` de vid1 va a seguir diciendo ±1
+  cuadro**, porque es lo que dice su `uncertainty.method` de 1.2.0. El ±4 real
+  del top está en el vid1 re-analizado (`data/incoming/vid1.kinelab`, 2.0.0) y
+  llega a la demo cuando se regenere (encargo 13 de la secuencia del 16).
+- **No se abrió el navegador** (regla de trabajo). Todo lo de arriba se verificó
+  sobre los datos, el verificador y los chunks del build.
+- **No se corrió `pytest`** por la sesión en paralelo, ver arriba.
+
+### Desviaciones
+
+- **Del contrato, ninguna.** No se tocó ningún `analysis.json`, ningún schema ni
+  ningún número.
+- **Del prompt, una hacia arriba, chica.** El verificador cubre además
+  `contratoAnterior` (los tres trabajos de la demo, el ejemplo 2.0.0 del repo y
+  diez bordes de versión). El prompt pedía sólo las columnas retiradas; la
+  mutación manual mostró que sin eso la función que decide una línea de la
+  pantalla no la miraba nadie, y está en el mismo archivo.
+- **`web/src/lib/api.ts`**: `uncertainty.method` pasó de `string` a `string?`.
+  Es el rótulo que ahora se muestra y sale de un archivo en disco que pudo
+  escribir otra versión del contrato; con el tipo obligatorio, el caso «si no
+  viene, el rango sin rótulo» que pide el prompt no se podía escribir sin
+  mentirle al compilador. No cambia ningún dato.
+
+---
+
 ## 15 de septiembre de 2026 — encargo 18: la señal de manos pesada por confianza, la banda del top y el MDC del sub-cuadro
 
 Prompt: `docs/prompts/18-senal-de-manos.md`. Informe:
