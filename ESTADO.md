@@ -3,6 +3,124 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 18 de septiembre de 2026 — encargo 29: la deriva de cámara, medida
+
+Prompt: `docs/prompts/29-deriva-de-camara-censo.md`. Informe:
+`docs/informes/2026-09-18-29-deriva-de-camara-censo.md`. **Sin sesión en paralelo**
+(lo pedía el prompt). Commits: `83c152f` (la herramienta y sus tests) y el de
+cierre, con este archivo y el informe.
+
+### Qué existe ahora
+
+- **`kinelab/tools/camera_drift.py`** (nuevo): mide cuánto se corre la imagen
+  durante el gesto y **no compensa nada**. Homografía del fondo entre un cuadro
+  de referencia y cada cuadro muestreado — SIFT con el sujeto enmascarado
+  (`bbox` de `pose.npz` dilatado 20 % más un disco sobre las muñecas de radio
+  0,65 altos de cuerpo, que cubre el palo), ratio test de Lowe y RANSAC —,
+  evaluada en **cuatro filas** de la imagen: caderas, hombros, cabeza y pies del
+  cuadro de referencia, sobre la columna del sujeto. Cuatro y no una está
+  medido: en `cortado3-lento` hay 8,7 px entre la fila de la cabeza y la de los
+  pies en el mismo cuadro.
+- **Escribe `camera-drift.json` al lado de la pose y nada más.** No toca
+  `analysis.json` ni `pose.npz` (hay un test que lo verifica por bytes), ninguna
+  métrica lo lee, y **`camera_motion_px` no se cambió**. Agnóstica al deporte:
+  de `analysis.json`, si está, sólo lee los cuadros de `address`, `top` e
+  `impact`, que son nombres del contrato.
+- **`no_rigido` mira dos condiciones y no una**: `residuo_px > 1,5` (mediana del
+  error de reproyección de los inliers) **o** `inliers_frac < 0,80`, las dos
+  procedencia `estimacion`, y `no_rigido_por` dice cuál fue. El residuo solo no
+  sirve —RANSAC lo acota por construcción—: medido, una deformación no rígida lo
+  sube de 0,00 a 1,98 px mientras la fracción de inliers cae de 1,00 a 0,76.
+- **Controles por CLI**: `--region superior|inferior`, `--sin-palo`,
+  `--dilatacion`, `--palo-radio`, `--ref`, y `--dibujar FRAME`, que escribe el
+  cuadro con el fondo enmascarado a la vista y los inliers dibujados.
+- **`tests/test_camera_drift.py`** (nuevo, 18 tests), todo contra
+  transformaciones construidas en el propio test.
+- **`data/incoming/cartado2-lenta.kinelab/`**: se corrió `datos` porque era el
+  único clip sin pose. 292 cuadros, 462 px de cuerpo, **sin eventos** (es el
+  clip del cronómetro detenido).
+
+### Medido
+
+- **Contra la auditoría del 16/9, en `cortado3-lento.mp4`: aceptado en x.**
+  Rep 1 **+13,5 a +22,2 px** contra su rango +14 a +23 (el mínimo queda 0,5 px
+  afuera, dentro de los ±3 px de aceptación); rep 2 **−10,1 a −22,1 px** contra
+  −8 a −25, entero adentro.
+- **La y de la auditoría se queda corta por un factor 2,5–3.** Dice «unos 10 px»
+  y son **−26,3 a −29,8 px** en el impacto de la rep 1: con `scale_px` 783,9 y
+  1,75 m, **5,9–6,7 cm**, o sea **2,1–2,4× el MDC** de `pelvis_lift_top_cm`
+  (2,769). En x, 3,4–5,0 cm contra el MDC 2,416 de `pelvis_sway_impact_cm`.
+  `quality.camera_motion_px` de esa misma toma sigue dando **1,347**.
+- **Censo de los 9** (`--cada 10`, por defecto): `cortado` ±5,2 px (76 cuadros,
+  el más quieto) · `cartado2-lenta` 10,2 · `Cortado-lenta` 21,7 · `vid3` 23,4 ·
+  `cortado3-lento` y `take-01` 43,1 (idénticos, como corresponde: misma pose) ·
+  `vid2` 46,3 · `20260907_170638` 135,0 · `vid1` **119,4 en y** con 366–1058
+  inliers y residuo 0,27–0,67 px, o sea cámara y no artefacto. Residuo mediano
+  0,24–0,42 px y 162–954 inliers en los nueve. **`no_rigido`: 1 cuadro en 9
+  clips** (`20260907_170638` 260, final del clip). 2–56 s por clip.
+- **Control (a), mitad superior contra inferior**: en la rep 1 las tres variantes
+  coinciden dentro de 0,7 px; **en la rep 2 la superior da −2,1 donde `todo` da
+  −19,3**. No alcanza para concluir paralaje: la superior tiene 53 inliers
+  contra 121, falla en 67 de 304 cuadros, y evaluarla en la fila de los pies es
+  extrapolar ~800 px fuera de su soporte (su `max |dy|` da +904,7 px). Lo que sí
+  queda dicho: **el número de `todo` es el de la mitad inferior** — la deriva
+  que se reporta es la del suelo, no la del fondo lejano.
+- **Control (b), la máscara no deja pasar al sujeto**: con las manos 6,8× más
+  rápidas en el downswing que en el address, el residuo contra una recta pasa de
+  0,10 a 0,23 px en x. Apagar el disco del palo mueve la deriva ≤ 0,81 px;
+  agrandar la máscara a 33 % de fondo libre (21 inliers) agrega ±5 px de
+  dispersión, que es acondicionamiento y no fuga.
+- **Control extra: el cuadro de referencia no manda.** Con `--ref 1052` en vez
+  del 0, los ocho números de eventos cambian ≤ 0,4 px, y la resta no cancela
+  nada por construcción.
+- **Suites: motor 381 pasados, 0 fallados, exit 0** (eran 363: +18 tests,
+  ninguna aserción existente tocada). Arnés **43 pasados, 0 fallados, exit 0**
+  —no se tocó `truth/`—.
+- **Mutación manual: 7 bugs inyectados, 7 en rojo, control en verde.** Máscara
+  invertida → 9 tests; homografía en la fila equivocada → 5; homografía al revés
+  → 6; `dx`/`dy` intercambiados → 5; `no_rigido` sólo por residuo → 2; resta de
+  eventos vuelta suma → 1; disco del palo sin dibujar → 1. Los dos últimos
+  taparon huecos que la mutación encontró: con el `address` sintético **en** el
+  cuadro de referencia su deriva era cero y restar o sumar daba lo mismo, y el
+  disco del palo no lo defendía ningún test de resultado (apagarlo mueve ≤ 0,81
+  px), así que se le escribió un test de geometría.
+
+### Qué falta o no se probó
+
+- **La causa no está separada**, que era el objetivo del control (a): falta
+  fondo lejano utilizable. Para la sesión de validación conviene agregarle a
+  `docs/filmacion-s22.md` §7 **un objeto fijo alto**, no sólo el del suelo, o la
+  mitad superior va a seguir sin tener con qué.
+- **El residuo no rígido de 10–12 px de la auditoría no aparece**: con el sujeto
+  enmascarado una sola homografía ajusta el fondo con 0,39 px de mediana sobre
+  162 inliers.
+- **`quality.camera_motion_px` sigue como estaba** (lo prohibía el prompt). No
+  miente, mide otra cosa; lo que engaña es el nombre. La propuesta —renombrarlo
+  a `camera_jitter_px` en el mismo bump 2.2.0 que traiga el campo de deriva— es
+  **major** por §Versionado y está en el informe, para el orquestador.
+- **`ESPECIFICACION.md`, `CONTRATO.md` y `CAPTURA.md` no se tocaron**: el
+  encargo era medir, y meter la deriva en el contrato tiene encargo propio.
+- **El `--cada 10` por defecto** sobre 2977 cuadros son 304 muestras y 33 s; el
+  análisis fino del control (b) usó 2 y 4. No se propuso cambiar el default.
+- No se tocó `kinelab/perception/`, `kinelab/analysis.py`, `kinelab/metrics/`,
+  `sports/`, `service/`, `web/`, `truth/`, ningún `analysis.json` ni ningún
+  umbral. **No se compensó nada en ninguna métrica**, y el modelo de pose no se
+  volvió a correr salvo en `cartado2-lenta.mp4`, que no tenía (lo autorizaba el
+  prompt). El front no se abrió (regla de trabajo).
+
+### Desviaciones
+
+- **Del contrato, ninguna.** No entra ni sale ningún campo de ningún schema,
+  ningún valor cambia y `camera-drift.json` es un archivo nuevo que el contrato
+  no describe y que ninguna métrica lee.
+- **Del prompt, una.** Pedía «una bandera `no_rigido` cuando el residuo supera
+  un umbral parametrizado». El residuo de los inliers no sirve solo para eso
+  —RANSAC lo acota por construcción, y está medido— así que se lo dejó como
+  primera condición, como pedía el prompt, y se le sumó la fracción de inliers,
+  que es la que separa. Las dos son `estimacion` y las dos se cambian por CLI.
+
+---
+
 ## 18 de septiembre de 2026 — encargo 30: el exit 134 era la telemetría de onnxruntime
 
 Prompt: `docs/prompts/30-exit-134-del-arnes.md`. Informe:
