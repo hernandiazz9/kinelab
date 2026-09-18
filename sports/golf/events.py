@@ -16,7 +16,7 @@ import numpy as np
 import yaml
 
 from kinelab.events.onset import onset_backtrack, settle_forward
-from kinelab.events.primitives import Event, direction_change_farthest_band, make_event, peak_window, stable_window_end, stable_window_start, still_noise_px, still_run_start, stillness_signal, subframe_crossing
+from kinelab.events.primitives import Event, MissingEvent, direction_change_farthest_band, make_event, peak_window, stable_window_end, stable_window_start, still_noise_px, still_run_start, stillness_signal, subframe_crossing
 from kinelab.events.segmentation import RepCandidate, SegmentationParams
 from kinelab.events.signal import principal_axis
 from kinelab.sport import SportEvents
@@ -216,7 +216,7 @@ def _impact_subframe(sig, address: int, impact: int, still_start: int, params: G
     return out
 
 
-def detect_golf_events(sig, cand: RepCandidate, params: GolfEventParams = GOLF_PARAMS) -> tuple[dict[str, Event | None], str | None]:
+def detect_golf_events(sig, cand: RepCandidate, params: GolfEventParams = GOLF_PARAMS) -> tuple[dict[str, Event | MissingEvent | None], str | None]:
     """Address (definido), Top, Impact y fin del follow-through para un candidato.
     Devuelve `(eventos, None)` o `({}, razón)` si la repetición no califica."""
     fps, spd, hands = sig.fps, sig.speed, sig.hands
@@ -253,16 +253,48 @@ def detect_golf_events(sig, cand: RepCandidate, params: GolfEventParams = GOLF_P
     top = direction_change_farthest_band(proj, dist, before=impact, after=address, margin=margin)
     if top.frame is None:
         return {}, "sin_top"
-    follow = stable_window_start(still, fps, max_speed=thr, min_duration_s=params.follow_still_s, after=impact)
+    # El fin del acompañamiento se busca DENTRO de la repetición: la cota es el fin
+    # del propio candidato de segmentación (auditoría del 16/9, §6 D-4). Sin cota,
+    # la búsqueda pedía `follow_still_s` de quietud, no la encontraba en la pausa
+    # del finish y seguía hasta la quietud del swing SIGUIENTE: en `cortado3-lento`
+    # la repetición 1 (address 1052, top 1284, impacto 1364, candidato hasta 1765)
+    # daba `follow_end` 1978 —el address del swing siguiente— y 2556,7 ms de
+    # acompañamiento. Ni `follow_still_s` ni `still_speed_max` se tocan: la pausa
+    # real de ese finish dura 60 cuadros a 240 fps (0,25 s) contra los 72 que pide
+    # el umbral, y con n = 1 mover un umbral es elegirlo para un clip.
+    #
+    # Lo que se marca es el INICIO de la quietud, no el final de la pose: qué es el
+    # finish para el entrenador —llegar a la pose final o soltarla, ≈380 ms de
+    # diferencia— no lo decide el código. Por eso el `method` lo dice.
+    follow = stable_window_start(still, fps, max_speed=thr, min_duration_s=params.follow_still_s, after=impact, before=cand.end)
     impact_ev = make_event("impact", impact, fps, tol_frames=1, method="peak_window")
     impact_ev.subframe = _impact_subframe(sig, address, impact, still_start, params)
-    events: dict[str, Event | None] = {
+    events: dict[str, Event | MissingEvent | None] = {
         "address": make_event("address", address, fps, tol_frames=1, method="stable_window"),
         "top": make_event("top", top.frame, fps, tol_frames=top.tol_frames, method="direction_change_farthest"),
         "impact": impact_ev,
-        "follow_end": None if follow is None else make_event("follow_end", settle_forward(spd, follow, refine), fps, tol_frames=2, method="stable_window"),
+        "follow_end": _follow_end(spd, follow, fps, impact, cand.end, refine, params),
     }
     return events, None
+
+
+def _follow_end(spd, follow: int | None, fps: float, impact: int, rep_end: int, refine: int, params: GolfEventParams) -> Event | MissingEvent:
+    """El fin del acompañamiento, o el hueco con su razón (nunca el swing siguiente).
+
+    `settle_forward` se acota al fin de la repetición por la misma razón que la
+    búsqueda: un evento que se llama «dentro de la repetición» no puede salirse de
+    ella ni por el refinamiento del frenado.
+    """
+    if follow is None:
+        return MissingEvent(
+            "follow_end",
+            f"sin quietud de {params.follow_still_s:g} s".replace(".", ",")
+            + f" entre el impacto (cuadro {impact}) y el fin de la "
+            f"repetición (cuadro {rep_end}): el motor marca el inicio de la quietud del finish DENTRO de la "
+            "repetición y no sale a buscarla al gesto siguiente (auditoría del 16/9 §6 D-4). Sin ella no hay "
+            "fin de acompañamiento ni duración del acompañamiento.",
+        )
+    return make_event("follow_end", min(settle_forward(spd, follow, refine), int(rep_end)), fps, tol_frames=2, method="stable_window_in_rep")
 
 
 GOLF_SPORT_EVENTS = SportEvents(definitions=GOLF_EVENTS, order=ORDER, segmentation=GOLF_SEGMENTATION, params=GOLF_PARAMS, detect=detect_golf_events, cutoff_hz_max=12.0)

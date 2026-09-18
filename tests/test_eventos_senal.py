@@ -325,3 +325,53 @@ def test_el_mdc_del_subcuadro_esta_aunque_el_cruce_salga_null():
     sub = _mocap("cmu-64_01-down_the_line", "down_the_line", wrist_score_min=GOLF_PARAMS.wrist_score_min)["impact"].subframe
     assert sub["fraction"] is None and sub["null_reason"]
     assert sub["mdc"] is not None and sub["mdc"]["unit"] == "ms"
+
+
+# --------------------------------------------------------------------------- #
+# 6 · una sola señal de manos: el CSV y el overlay salen de la misma que los
+#     eventos (encargo 31, punto 3)
+#
+# `kinelab/explore.py` llamaba a `swing_signals(pose, fps)` sin el
+# `wrist_score_min` del deporte: los eventos salían de la señal con umbral
+# (encargo 18) y el CSV y el overlay, de la señal a peso igual. En los cuadros
+# donde una muñeca cae bajo el umbral —justo donde el modelo la pierde— las dos
+# difieren, y el dibujo mostraba un centro de manos que no era el que había
+# elegido el evento.
+# --------------------------------------------------------------------------- #
+
+
+def test_la_tabla_por_cuadro_usa_la_misma_senal_que_los_eventos():
+    """Con una muñeca perdida, la tabla por cuadro calculada con el umbral del deporte
+    es **exactamente** la señal de la que salen los eventos, y difiere de la que salía
+    antes en los cuadros en que la muñeca cae bajo el umbral. El número de cuadros que
+    cambian no se quema: se cuenta de los propios scores."""
+    from kinelab.explore import per_frame_table
+
+    sw = synth_swing(120.0, n_reps=1)
+    limpio = _tops(sw.keypoints, sw.scores, sw, wrist_score_min=GOLF_PARAMS.wrist_score_min)[0]["top"].frame
+    kpts, scores = _muneca_perdida(sw, alrededor_de=limpio)
+    pose = _pose(kpts, scores, sw)
+    umbral = GOLF_PARAMS.wrist_score_min
+
+    _, con = per_frame_table(pose, sw.fps, 1.75, None, wrist_score_min=umbral)
+    _, sin = per_frame_table(pose, sw.fps, 1.75, None)
+    sig = swing_signals(pose, sw.fps, wrist_score_min=umbral)
+
+    v_con = np.array([np.nan if r["hands_speed_bh_s"] is None else r["hands_speed_bh_s"] for r in con])
+    v_sin = np.array([np.nan if r["hands_speed_bh_s"] is None else r["hands_speed_bh_s"] for r in sin])
+    assert np.allclose(v_con, sig.speed, equal_nan=True, atol=1e-9), "el CSV es la señal de los eventos, no otra"
+    bajos = int(np.count_nonzero((scores[:, H.LEFT_WRIST] < umbral) | (scores[:, H.RIGHT_WRIST] < umbral)))
+    assert bajos > 0, "el fixture tiene que tener cuadros bajo el umbral o el test no prueba nada"
+    assert np.count_nonzero(~np.isclose(v_con, v_sin, equal_nan=True)) > 0, "y difiere de la señal a peso igual"
+
+
+def test_con_los_scores_altos_la_tabla_por_cuadro_no_se_mueve():
+    """El control: sin ninguna muñeca bajo el umbral, pasar el umbral es la identidad.
+    Si esto se moviera, el umbral estaría haciendo algo que no es filtrar."""
+    from kinelab.explore import per_frame_table
+
+    sw = synth_swing(120.0, n_reps=2)
+    pose = _pose(sw.keypoints.astype(float), sw.scores.astype(float), sw)
+    names, con = per_frame_table(pose, sw.fps, 1.75, None, wrist_score_min=GOLF_PARAMS.wrist_score_min)
+    _, sin = per_frame_table(pose, sw.fps, 1.75, None)
+    assert con == sin, "todas las columnas, no sólo las de manos"

@@ -34,6 +34,28 @@ class Event:
         return asdict(self)
 
 
+@dataclass
+class MissingEvent:
+    """Un evento que NO existe en esta repetición, con la razón en una frase.
+
+    Es **falso** en un booleano a propósito: el motor lo escribe como `null` en
+    `analysis.json` —`$defs/event` admite `null` y no admite campos nuevos
+    (`additionalProperties: false`)— y la razón va a `warnings[]`, que es donde
+    ADR-019 puso las razones que no caben en el contrato. Así el hueco viaja con
+    su porqué sin tocar el schema, y quien lea el JSON no tiene que adivinar si
+    el evento no se detectó o si nadie lo buscó.
+
+    El texto lo escribe el **deporte**: el motor no sabe qué umbral se usó ni
+    cómo se llama (invariante 13); sólo lo transporta.
+    """
+
+    id: str
+    reason: str
+
+    def __bool__(self) -> bool:
+        return False
+
+
 def make_event(event_id: str, frame: int, fps: float, *, tol_frames: int, method: str) -> Event:
     return Event(id=event_id, frame=int(frame), t_s=round(frame / fps, 4), tol_frames=tol_frames, uncertainty_s=round(tol_frames / fps, 5), method=method)
 
@@ -151,12 +173,27 @@ def stable_window_end(speed: np.ndarray, fps: float, *, max_speed: float, min_du
     return None
 
 
-def stable_window_start(speed: np.ndarray, fps: float, *, max_speed: float, min_duration_s: float, after: int) -> int | None:
-    """Primer cuadro de la primera ventana de quietud (≥ `min_duration_s`) después de `after`."""
+def stable_window_start(speed: np.ndarray, fps: float, *, max_speed: float, min_duration_s: float, after: int, before: int | None = None) -> int | None:
+    """Primer cuadro de la primera ventana de quietud (≥ `min_duration_s`) después de
+    `after`, y —con `before`— **sin pasarse de ahí**.
+
+    Con `before`, la ventana de quietud tiene que caber entera en `(after, before]`:
+    una racha que empieza adentro pero sigue después del tope cuenta sólo hasta el
+    tope, y una que empieza después no se mira. `None` = sin tope, que es la firma
+    anterior.
+
+    Por qué el tope (auditoría del 16/9, §1 y §6 D-4): sin él la búsqueda pasa de
+    largo la pausa del gesto y devuelve la quietud **del gesto siguiente**. Medido
+    en `cortado3-lento.mp4`: la repetición 1 termina en el cuadro 1765, su pausa
+    del finish dura 60 cuadros a 240 fps (0,25 s) y el motor pedía 0,3 s, así que
+    el `follow_end` salía 1978 —la quietud previa al swing siguiente, que empieza
+    en 1947— y la duración del acompañamiento daba 2556,7 ms. Quien pone el tope
+    es el deporte: acá es un cuadro y nada más.
+    """
     still = _still(speed, max_speed)
     need = max(1, int(round(min_duration_s * fps)))
     i = max(int(after) + 1, 0)
-    n = still.size
+    n = still.size if before is None else min(int(before) + 1, still.size)
     while i < n:
         if not still[i]:
             i += 1

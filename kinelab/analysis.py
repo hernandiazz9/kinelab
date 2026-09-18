@@ -16,6 +16,7 @@ import yaml
 import kinelab
 from kinelab.contract.write import write_analysis
 from kinelab.events.manual import apply_edits, load_edits
+from kinelab.events.primitives import MissingEvent
 from kinelab.events.segmentation import segment_reps
 from kinelab.events.signal import butterworth_lowpass, cutoff_for_fps, hands_center, speed
 from kinelab.ingest.gate import DECLARED_NOTE, CaptureJson
@@ -165,6 +166,11 @@ def build_analysis(take_dir: Path, capture: CaptureJson, pose: PoseData, sport: 
     cands, rejected = segment_reps(sig.speed, fps, ev.segmentation)
     events_out: list[dict] = []
     reps: list[dict] = []
+    # Los eventos que el deporte declaró ausentes CON su razón (`MissingEvent`).
+    # En el JSON son `null` —`$defs/event` no admite campos nuevos— y la razón va
+    # a `warnings[]`, como las de ADR-019. Un `None` pelado no deja rastro: es la
+    # diferencia entre "no lo hay, y por esto" y "nadie lo buscó".
+    event_notes: list[str] = []
     prev_end = -1
     for c in cands:
         events, reason = ev.detect(sig, c)
@@ -177,6 +183,7 @@ def build_analysis(take_dir: Path, capture: CaptureJson, pose: PoseData, sport: 
             rejected["solapada"] = rejected.get("solapada", 0) + 1
             continue
         n = len(reps) + 1
+        event_notes += [f"Repetición {n}: sin `{events[k].id}` — {events[k].reason}" for k in ev.order if isinstance(events.get(k), MissingEvent)]
         events_out.append({"rep": n, **{k: (events[k].to_dict() if events.get(k) else None) for k in ev.order}})
         reps.append({"rep": n, "frame_start": int(start), "frame_end": int(end), "t_start": round(start / fps, 4), "t_end": round(end / fps, 4), "peak_speed_bh_s": round(c.peak_speed, 3), "metrics": {}})
         prev_end = end
@@ -231,6 +238,7 @@ def build_analysis(take_dir: Path, capture: CaptureJson, pose: PoseData, sport: 
                 )
             if registry.mdc_note and any(m.mdc_validation == "sin_validar" for m in registry):
                 warnings.append(f"El MDC que viaja con cada número todavía no está validado en material real: {registry.mdc_note}.")
+    warnings += event_notes
     # Antes de cualquier número, por qué la tasa de cuadros no está verificada
     # (ADR-016). Son DOS casos distintos y el aviso no los puede mezclar:
     #

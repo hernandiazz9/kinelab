@@ -16,7 +16,7 @@ from kinelab.__main__ import main as kinelab_main
 from kinelab.analysis import analyze_take, build_analysis, swing_signals
 from kinelab.contract.validate import validate_analysis
 from kinelab.events.manual import Edit, EventCollisionError, apply_edits
-from kinelab.events.primitives import direction_change_farthest, direction_changes, subframe_crossing
+from kinelab.events.primitives import MissingEvent, direction_change_farthest, direction_changes, stable_window_start, still_run_start, stillness_signal, subframe_crossing
 from kinelab.events.segmentation import SegmentationParams, segment_reps
 from kinelab.events.signal import principal_axis
 from kinelab.ingest.__main__ import ingest_clip
@@ -287,12 +287,12 @@ def test_golfdb_stats():
     assert s["impact"]["within_2"] == 0.5
 
 
-def _synthetic_take(clips, capture_paths_yaml, tmp_path):
+def _synthetic_take(clips, capture_paths_yaml, tmp_path, sw=None):
     if "hevc120" not in clips:
         pytest.skip("sin fixture hevc120")
     paths = load_capture_paths(capture_paths_yaml)
     take, cap = ingest_clip(clips["hevc120"], athlete="t", gesture="driver", view="face_on", capture_path_id="test-hevc-120-cfr", capture_paths=paths, sport=GOLF, data_dir=tmp_path, day=date(2026, 9, 12))
-    sw = synth_swing(120.0, n_reps=2)
+    sw = sw if sw is not None else synth_swing(120.0, n_reps=2)
     save_pose(take, _pose(sw))
     return take, sw
 
@@ -906,3 +906,132 @@ def test_explore_writes_the_impact_subframe(clips, tmp_path):
     assert 0.0 <= sf["fraction"] <= 1.0 and sf["null_reason"] is None
     assert abs(sf["frame_before"] + sf["fraction"] - sw.truth[0]["impact_cross"]) <= SUBFRAME_TOL_FRAMES
     assert abs(sf["t_sub_s"] - (sf["frame_before"] + sf["fraction"]) / r["fps_archivo"]) < 1e-3
+
+
+# --------------------------------------------------------------------------- #
+# El fin del acompañamiento se busca DENTRO de la repetición (encargo 31)
+#
+# Sin cota, `stable_window_start` pedía `follow_still_s` de quietud desde el
+# impacto y seguía hasta encontrarla: si la pausa del finish era más corta que
+# el umbral, el evento caía en la quietud PREVIA AL GESTO SIGUIENTE. Medido en
+# `cortado3-lento.mp4` (auditoría del 16/9 §1): repetición 1 con address 1052,
+# impacto 1364 y candidato hasta 1765, `follow_end` 1978 y 2556,7 ms de
+# acompañamiento — el address del swing siguiente. La cota es el fin del propio
+# candidato de segmentación (§6 D-4); ningún umbral se movió.
+# --------------------------------------------------------------------------- #
+
+
+def _reps_con_eventos(sw):
+    """Los eventos de cada candidato, con el objeto crudo (para ver el hueco y su razón)."""
+    sig = swing_signals(_pose(sw), sw.fps)
+    cands, rejected = segment_reps(sig.speed, sw.fps, GOLF_SEGMENTATION)
+    out = []
+    for c in cands:
+        ev, reason = detect_golf_events(sig, c)
+        assert reason is None, reason
+        out.append((c, ev))
+    assert len(out) == 2, (out, rejected)
+    return sig, out
+
+
+def test_sin_quietud_en_su_repeticion_el_follow_end_es_null_con_razon():
+    """Dos repeticiones seguidas cuya pausa del finish (0,2 s) es más corta que la
+    quietud que pide el deporte (0,3 s): el fin del acompañamiento **no existe** y lo
+    dice. Lo que no puede pasar es que sea la quietud previa al swing siguiente."""
+    sw = synth_swing(120.0, n_reps=2, hold_s=0.2, recover_s=0.6)
+    sig, reps = _reps_con_eventos(sw)
+    cand1, ev1 = reps[0]
+    cand2, ev2 = reps[1]
+    assert isinstance(ev1["follow_end"], MissingEvent), "sin quietud propia no hay evento"
+    assert not ev1["follow_end"], "un hueco es falso en un booleano: el motor lo escribe como null"
+    razon = ev1["follow_end"].reason
+    assert str(ev1["impact"].frame) in razon and str(cand1.end) in razon, razon
+    assert "0,3 s" in razon and "fin de la repetición" in razon, razon
+
+    # Y lo que hacía antes, con la misma señal y el mismo umbral: sin la cota la
+    # búsqueda encuentra quietud, pero es la del gesto siguiente.
+    thr = max(GOLF_SPORT_EVENTS.params.still_speed_max, GOLF_SPORT_EVENTS.params.noise_factor * sig.noise_floor_bh_s)
+    still = stillness_signal(sig.speed, sw.fps, GOLF_SPORT_EVENTS.params.still_smooth_s)
+    sin_cota = stable_window_start(still, sw.fps, max_speed=thr, min_duration_s=GOLF_SPORT_EVENTS.params.follow_still_s, after=ev1["impact"].frame)
+    need = round(GOLF_SPORT_EVENTS.params.follow_still_s * sw.fps)
+    assert sin_cota is not None and sin_cota + need - 1 > cand1.end, "sin cota, la ventana de quietud se sale de la repetición"
+    assert still_run_start(still, max_speed=thr, end=ev2["address"].frame) <= sin_cota <= ev2["address"].frame, (
+        "y la quietud que encuentra es la del address de la repetición 2, que es el bug de cortado3-lento"
+    )
+
+
+def test_con_quietud_dentro_de_la_repeticion_el_follow_end_es_el_cuadro_correcto():
+    """El mismo swing con la pausa del finish más larga que el umbral: el evento sale,
+    marca el INICIO de la quietud (qué es el finish para el entrenador no lo decide el
+    código, y por eso el `method` lo dice) y cae dentro de su propio candidato."""
+    sw = synth_swing(120.0, n_reps=2, hold_s=0.4, recover_s=0.6)
+    _, reps = _reps_con_eventos(sw)
+    for (cand, ev), truth in zip(reps, sw.truth):
+        fe = ev["follow_end"]
+        assert fe, "con quietud propia el evento existe"
+        assert abs(fe.frame - truth["follow_end"]) <= 2, (fe.frame, truth["follow_end"])
+        assert ev["impact"].frame < fe.frame <= cand.end, "dentro de su repetición, de punta a punta"
+        assert fe.method == "stable_window_in_rep"
+
+
+@pytest.mark.parametrize("nombre,view", [("cmu-64_01-face_on", "face_on"), ("cmu-64_01-down_the_line", "down_the_line")])
+def test_el_mocap_no_se_mueve_con_la_cota(nombre, view):
+    """El trial 64_01 corta antes del final de la pose: su `follow_end` ya era `null`
+    y sigue siéndolo. Es el control — la cota no puede inventar ni borrar nada donde
+    no había quietud que encontrar — y ahora el hueco viene con su razón."""
+    ev = _mocap_rep(nombre, view)["ev"]
+    assert isinstance(ev["follow_end"], MissingEvent) and not ev["follow_end"]
+    assert "fin de la repetición" in ev["follow_end"].reason
+    for k in ("address", "top", "impact"):
+        assert ev[k].frame is not None
+
+
+def test_la_razon_del_hueco_llega_a_warnings_y_el_evento_sale_null(clips, capture_paths_yaml, tmp_path):
+    """`$defs/event` admite `null` y no admite campos nuevos: el hueco va como `null` y
+    la razón a `warnings[]`, que es donde ADR-019 puso las razones que no caben en el
+    contrato. Un `null` pelado no distingue «no lo hay, y por esto» de «nadie lo buscó»."""
+    take, _ = _synthetic_take(clips, capture_paths_yaml, tmp_path, sw=synth_swing(120.0, n_reps=2, hold_s=0.2, recover_s=0.6))
+    a = analyze_take(take, GOLF, height_m=1.75)
+    assert [e["follow_end"] for e in a["events"]] == [None, None]
+    assert json.loads((take / "analysis.json").read_text())["events"][0]["follow_end"] is None
+    razones = [w for w in a["warnings"] if "follow_end" in w]
+    assert len(razones) == 2 and all(w.startswith("Repetición ") for w in razones), razones
+    assert all("fin de la repetición" in w for w in razones), razones
+    assert validate_analysis(json.loads((take / "analysis.json").read_text())) == [], "el null del evento valida contra el schema tal cual está"
+
+
+def test_explore_escribe_la_tolerancia_de_cada_evento(clips, tmp_path):
+    """`tol_frames` llega a `datos-eventos.json`, que es de donde la lee la pantalla.
+    Hasta hoy la tolerancia de cada evento sólo estaba en `analysis.json` —el ±4 del
+    top de `vid1` no se veía en ningún lado— y la tabla mostraba un ±1 fijo.
+
+    No se compara contra un número quemado: se compara contra el `analysis.json` de la
+    misma corrida, que es la fuente."""
+    from kinelab.explore import explore
+
+    if "hevc120" not in clips:
+        pytest.skip("sin fixture hevc120")
+    sw = synth_swing(120.0, n_reps=1, still_s=0.5, backswing_s=0.8, downswing_s=0.25, follow_s=0.55, recover_s=0.8, amplitude_px=20.0, body_height_px=70.0, frame=(96, 96), hands_tilt=0.2, hands_miss_px=5.0)
+    r = explore(clips["hevc120"], tmp_path / "out", GOLF, height_m=1.8, estimator=SwingEstimator(sw))
+    escrito = json.loads((tmp_path / "out" / "datos-eventos.json").read_text(encoding="utf-8"))
+    rep = json.loads((tmp_path / "out" / "analysis.json").read_text(encoding="utf-8"))["events"][0]
+    assert escrito["eventos_tol_frames"] == r["eventos_tol_frames"], "lo que se muestra es lo que se escribió"
+    assert set(escrito["eventos_tol_frames"]) == set(escrito["eventos_frame"]), "una tolerancia por evento presente"
+    assert escrito["eventos_tol_frames"] == {k: rep[k]["tol_frames"] for k in escrito["eventos_frame"]}, "la del analysis.json, no otra"
+    assert all(isinstance(v, int) and v >= 1 for v in escrito["eventos_tol_frames"].values())
+
+
+def test_el_follow_end_no_se_sale_de_la_repeticion_ni_por_el_refinamiento():
+    """La cota vale también para `settle_forward`, que camina hacia adelante mientras
+    la velocidad siga bajando: un evento que se llama «dentro de la repetición» no
+    puede salirse de ella por el refinamiento del frenado.
+
+    Con los parámetros de golf de hoy no llega a pasar —`refine_s` 0,15 s es la mitad
+    de `follow_still_s` 0,3 s, así que la ventana siempre deja margen—, y por eso el
+    caso se construye acá con la velocidad y los cuadros a mano: es la única forma de
+    que el límite quede defendido si alguien mueve esos dos números."""
+    from sports.golf.events import _follow_end
+
+    spd = np.linspace(1.0, 0.0, 40)  # siempre bajando: `settle_forward` camina todo lo que le dejen
+    fe = _follow_end(spd, 20, 120.0, impact=10, rep_end=25, refine=15, params=GOLF_SPORT_EVENTS.params)
+    assert fe.frame == 25, "se corta en el fin de la repetición, no en el cuadro 35"

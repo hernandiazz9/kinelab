@@ -23,7 +23,8 @@ Deja en DIR (por defecto <video>.kinelab/):
     overlay.mp4          el video con los palitos, ángulos y eventos dibujados
     evento-<id>.png      una foto por evento con el esqueleto y los números
     datos-por-cuadro.csv una fila por cuadro: 26 puntos (px, score), ángulos, alturas, desplazamientos, velocidades
-    datos-eventos.json   todo eso en cada evento, más diferencias respecto del address, duraciones
+    datos-eventos.json   todo eso en cada evento, más diferencias respecto del address, duraciones,
+                         la tolerancia en cuadros de cada evento (`eventos_tol_frames`)
                          y el instante sub-cuadro del impacto (`eventos_subcuadro`)
     analysis.json, pose.npz, capture.json   lo mismo que produce el motor
 """
@@ -159,9 +160,21 @@ def _vs_vertical_deg(k, i, j):
     return np.degrees(np.arctan2(d[:, 0], d[:, 1]))
 
 
-def per_frame_table(pose, fps: float, height_m: float | None, address: int | None) -> tuple[list[str], list[dict]]:
+def per_frame_table(pose, fps: float, height_m: float | None, address: int | None, *, wrist_score_min: float = 0.0) -> tuple[list[str], list[dict]]:
+    """Una fila por cuadro. `wrist_score_min` es el umbral del DEPORTE por debajo del
+    cual una muñeca no entra al centro de manos: lo pasa `explore()` desde
+    `sport.events.params`, igual que `build_analysis`.
+
+    Antes no se pasaba, y el CSV, el overlay y los eventos salían de dos señales de
+    manos distintas: los eventos, de la pesada con umbral (encargo 18); el CSV y el
+    dibujo, de la pesada a peso igual. En los cuadros en que una muñeca cae bajo el
+    umbral —justo donde el modelo la pierde, que es el top— las dos difieren, y el
+    overlay mostraba un centro de manos que no era el que había elegido el evento.
+    Default 0,0 = sin umbral, la firma anterior (la usa el arnés, que no tiene
+    deporte).
+    """
     k = interpolate_gaps(pose.keypoints, 5).astype(float)
-    sig = swing_signals(pose, fps)
+    sig = swing_signals(pose, fps, wrist_score_min=wrist_score_min)
     bh = sig.body_height
     T = k.shape[0]
     mid_hip = (k[:, H.LEFT_HIP] + k[:, H.RIGHT_HIP]) / 2
@@ -349,13 +362,19 @@ def explore(video: Path | None, out_dir: Path, sport: SportConfig, *, height_m: 
     fps = float(capture.fps_real)
     events: dict[str, int] = {}
     subframes: dict[str, dict] = {}
+    tolerancias: dict[str, int] = {}
     rep = analysis["events"][0] if analysis["events"] else None
     if rep:
         events = {k: rep[k]["frame"] for k in EVENT_ORDER if rep.get(k)}
+        # La tolerancia de CADA evento, en cuadros (CONTRATO.md §events[]): es de
+        # donde sale la banda de toda métrica anclada a él (invariante 8) y no es
+        # siempre 1 —el top de `vid1.mp4` sale con 4—. Hasta hoy sólo estaba en
+        # `analysis.json` y la pantalla no la mostraba.
+        tolerancias = {k: rep[k]["tol_frames"] for k in EVENT_ORDER if rep.get(k)}
         # El instante entre dos cuadros, donde el deporte lo defina (hoy: sólo el
         # impacto). El cuadro entero de arriba no cambia: esto lo acompaña.
         subframes = {k: rep[k]["subframe"] for k in EVENT_ORDER if rep.get(k) and rep[k].get("subframe")}
-    names, rows = per_frame_table(pose, fps, height_m, events.get("address"))
+    names, rows = per_frame_table(pose, fps, height_m, events.get("address"), wrist_score_min=float(getattr(sport.events.params, "wrist_score_min", 0.0) or 0.0) if sport.events is not None else 0.0)
     with (take / "datos-por-cuadro.csv").open("w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=names)
         w.writeheader()
@@ -376,7 +395,7 @@ def explore(video: Path | None, out_dir: Path, sport: SportConfig, *, height_m: 
     peaks = {k: (None if not np.isfinite(v := np.nanmax([r[k] for r in rows if r[k] is not None] or [np.nan])) else round(float(v), 2)) for k in ("hands_speed_bh_s", "hands_speed_cm_s") if k in names}
     summary = {"aviso": AVISO, "video": capture.original_name, "camino": capture.capture_path_id, "camino_calibrado": capture.capture_path_calibrated,
                "fps_provenance": capture.fps_provenance, "fps_aviso": nota_fuente or next((w for w in analysis["warnings"] if w.startswith("Tasa de cuadros sin verificar")), None),
-               "fps_archivo": fps, "cuadros": len(rows), "altura_m": height_m, "gate_diria": gate_notes, "eventos_frame": events, "eventos_t_s": {k: round(f / fps, 3) for k, f in events.items()}, "eventos_subcuadro": subframes, "duraciones": durations, "picos": peaks, "en_cada_evento": finite_or_none(at), "diferencias_vs_address": deltas, "calidad": analysis["quality"], "columnas": names}
+               "fps_archivo": fps, "cuadros": len(rows), "altura_m": height_m, "gate_diria": gate_notes, "eventos_frame": events, "eventos_t_s": {k: round(f / fps, 3) for k, f in events.items()}, "eventos_tol_frames": tolerancias, "eventos_subcuadro": subframes, "duraciones": durations, "picos": peaks, "en_cada_evento": finite_or_none(at), "diferencias_vs_address": deltas, "calidad": analysis["quality"], "columnas": names}
     (take / "datos-eventos.json").write_text(json.dumps(finite_or_none(summary), ensure_ascii=False, indent=2), encoding="utf-8")
     _stage("dibujando", total=len(rows))
     overlay, snaps = render(take, pose, rows, events, fps, capture, progress_cb=progress, banner=banner)

@@ -119,6 +119,15 @@ export function textoSubcuadro(sf: { frame_before: number | null; frame_after: n
   return `entre el cuadro ${sf.frame_before} y el ${sf.frame_after} (${fmt(sf.fraction, 2)}${banda})`;
 }
 
+/** "± 4 cuadros" — la tolerancia del evento, tal como la escribe el motor. No se
+ *  compone ningún número acá: si el motor no la mandó (trabajo viejo), no se
+ *  inventa un ±1, que es justamente el rótulo fijo que la auditoría marcó como
+ *  falso. */
+export function textoTolerancia(tol: number | null | undefined): string | null {
+  if (tol === null || tol === undefined || !Number.isFinite(tol)) return null;
+  return `± ${tol} ${tol === 1 ? "cuadro" : "cuadros"}`;
+}
+
 /** Una fecha ISO del backend (UTC) en hora local y formato corto: "13/09/2026, 16:35". */
 export function fecha(iso: string | null | undefined): string {
   if (!iso) return "—";

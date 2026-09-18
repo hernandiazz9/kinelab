@@ -99,6 +99,10 @@ export interface Resumen {
   fps_aviso?: string | null;
   eventos_frame: Eventos;
   eventos_t_s: Eventos;
+  /** Tolerancia de cada evento en cuadros (CONTRATO.md §events[]): de ahí sale la
+   *  banda de toda métrica anclada a él, y no siempre es 1. Falta en un trabajo
+   *  anterior al encargo 31. */
+  eventos_tol_frames?: Partial<Record<EventoId, number>>;
   eventos_subcuadro?: Partial<Record<EventoId, Subcuadro>>;
   duraciones: Record<string, number>;
   picos: Record<string, number | null>;

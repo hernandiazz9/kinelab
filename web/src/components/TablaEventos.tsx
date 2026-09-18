@@ -2,13 +2,19 @@
 // después duraciones, picos, diferencias contra el address, y por último TODAS
 // las columnas en cada evento. Nada se resume en un puntaje (ADR-012).
 //
+// Cada evento lleva su tolerancia en cuadros al lado del cuadro, cuando el motor
+// la manda (`eventos_tol_frames`): es la banda de ese evento en ESA repetición y
+// no siempre es 1 —el top de `vid1` sale con 4—. No se compone acá ni se pone un
+// ±1 por defecto: el rótulo fijo «±1 cuadro» es lo que la auditoría del 16/9
+// marcó como falso.
+//
 // «Todas» quiere decir todas menos las que ADR-018 retiró (`lib/retirados.ts`),
 // que un trabajo calculado con un contrato anterior sigue trayendo en el
 // archivo. Lo desconocido no se esconde: lo que no tiene nombre legible se
 // muestra con su identificador.
 
 import type { EventoId, Resumen } from "@/lib/api";
-import { DURACIONES, EVENTOS, etiqueta, fmt, fmtCol, textoSubcuadro } from "@/lib/etiquetas";
+import { DURACIONES, EVENTOS, etiqueta, fmt, fmtCol, textoSubcuadro, textoTolerancia } from "@/lib/etiquetas";
 import { sinRetirados } from "@/lib/retirados";
 import { COLOR_EVENTO } from "./Reproductor";
 
@@ -60,6 +66,7 @@ function Cabecera({ evs, resumen, onIr }: { evs: EventoId[]; resumen: Resumen; o
         <th className={th}></th>
         {evs.map((ev) => {
           const f = resumen.eventos_frame[ev];
+          const tol = textoTolerancia(resumen.eventos_tol_frames?.[ev]);
           const sub = textoSubcuadro(resumen.eventos_subcuadro?.[ev]);
           return (
             <th key={ev} className={th}>
@@ -68,7 +75,7 @@ function Cabecera({ evs, resumen, onIr }: { evs: EventoId[]; resumen: Resumen; o
               </button>
               {f !== undefined && (
                 <span className="block text-xs font-normal text-zinc-500">
-                  cuadro {f} · {fmt(resumen.eventos_t_s[ev], 3)} s
+                  cuadro {f} · {fmt(resumen.eventos_t_s[ev], 3)} s{tol && ` · ${tol}`}
                 </span>
               )}
               {sub && <span className="block text-xs font-normal text-zinc-400">{sub}</span>}

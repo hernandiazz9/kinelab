@@ -57,12 +57,20 @@ def _cross_frame(fps: float, top_s: float, D: float, amplitude_px: float, tilt: 
     return (top_s + u[i] * D) * fps
 
 
-def synth_swing(fps: float, n_reps: int = 3, *, still_s: float = 1.0, backswing_s: float = 0.9, downswing_s: float = 0.27, follow_s: float = 0.6, recover_s: float = 2.0, amplitude_px: float = 400.0, body_height_px: float = 900.0, frame: tuple[int, int] = (1080, 1920), noise_px: float = 0.0, seed: int = 0, hands_tilt: float = 0.0, hands_miss_px: float = 0.0) -> SynthSwing:
+def synth_swing(fps: float, n_reps: int = 3, *, still_s: float = 1.0, backswing_s: float = 0.9, downswing_s: float = 0.27, follow_s: float = 0.6, recover_s: float = 2.0, amplitude_px: float = 400.0, body_height_px: float = 900.0, frame: tuple[int, int] = (1080, 1920), noise_px: float = 0.0, seed: int = 0, hands_tilt: float = 0.0, hands_miss_px: float = 0.0, hold_s: float | None = None) -> SynthSwing:
     """`hands_tilt`: cuánto baja el arco por unidad de `p` (las manos suben y bajan, no
     sólo van y vienen). `hands_miss_px`: cuánto se corre el arco de bajada respecto del
-    de subida, en px, alcanzado antes del impacto. Ver el docstring del módulo."""
+    de subida, en px, alcanzado antes del impacto. Ver el docstring del módulo.
+
+    `hold_s`: cuánto dura la pausa del finish, la quietud DESPUÉS del acompañamiento.
+    `None` = `still_s`, que es lo de antes (las dos quietudes duraban lo mismo). Se
+    separó para poder construir un swing cuya pausa del finish sea más corta que la
+    quietud que el deporte exige para cerrar el acompañamiento: es lo que pasa en
+    `cortado3-lento.mp4` —60 cuadros de pausa a 240 fps contra los 72 que pide
+    `follow_still_s`— y lo que hacía que `follow_end` se fuera al gesto siguiente."""
     D = downswing_s + follow_s
-    cycle = still_s + backswing_s + D + still_s + recover_s
+    hold_s = still_s if hold_s is None else hold_s
+    cycle = still_s + backswing_s + D + hold_s + recover_s
     T = int(round(cycle * fps * n_reps)) + int(round(still_s * fps))
     t = np.arange(T) / fps
     p = np.zeros(T)
@@ -70,7 +78,7 @@ def synth_swing(fps: float, n_reps: int = 3, *, still_s: float = 1.0, backswing_
     truth: list[dict] = []
     for k in range(n_reps):
         t0 = k * cycle
-        a, b, c, d = t0 + still_s, t0 + still_s + backswing_s, t0 + still_s + backswing_s + D, t0 + still_s + backswing_s + D + still_s
+        a, b, c, d = t0 + still_s, t0 + still_s + backswing_s, t0 + still_s + backswing_s + D, t0 + still_s + backswing_s + D + hold_s
         back = (t >= a) & (t < b)
         p[back] = smoothstep((t[back] - a) / backswing_s)
         down = (t >= b) & (t < c)
