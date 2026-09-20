@@ -1,6 +1,20 @@
 # Plan
 
-Última ronda: 2026-09-20 (tarde) — el 33 quedó integrado en `main` (`2b0ed1b`)
+Última ronda: 2026-09-20 (tarde) — **cerró el 34** (`b94e1be`, `b4a981e`,
+`a54718e`, integrado en `59f6b0b`): el fps de una toma dice de qué clip salió
+su calibración. `capture-paths` **1.2.0** con `calibration_clip_sha256`
+(opcional, fuera de los seis campos del cronómetro), `capture.json` **1.3.0**
+con `fps_calibration {clip_sha256, same_file}`, el aviso por
+`analysis.warnings` y **sin `Check` nuevo** —`CHECK_ORDER` intacto—, y el sha
+del único camino calibrado declarado y verificado. De los 26 `capture.json`
+del repo: **2 en `false` con aviso, 1 en `true`, 23 en `null`**. Motor 448/0
+(+51), arnés 43/0, front en verde. El agente se colgó una vez por un watchdog
+del harness con todo sin commitear y se reanudó con `SendMessage`, con su
+contexto intacto: terminó completo. **Lo que el 34 deja a la vista y no puede
+arreglar: el único clip que se calibró a sí mismo es el que el gate rechaza
+por durar 2,49 s.** Falta que Hernán mire el front del 33 y el del 34.
+
+Ronda anterior, 2026-09-20 (tarde) — el 33 quedó integrado en `main` (`2b0ed1b`)
 y `scripts/integrar`, que usaba `flock` —que macOS no tiene—, está arreglado y
 probado. El **34 se relanza limpio**: su primer intento quedó a medias y su
 trabajo está salvado en el commit `WIP:` `5423deb` de la rama
@@ -267,9 +281,10 @@ una sola sesión por vez.
 - [pendiente] repeticion-elegible — hoy toda la pantalla es la rep 1 porque
   `explore.py:366` la arma así; elegirla cambia el formato de
   `datos-eventos.json`, el overlay y el `address` del CSV. Sale del 33.
-- **R7** · [en curso] **34** fuente-de-la-calibracion — relanzado limpio el
-  20/9 por la cadena; el intento anterior está en `5423deb` (rama
-  `worktree-agent-ad505eed8bc47c798`), descartado. — `calibration_clip_sha256`
+- **R7** · [hecho] **34** fuente-de-la-calibracion — `b94e1be`, `b4a981e`,
+  `a54718e`, integrado en `59f6b0b`. Relanzado limpio; el intento anterior
+  quedó en `5423deb` (rama `worktree-agent-ad505eed8bc47c798`), descartado.
+  Cuatro preguntas en su informe §Preguntas, todas para Hernán. — `calibration_clip_sha256`
   en capture-paths 1.2.0, `fps_calibration.same_file` en capture 1.3.0, el
   aviso por `analysis.warnings`, y `fps_truth` emitiendo el sha. **La premisa
   del plan estaba mal**: no hay divergencia entre `ingest/__main__.py:103` y
