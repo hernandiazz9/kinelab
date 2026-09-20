@@ -48,7 +48,7 @@ from fastapi.responses import FileResponse
 from starlette.concurrency import run_in_threadpool
 
 from kinelab.ingest.__main__ import ingest_clip
-from kinelab.ingest.capture_paths import GENERIC_VIDEO_ID, CapturePaths, load_capture_paths, resolve_path_id
+from kinelab.ingest.capture_paths import CAPTURE_PATHS_FILE, GENERIC_VIDEO_ID, CapturePaths, load_capture_paths, resolve_path_id
 from kinelab.ingest.gate import CaptureJson, slomo_declared_reason
 from kinelab.ingest.session import validate_slug
 from kinelab.tools.fps_truth import FfprobeError, analyze
@@ -157,7 +157,7 @@ def create_app(
     app.state.publicacion = publicacion
 
     def capture_paths() -> CapturePaths:
-        f = data / "capture-paths.yaml"
+        f = data / CAPTURE_PATHS_FILE
         if not f.is_file():
             raise HTTPException(500, f"No existe {f}. Tiene que estar el capture-paths.yaml del repo.")
         try:
