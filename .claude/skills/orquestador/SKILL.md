@@ -312,14 +312,26 @@ sirve la mitad. Tiene que traer el camino de vuelta:
    Si la pregunta se contesta mirando algo, mandá además la imagen con
    `avisar -f`: la abre en el teléfono y contesta ahí.
 
-**Cuidado con qué enlace mandás.** Medido el 20/9 contra el Telegram de
-Hernán: el `link` que devuelve `get_session` es un `claude://…` y **Telegram
-no lo hace tocable** —queda como texto muerto—; y la variante
-`https://claude.ai/epitaxy/<id>` **no existe**: abre la portada de Claude. El
-que sirve es el de Remote Control, que el harness no te da (es del dueño, sale
-del badge de la sesión). Hasta tenerlo anotado, el aviso **nombra la sesión**
-para que el dueño la busque en la app del teléfono, y no promete un enlace que
-no lleva a ningún lado.
+**El enlace no lo podés calcular: pedilo una vez por ronda.** Medido el 20/9:
+el `link` que devuelve `get_session` es un `claude://…` que **Telegram no hace
+tocable**, y `https://claude.ai/epitaxy/<id>` no existe, abre la portada. El
+bueno es el de Remote Control, `https://claude.ai/code/session_…`, y su id
+**no es** el `local_…` de la sesión: son distintos, no se derivan, y el harness
+no te lo entrega a propósito.
+
+Así que al abrir la ronda, después de encender Remote Control, **pedile al
+dueño que pegue la dirección del badge** y guardala:
+
+```bash
+printf '%s\n' "<la dirección que te pasó>" > ~/.claude/remote-control-url
+chmod 600 ~/.claude/remote-control-url
+```
+
+De ahí en más `avisar` la agrega solo al final de cada mensaje; no la escribas
+a mano. **Reescribila cada vez que abrís una ronda en una sesión nueva**: si
+el archivo quedó con la dirección de una sesión vieja, tus avisos mandan al
+dueño a un lugar donde no estás. Si todavía no la tenés, el aviso **nombra la
+sesión** y no promete un enlace que no lleva a ningún lado.
 
 **Y la cadena no sigue de largo sobre una pregunta abierta si lo que viene
 depende de ella.** Lanzá lo que no dependa; lo que sí, espera. Eso va dicho en
