@@ -93,8 +93,9 @@ function Cabecera({ evs, rep, onIr }: { evs: EventoId[]; rep: Repeticion; onIr: 
  *  «Repetición N de M», la misma que dicen las métricas y la tabla por cuadro, o
  *  `null` en un trabajo anterior al encargo 35, que no declara cuál es (y ahí no
  *  se inventa ninguna: es lo que esta tabla ya hacía). `columnas` y `calidad`
- *  son del clip, no de la repetición. */
-export default function TablaEventos({ rep, frase, columnas: todas, calidad, onIr }: { rep: Repeticion | null; frase: string | null; columnas: string[]; calidad: unknown; onIr: (n: number) => void }) {
+ *  son del clip, no de la repetición. `respaldo` dice que la repetición salió del
+ *  primer nivel de un trabajo viejo, y ahí los picos son los del clip entero. */
+export default function TablaEventos({ rep, frase, respaldo = false, columnas: todas, calidad, onIr }: { rep: Repeticion | null; frase: string | null; respaldo?: boolean; columnas: string[]; calidad: unknown; onIr: (n: number) => void }) {
   const enCadaEvento: Partial<Record<EventoId, FilaCsv>> = rep?.en_cada_evento ?? {};
   const evs = (Object.keys(EVENTOS) as EventoId[]).filter((k) => enCadaEvento[k]);
   const valor = (ev: EventoId, col: string) => enCadaEvento[ev]?.[col] ?? null;
@@ -176,11 +177,12 @@ export default function TablaEventos({ rep, frase, columnas: todas, calidad, onI
           </div>
         </div>
         <div>
-          {/* El pico DENTRO de esta repetición. El de primer nivel de
-              `datos-eventos.json` es el del clip entero y con dos swings no es de
-              ninguno de los dos: medido en `cortado3-lento`, el 4,85 bh/s que se
-              publicaba arriba es el de la repetición 2 (informe del 35). */}
-          <h2 className={`${h2} mt-0`}>Picos (máximo en esta repetición)</h2>
+          {/* El pico DENTRO de esta repetición — salvo en un trabajo viejo, donde
+              lo único que hay es el de primer nivel, que es el del clip entero y con
+              dos swings no es de ninguno de los dos: medido en `cortado3-lento`, el
+              4,85 bh/s que se publicaba arriba es el de la repetición 2 (informe
+              del 35). El rótulo dice cuál de los dos es; no se supone. */}
+          <h2 className={`${h2} mt-0`}>Picos (máximo en {respaldo ? "todo el clip" : "esta repetición"})</h2>
           <div className="rounded border border-zinc-800">
             <table className={tabla}>
               <tbody>

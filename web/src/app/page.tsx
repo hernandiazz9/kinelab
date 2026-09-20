@@ -468,7 +468,7 @@ function Resultado({
       )}
 
       <section>
-        <TablaEventos rep={rep} frase={reps.respaldo ? null : frase} columnas={r.columnas} calidad={r.calidad} onIr={irArriba} />
+        <TablaEventos rep={rep} frase={reps.respaldo ? null : frase} respaldo={reps.respaldo} columnas={r.columnas} calidad={r.calidad} onIr={irArriba} />
       </section>
 
       <section>
