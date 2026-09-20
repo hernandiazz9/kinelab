@@ -223,8 +223,12 @@ una sola sesión por vez.
 
 ## Hechos
 
-02–15, 18–20, 22–26 (ver `docs/informes/`). **16**: commiteado en `03aea3f` por
-la sesión del 18, sin informe; su punto 6 lo cierra el 27. Demo pública:
+01–15, 18–20, 22–26 (ver `docs/informes/`). El **01** y el **16** llevan
+informe de arqueología, escrito el 20/9 desde el historial y marcado como tal:
+el 01 es anterior al método (se hizo el 12/9; el formato de informes se
+escribió ese mismo día, en `27fe21f`), y el 16 se commiteó en `03aea3f` por la
+sesión del 18 sin dejar informe, con su punto 6 cerrado por el 27. Ninguno de
+los dos dejó números propios, y los informes lo dicen. Demo pública:
 `https://kinelab-qnm5fa60a-hernandiazz9s-projects.vercel.app` (sin protección,
 `noindex`; el video de `vid1` es accesible con el enlace).
 
