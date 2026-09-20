@@ -102,6 +102,10 @@ estado-fases.md`). **Ningún número del proyecto es hoy un juicio válido.**
 
 ## Decisiones del orquestador
 
+- 2026-09-20 · **Decisión de Hernán: la pregunta 9 se cierra.** Miró
+  `palo-local-1364.png` y la marca del palo no arranca en la mano y el ángulo
+  está torcido. El impacto queda como está y no se abre encargo del shaft. Con
+  esto la decisión del 32 (abajo) deja de ser reversible-pendiente.
 - 2026-09-20 · **La procedencia de la calibración se registra, no se exige**, y
   `calibration_clip_sha256` va **fuera** de `_CALIBRATION_FIELDS` (34).
   Exigirlo dejaría sin cargar el único camino calibrado del repo y el fixture
@@ -341,11 +345,13 @@ los dos dejó números propios, y los informes lo dicen. Demo pública:
    acota el fin del acompañamiento a su repetición, pero qué es el finish lo
    tenés que decir vos.
 
-9. **Del 32. Traba el número del impacto y nada más** (verificado el 20/9: ni
-   el 33 ni el 34 dependen de ella, así que la cadena sigue). Abrí
-   `data/incoming/cortado3-lento.kinelab/mascara/palo-local-1364.png` y decí si
-   ves el shaft. La sesión marcó una estela tenue y no marcó nada en 1367 y
-   1368. Si vos lo ves y ella no, el impacto se rehace.
+9. ~~Del 32: ¿se ve el shaft en 1364?~~ **Contestada el 20/9 por Hernán, con
+   la imagen a la vista.** No lo ve: la marca de la máscara «está muy cerca
+   pero no del todo bien — no arranca desde la mano y el ángulo no es
+   correcto». Confirma los 66° y el 0 de 8 del 32. **El número del impacto no
+   se rehace y el shaft no se abre como encargo**; lo que falta es obturador
+   más corto (`CAPTURA.md` §Luz), no un modelo mejor. Decisión de Hernán, no
+   del orquestador.
 
 ## Aparcado
 
