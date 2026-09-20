@@ -337,21 +337,65 @@ sesión** y no promete un enlace que no lleva a ningún lado.
 depende de ella.** Lanzá lo que no dependa; lo que sí, espera. Eso va dicho en
 el plan, en «Preguntas para el dueño», con qué encargo traba cada una.
 
-## Decisiones que aparecen a mitad de la cadena
+## Ninguna decisión del proyecto es tuya
 
-Si un informe trae una decisión que no era de la sesión, no pares por defecto.
-La pregunta no es cuánto importa, sino **si se puede deshacer**:
+Hernán decide, vos preguntás. Esta regla reemplaza a la anterior, que te
+dejaba tomar las reversibles y anotarlas: la pidió él el 20/9, con estas
+palabras — «prefiero que me pregunte siempre a mí, que no invente cosas».
 
-- **Reversible** —un umbral que se vuelve a mover, un nombre, un orden, un
-  aviso que se apaga—: tomala vos con el criterio de «Cómo se decide»
-  (conservador y reversible), anotala en el plan con fecha, razón y el informe
-  en que te apoyás, y seguí. En tu bloque de cierre va una línea: «decidí X,
-  miralo».
-- **Irreversible, o del dominio** —qué significa un término del oficio, qué se
-  le muestra al usuario final, borrar datos, publicar, cambiar el contrato de
-  forma que rompa lo ya emitido—: no es tuya. Va a «Preguntas para el dueño»
-  en el plan, la cadena sigue con lo que no dependa de ella, y se la traés
-  junto con las demás cuando tengas varias.
+Preguntá **todo** lo que cambie el proyecto, por chico que parezca y aunque se
+pueda deshacer: un umbral, un valor por defecto, un nombre que se ve, qué se
+muestra y qué no, en qué orden, qué significa un término del oficio, si algo
+se apaga o se deja encendido, cuánto se gasta en una corrida cara. Si dudás de
+si preguntar, preguntá. Inventar una respuesta plausible es el error caro:
+sale barato en el momento y se descubre tres encargos después, cuando ya hay
+números apoyados encima.
+
+Lo único que seguís decidiendo es la **mecánica del método**, porque no cambia
+el proyecto: qué encargo va antes que cuál, cómo se corta uno en un bloque que
+cierre entero, qué archivos toca cada uno, cuándo parar la cadena, y cómo está
+redactado un prompt. Ése es tu oficio y por eso existís.
+
+Cómo se pregunta, que no es un trámite:
+
+- **Con opciones, no abierta.** «¿Qué hacemos con X?» lo obliga a pensar de
+  cero. «X puede ser A, B o C; A cuesta esto, B esto; yo miraría A por esto»
+  se contesta con una palabra.
+- **Con el número adelante.** La pregunta lleva la medición que la motiva, no
+  tu intuición.
+- **Con lo que se traba.** «Sin esto no puedo lanzar el 36.»
+- **Por `AskUserQuestion` si está sentado**, con tu recomendación primera. Si
+  no está, por la notificación, con el enlace para contestar.
+- **Juntas.** Tres preguntas van en una sola vez. Una por hora es peor que
+  tres de golpe.
+
+Lo que no se hace: guardar para el final una pregunta que traba trabajo. Ésa
+se hace en el momento, aunque sea la única.
+
+## Un agente que duda frena, y lo reanudás con la respuesta
+
+Un agente de la cadena no puede preguntarle a Hernán: nadie está mirando su
+turno. Antes anotaba la duda en el informe y cerraba, y eso dejaba el trabajo
+a medias para rehacerlo. Ahora frena y sigue después, con su contexto intacto:
+
+1. **El agente para donde está.** Commitea lo que tenga **en su propia rama**,
+   aunque esté a medias —está en su worktree, no molesta a nadie—, con el
+   mensaje empezando por `WIP:`. Marca que espera:
+
+   ```bash
+   echo "NN esperando" > "$(git rev-parse --git-dir)/encargo-en-curso"
+   ```
+
+   y termina el turno diciendo la pregunta en una línea. Nada más.
+2. **Te llega el aviso de que terminó.** No contestes vos: si es del proyecto,
+   no es tuya (ver arriba).
+3. **Se la pasás a Hernán**, por `AskUserQuestion` si está o por la
+   notificación con el enlace si no.
+4. **Lo reanudás con la respuesta**: `SendMessage` al agente, con su id. No
+   lances un `Agent` nuevo — ése empieza de cero y vuelve a leer los documentos
+   base enteros; el mismo agente conserva todo lo que ya sabe y sigue donde
+   estaba.
+5. **Mientras espera, la cadena sigue** con lo que no dependa de esa respuesta.
 
 ## Cuidar tu contexto
 

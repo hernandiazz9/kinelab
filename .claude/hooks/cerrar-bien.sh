@@ -18,10 +18,31 @@ marca="$gitdir/encargo-en-curso"
 nn=$(tr -dc '0-9' < "$marca" | head -c 2)
 [ -n "$nn" ] || exit 0
 
+# Un encargo que frenó a preguntar no está cerrando: no le pidas el informe.
+# Sí le pedimos que lo que tenga esté commiteado en su rama, aunque sea un
+# WIP: el worktree es suyo y un commit a medias ahí no molesta a nadie,
+# mientras que un turno que termina con cambios sueltos los pierde.
+esperando=0
+grep -qi "esperando" "$marca" && esperando=1
+
 falta=""
 sucio=$(git status --porcelain --untracked-files=no)
 [ -n "$sucio" ] && falta="Quedan cambios sin commitear:
 $sucio"
+
+if [ "$esperando" = 1 ]; then
+  if [ -z "$falta" ]; then exit 0; fi
+  cat >&2 <<FIN
+El encargo $nn frenó a preguntar, pero dejó trabajo suelto:
+
+$falta
+
+Commitealo en tu rama antes de terminar el turno, aunque sea a medias y con el
+mensaje empezando por «WIP:». El worktree es tuyo; lo que no se commitea se
+pierde cuando te reanuden.
+FIN
+  exit 2
+fi
 
 informe=$(ls docs/informes/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-"$nn"-*.md 2>/dev/null | head -1)
 if [ -z "$informe" ]; then
