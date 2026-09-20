@@ -20,13 +20,21 @@ sale el eje del tiempo lo pone quien llama (`nota_fuente`), porque no hay
 archivo que reproduzca ni cronómetro que filmar.
 
 Deja en DIR (por defecto <video>.kinelab/):
-    overlay.mp4          el video con los palitos, ángulos y eventos dibujados
-    evento-<id>.png      una foto por evento con el esqueleto y los números
+    overlay.mp4          el video con los palitos, ángulos y los eventos de TODAS las
+                         repeticiones rotulados con la suya (`R2 IMPACT`). Uno solo, no uno por repetición
+    evento-<id>.png      una foto por evento de la repetición 1, con el esqueleto y los números
+    evento-r<N>-<id>.png lo mismo para las repeticiones 2, 3, …
     datos-por-cuadro.csv una fila por cuadro: 26 puntos (px, score), ángulos, alturas, desplazamientos, velocidades
     datos-eventos.json   todo eso en cada evento, más diferencias respecto del address, duraciones,
                          la tolerancia en cuadros de cada evento (`eventos_tol_frames`)
                          y el instante sub-cuadro del impacto (`eventos_subcuadro`)
     analysis.json, pose.npz, capture.json   lo mismo que produce el motor
+
+`datos-eventos.json` publica **todas** las repeticiones en `repeticiones_detalle`:
+una entrada por repetición con sus eventos, sus tolerancias, su sub-cuadro, su
+escala, sus duraciones, sus picos y sus diferencias respecto de SU address. Los
+campos de primer nivel siguen siendo los de la repetición 1 (`repeticion_mostrada`)
+y son **transitorios**: el encargo 36 los retira cuando la pantalla sepa elegir.
 """
 
 from __future__ import annotations
@@ -278,9 +286,75 @@ def per_frame_table(pose, fps: float, height_m: float | None, address: int | Non
     return names, rows
 
 
+#: Los sufijos de las columnas que se miden CONTRA UN CUADRO DE REFERENCIA. La
+#: tabla por cuadro las calcula todas contra un solo cuadro —el address de la
+#: repetición 1—, así que para otra repetición hay que restarle el valor de SU
+#: address: la referencia se cancela y queda el desplazamiento verdadero de esa
+#: repetición. Ver `_rebasar`.
+_VS_ADDRESS = ("_vs_address_pct", "_vs_address_cm")
+
+
+def _rebasar(row: dict, base: dict | None) -> dict:
+    """La fila de un evento, medida contra el address de SU repetición.
+
+    Las columnas `*_vs_address_*` de `per_frame_table` son `pt[i] − pt[ref]` con
+    un único `ref` para toda la tabla. Restarle la fila del address de esta
+    repetición cancela ese `ref` y deja `pt[i] − pt[address_de_esta_rep]`, que es
+    exactamente lo que la columna dice medir. Las dos filas caen dentro de la
+    misma repetición —el address es su primer cuadro— así que se dividieron por
+    la misma escala y la resta es legítima.
+
+    `base=None` quiere decir «esta fila ya está medida contra el cuadro que
+    corresponde»: es el caso de la repetición cuyo address ES el `ref` de la
+    tabla, donde restar sería restar ceros. La fila se devuelve tal cual, sin
+    tocar un solo float."""
+    if base is None:
+        return row
+    return {k: ((None if (v is None or base.get(k) is None) else v - base[k]) if k.endswith(_VS_ADDRESS) else v) for k, v in row.items()}
+
+
+def _en_cada_evento(rows: list[dict], events: dict[str, int], base: dict | None) -> dict[str, dict]:
+    return {name: _rebasar(rows[f], base) for name, f in events.items()}
+
+
+def _diferencias_vs_address(at: dict[str, dict], names: list[str]) -> dict[str, dict]:
+    """Cuánto cambió cada ángulo entre el address y cada evento. Sólo columnas en
+    grados: no dependen del cuadro de referencia, así que la resta vale igual."""
+    deltas: dict[str, dict] = {}
+    if "address" not in at:
+        return deltas
+    for name, r in at.items():
+        if name == "address":
+            continue
+        deltas[f"{name}_vs_address"] = {k: round(r[k] - at["address"][k], 2) for k in names if k.endswith("_deg") and r.get(k) is not None and at["address"].get(k) is not None}
+    return deltas
+
+
+def _duraciones(events: dict[str, int], fps: float) -> dict[str, float]:
+    d: dict[str, float] = {}
+    for a, b in zip(EVENT_ORDER, EVENT_ORDER[1:]):
+        if a in events and b in events:
+            d[f"{a}_to_{b}_ms"] = round((events[b] - events[a]) / fps * 1000.0, 1)
+    if "address" in events and "top" in events and "impact" in events and events["impact"] > events["top"]:
+        d["tempo_ratio"] = round((events["top"] - events["address"]) / (events["impact"] - events["top"]), 2)
+    return d
+
+
+def _picos(rows: list[dict], names: list[str], lo: int = 0, hi: int | None = None) -> dict[str, float | None]:
+    """El pico de las dos velocidades de manos entre `lo` y `hi` inclusive.
+
+    Sin ninguna repetición no hay escala, así que `hands_speed_cm_s` queda entero
+    en `None` y la lista sale vacía: el pico es `None`, no un aviso de numpy.
+    `max` sobre la lista ya filtrada evita el `nanmax` de un eje todo NaN."""
+    tramo = rows[lo : (len(rows) if hi is None else hi + 1)]
+    return {k: (round(float(max(vs)), 2) if (vs := [r[k] for r in tramo if r[k] is not None and np.isfinite(r[k])]) else None) for k in ("hands_speed_bh_s", "hands_speed_cm_s") if k in names}
+
+
 # Las tres líneas de texto más anchas que puede haber: el tamaño de la fuente se fija
 # con ellas, no con el texto de cada cuadro, para que no cambie de un cuadro al otro.
-_TEXT_TEMPLATES = ("9999  t=999.999s   FOLLOW_END", "manos 99.99 bh/s  altura manos 999%", "tronco -180  hombros -180  caderas -180")
+# El rótulo del evento lleva la repetición delante (`R12 FOLLOW_END`) desde que el
+# overlay marca las de todas las repeticiones y no sólo las de la primera.
+_TEXT_TEMPLATES = ("9999  t=999.999s   R99 FOLLOW_END", "manos 99.99 bh/s  altura manos 999%", "tronco -180  hombros -180  caderas -180")
 
 
 def _font_scale(w: int, h: int, th: int, margin_px: int | None = None) -> float:
@@ -355,8 +429,28 @@ def _frames(take_dir: Path, capture: CaptureJson, progress_cb=None):
             progress_cb(i + 1)
 
 
-def render(take_dir: Path, pose, rows: list[dict], events: dict[str, int], fps: float, capture: CaptureJson, progress_cb=None, banner: str | None = None) -> tuple[Path, list[Path]]:
-    frame_events = {f: name for name, f in events.items()}
+def foto_de_evento(rep: int, evento: str) -> str:
+    """El nombre del PNG de un evento. La repetición 1 conserva el nombre de
+    siempre (`evento-top.png`) y las demás llevan la suya delante
+    (`evento-r2-top.png`): la pantalla, la demo y la lista blanca de
+    `service/exploracion.py` ya conocen los cuatro primeros y no se rompen."""
+    return f"evento-{evento}.png" if rep == 1 else f"evento-r{rep}-{evento}.png"
+
+
+def render(take_dir: Path, pose, rows: list[dict], events_por_rep: list[tuple[int, dict[str, int]]], fps: float, capture: CaptureJson, progress_cb=None, banner: str | None = None) -> tuple[Path, list[Path]]:
+    """Un solo `overlay.mp4` —no uno por repetición— con los eventos de **todas**
+    las repeticiones rotulados, y una foto por cada uno.
+
+    `events_por_rep` es `[(rep, {evento: cuadro})]` en orden. Hasta el encargo 35
+    esto recibía los eventos de la repetición 1 y nada más: en un clip de dos
+    swings el overlay marcaba cuatro cuadros de casi 3000 y los otros cuatro
+    pasaban sin nombre. Las repeticiones no se solapan (`build_analysis` descarta
+    la que empieza antes de que termine la anterior), así que ningún cuadro puede
+    ser evento de dos."""
+    frame_events: dict[int, tuple[int, str]] = {}
+    for rep, events in events_por_rep:
+        for name, f in events.items():
+            frame_events[int(f)] = (rep, name)
     out = take_dir / "overlay.mp4"
     banner = ascii_para_quemar(banner or capture_banner(capture))
     proc = None
@@ -365,7 +459,10 @@ def render(take_dir: Path, pose, rows: list[dict], events: dict[str, int], fps: 
         for i, frame in _frames(take_dir, capture, progress_cb):
             if i >= len(rows):
                 break
-            label = frame_events.get(i)
+            marca = frame_events.get(i)
+            # El rótulo dice de qué repetición es el evento: en un clip de dos
+            # swings, «IMPACT» a secas no distingue el primero del segundo.
+            label = f"r{marca[0]} {marca[1]}" if marca else None
             img = _draw(frame, pose.keypoints[i], pose.scores[i], rows[i], label, float(pose.timestamps_s[i]), banner)
             if proc is None:
                 hh, ww = img.shape[:2]
@@ -373,8 +470,8 @@ def render(take_dir: Path, pose, rows: list[dict], events: dict[str, int], fps: 
                 # retroceder un cuadro en el navegador decodifica hasta 250 cuadros por paso.
                 proc = subprocess.Popen([ffmpeg_bin(), "-y", "-v", "error", "-nostdin", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{ww}x{hh}", "-r", f"{fps:.4f}", "-i", "-", "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-g", "12", "-pix_fmt", "yuv420p", "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2", "-movflags", "+faststart", str(out)], stdin=subprocess.PIPE)
             proc.stdin.write(img.tobytes())
-            if label:
-                p = take_dir / f"evento-{label}.png"
+            if marca:
+                p = take_dir / foto_de_evento(marca[0], marca[1])
                 cv2.imwrite(str(p), img)
                 snaps.append(p)
     finally:
@@ -449,35 +546,23 @@ def explore(video: Path | None, out_dir: Path, sport: SportConfig, *, height_m: 
         w = csv.DictWriter(f, fieldnames=names)
         w.writeheader()
         w.writerows(rows)
-    at = {name: rows[f] for name, f in events.items()}
-    deltas = {}
-    if "address" in at:
-        for name, r in at.items():
-            if name == "address":
-                continue
-            deltas[f"{name}_vs_address"] = {k: round(r[k] - at["address"][k], 2) for k in names if k.endswith("_deg") and r.get(k) is not None and at["address"].get(k) is not None}
-    durations = {}
-    for a, b in zip(EVENT_ORDER, EVENT_ORDER[1:]):
-        if a in events and b in events:
-            durations[f"{a}_to_{b}_ms"] = round((events[b] - events[a]) / fps * 1000.0, 1)
-    if "address" in events and "top" in events and "impact" in events and events["impact"] > events["top"]:
-        durations["tempo_ratio"] = round((events["top"] - events["address"]) / (events["impact"] - events["top"]), 2)
-    # Sin ninguna repetición no hay escala, así que `hands_speed_cm_s` queda entero
-    # en `None` y la lista de abajo sale vacía: el pico es `None`, no un aviso de
-    # numpy. `max` sobre la lista ya filtrada evita el `nanmax` de un eje todo NaN.
-    peaks = {k: (round(float(max(vs)), 2) if (vs := [r[k] for r in rows if r[k] is not None and np.isfinite(r[k])]) else None) for k in ("hands_speed_bh_s", "hands_speed_cm_s") if k in names}
+    # `ref` es el cuadro contra el que `per_frame_table` midió TODAS las columnas
+    # `*_vs_address_*`: el address de la repetición 1, o el 0 si no hay ninguna.
+    # La repetición cuyo address es ese cuadro lee sus filas tal cual; las demás
+    # tienen que restarle el suyo (`_rebasar`).
+    ref = events.get("address") if events.get("address") is not None else 0
+    at = _en_cada_evento(rows, events, None)
+    deltas = _diferencias_vs_address(at, names)
+    durations = _duraciones(events, fps)
+    peaks = _picos(rows, names)
     # De dónde sale cada cm y contra qué cuadro se mide cada «vs address», dicho.
-    # Toda esta pantalla es la repetición que el motor eligió —la primera—: el
-    # overlay, las fotos por evento, la tabla por evento y el `address` de la tabla
-    # por cuadro salen de `analysis["events"][0]`. Dejarlo sin decir es suponer que
-    # el que mira sabe que hay otras.
     rep1 = analysis["reps"][0] if analysis["reps"] else None
-    escala_px = rep1["scale_px"] if rep1 else None
-    escala_fuente = rep1["scale_source"] if rep1 else None
     # El cuadro del máximo de la cadena sólo se publica con UNA repetición: con
     # varias, el que trae `quality.scale_px` es el de la repetición que aportó la
     # mediana, que puede no ser ésta. Mostrar ese cuadro al lado de esta escala
-    # sería mandar a mirar un cuadro que no la produjo.
+    # sería mandar a mirar un cuadro que no la produjo. Publicarlo por repetición
+    # pide un campo más en `reps[]` de `analysis.json`, o sea otro bump de
+    # contrato: no es de este encargo.
     escala_cuadro = analysis["quality"]["scale_px"]["frame"] if len(analysis["reps"]) == 1 else None
     # `explore.py` cae al cuadro 0 cuando no hay address (`ref` arriba). El valor no
     # cambia; lo que cambia es que ahora se dice cuál fue, porque «vs address» sin
@@ -485,15 +570,50 @@ def explore(video: Path | None, out_dir: Path, sport: SportConfig, *, height_m: 
     tiene_address = events.get("address") is not None
     referencia_cuadro = events.get("address") if tiene_address else (0 if rows else None)
     referencia_fuente = "address" if tiene_address else ("cuadro 0 (sin address)" if rows else None)
+
+    # Una entrada por repetición, con TODO lo que hasta el encargo 35 existía sólo
+    # para la primera. El front del encargo 36 elige una y cambia la pantalla
+    # entera con esto; hasta entonces nada la lee y nada se rompe. Los nombres son
+    # los mismos que los de primer nivel a propósito: es el mismo dato, una
+    # repetición más abajo.
+    repeticiones_detalle: list[dict] = []
+    for r, rep_ev in zip(analysis["reps"], analysis["events"]):
+        ev_f = {k: rep_ev[k]["frame"] for k in EVENT_ORDER if rep_ev.get(k)}
+        addr = ev_f.get("address")
+        base = None if (addr is None or addr == ref) else rows[addr]
+        at_r = _en_cada_evento(rows, ev_f, base)
+        repeticiones_detalle.append({
+            "rep": r["rep"], "frame_start": r["frame_start"], "frame_end": r["frame_end"],
+            "eventos_frame": ev_f, "eventos_t_s": {k: round(f / fps, 3) for k, f in ev_f.items()},
+            "eventos_tol_frames": {k: rep_ev[k]["tol_frames"] for k in EVENT_ORDER if rep_ev.get(k)},
+            "eventos_subcuadro": {k: rep_ev[k]["subframe"] for k in EVENT_ORDER if rep_ev.get(k) and rep_ev[k].get("subframe")},
+            "escala_px": r["scale_px"], "escala_fuente": r["scale_source"], "escala_cuadro": escala_cuadro,
+            "referencia_cuadro": addr if addr is not None else (0 if rows else None),
+            "referencia_fuente": "address" if addr is not None else ("cuadro 0 (sin address)" if rows else None),
+            "duraciones": _duraciones(ev_f, fps),
+            # El pico DENTRO de la repetición, no el del clip entero: el de primer
+            # nivel es el máximo de todos los cuadros y en un clip de dos swings
+            # no es de ninguno de los dos en particular.
+            "picos": _picos(rows, names, r["frame_start"], r["frame_end"]),
+            "en_cada_evento": at_r, "diferencias_vs_address": _diferencias_vs_address(at_r, names),
+        })
+
     summary = {"aviso": AVISO, "video": capture.original_name, "camino": capture.capture_path_id, "camino_calibrado": capture.capture_path_calibrated,
                "fps_provenance": capture.fps_provenance, "fps_aviso": nota_fuente or next((w for w in analysis["warnings"] if w.startswith("Tasa de cuadros sin verificar")), None),
+               # TRANSITORIOS: de acá hasta `columnas`, todo lo que habla de eventos,
+               # escala y referencia es la repetición 1, y está repetido en
+               # `repeticiones_detalle[0]`. Lo retira el encargo 36, cuando el front
+               # lea la repetición elegida.
                "fps_archivo": fps, "cuadros": len(rows), "altura_m": height_m, "gate_diria": gate_notes, "eventos_frame": events, "eventos_t_s": {k: round(f / fps, 3) for k, f in events.items()}, "eventos_tol_frames": tolerancias, "eventos_subcuadro": subframes,
-               "escala_px": escala_px, "escala_fuente": escala_fuente, "escala_cuadro": escala_cuadro,
+               "escala_px": rep1["scale_px"] if rep1 else None, "escala_fuente": rep1["scale_source"] if rep1 else None, "escala_cuadro": escala_cuadro,
                "referencia_cuadro": referencia_cuadro, "referencia_fuente": referencia_fuente,
                "repeticion_mostrada": rep1["rep"] if rep1 else None, "repeticiones": len(analysis["reps"]),
-               "duraciones": durations, "picos": peaks, "en_cada_evento": finite_or_none(at), "diferencias_vs_address": deltas, "calidad": analysis["quality"], "columnas": names}
+               "duraciones": durations, "picos": peaks, "en_cada_evento": finite_or_none(at), "diferencias_vs_address": deltas,
+               "repeticiones_detalle": repeticiones_detalle,
+               "calidad": analysis["quality"], "columnas": names}
     (take / "datos-eventos.json").write_text(json.dumps(finite_or_none(summary), ensure_ascii=False, indent=2), encoding="utf-8")
     _stage("dibujando", total=len(rows))
-    overlay, snaps = render(take, pose, rows, events, fps, capture, progress_cb=progress, banner=banner)
+    eventos_por_rep = [(d["rep"], d["eventos_frame"]) for d in repeticiones_detalle]
+    overlay, snaps = render(take, pose, rows, eventos_por_rep, fps, capture, progress_cb=progress, banner=banner)
     summary["archivos"] = [str(take / "datos-por-cuadro.csv"), str(take / "datos-eventos.json"), str(overlay), *map(str, snaps)]
     return summary

@@ -152,7 +152,9 @@ class Trabajo:
         }
 
     def archivos(self) -> dict[str, str]:
-        return {n: f"/api/datos/{self.id}/archivos/{n}" for n in ARCHIVOS if (self.dir / n).is_file()}
+        # Incluye las fotos de las repeticiones 2, 3, … (`evento-r2-top.png`), que
+        # no están en la lista fija: son tantas como repeticiones tenga el clip.
+        return {n: f"/api/datos/{self.id}/archivos/{n}" for n in archivos_servibles(self.dir)}
 
     def ficha(self) -> dict[str, Any] | None:
         """La ficha del archivo, del `capture.json`. `None` hasta que exista.
@@ -254,7 +256,7 @@ def ficha_de_captura(c: CaptureJson) -> dict[str, Any]:
 
 # Lo único que se sirve de la carpeta de un trabajo, con su media type. Cualquier
 # otro nombre es 404: nada de recorrer el disco desde la URL.
-ARCHIVOS: dict[str, str] = {
+_ARCHIVOS_FIJOS: dict[str, str] = {
     "overlay.mp4": "video/mp4",
     "evento-address.png": "image/png",
     "evento-top.png": "image/png",
@@ -270,6 +272,60 @@ ARCHIVOS: dict[str, str] = {
     # aparece únicamente cuando este archivo existe.
     "pose3d.json": "application/json",
 }
+
+#: Los cuatro eventos que tienen foto, en el orden en que los escribe el motor.
+#: Salen de `_ARCHIVOS_FIJOS` y no de una lista aparte: una sola fuente.
+_EVENTOS_CON_FOTO: tuple[str, ...] = tuple(n[len("evento-") : -len(".png")] for n in _ARCHIVOS_FIJOS if n.startswith("evento-"))
+
+#: Las fotos de las repeticiones 2, 3, … (`evento-r2-top.png`). No pueden estar
+#: en la lista fija porque son tantas como repeticiones tenga el clip, así que la
+#: lista blanca las acepta **por forma**: la expresión está anclada, el número es
+#: de uno a tres dígitos y el evento tiene que ser uno de los cuatro de arriba.
+#: No admite `/`, ni `.`, ni nada que pueda salir de la carpeta del trabajo, que
+#: es para lo que existe la lista (`service/app.py` §datos_archivo).
+_FOTO_DE_REPETICION = re.compile(r"^evento-r([1-9][0-9]{0,2})-(" + "|".join(re.escape(e) for e in _EVENTOS_CON_FOTO) + r")\.png$")
+
+
+class _Servibles(dict):
+    """La lista blanca: los nombres fijos, más las fotos por repetición, que son
+    una familia y no una lista.
+
+    Es un `dict` de verdad —iterarlo da los nombres fijos, que es lo que sale en
+    el mensaje del 404— con `get` y `in` extendidos a `evento-r<N>-<evento>.png`.
+    Se hizo así, y no agregando N entradas por clip, porque el número de
+    repeticiones lo decide el material y no hay ningún máximo razonable que
+    quemar."""
+
+    def get(self, nombre: str, default: Any = None) -> Any:  # type: ignore[override]
+        m = super().get(nombre)
+        if m is not None:
+            return m
+        return "image/png" if isinstance(nombre, str) and _FOTO_DE_REPETICION.match(nombre) else default
+
+    def __contains__(self, nombre: object) -> bool:
+        return super().__contains__(nombre) or bool(isinstance(nombre, str) and _FOTO_DE_REPETICION.match(nombre))
+
+
+ARCHIVOS: dict[str, str] = _Servibles(_ARCHIVOS_FIJOS)
+
+
+def _orden_foto(nombre: str) -> tuple[int, int]:
+    """Por repetición y, dentro de ella, por el orden de los eventos: así la lista
+    sale `r2-address, r2-top, …` y no en orden alfabético, que pondría el impacto
+    antes que el address."""
+    m = _FOTO_DE_REPETICION.match(nombre)
+    if m is None:
+        return (10**6, 10**6)
+    evento = m.group(2)
+    return (int(m.group(1)), _EVENTOS_CON_FOTO.index(evento) if evento in _EVENTOS_CON_FOTO else len(_EVENTOS_CON_FOTO))
+
+
+def archivos_servibles(d: Path) -> list[str]:
+    """Los nombres servibles que EXISTEN en la carpeta de un trabajo: los fijos en
+    el orden de la lista blanca, y después las fotos de las repeticiones 2, 3, …"""
+    fijos = [n for n in _ARCHIVOS_FIJOS if (d / n).is_file()]
+    extra = sorted((p.name for p in d.glob("evento-r*-*.png") if _FOTO_DE_REPETICION.match(p.name)), key=_orden_foto)
+    return fijos + extra
 
 
 class Exploracion:
