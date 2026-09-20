@@ -3,6 +3,100 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 20 de septiembre de 2026 — encargo 32: la máscara del sujeto, medida
+
+Prompt: `docs/prompts/32-mascara-del-sujeto.md`. Informe:
+`docs/informes/2026-09-20-32-mascara-del-sujeto.md`. **En paralelo con el 31**, que ya
+cerró y cuyos archivos no toca esta sesión. Commits: `83338ca` (el script) y el de
+cierre, con este archivo y el informe. **Es un experimento, no un producto**: no entra
+nada al motor.
+
+### Qué existe ahora
+
+- **`banco/mascara_sujeto.py`** (nuevo, 1164 líneas con su docstring). Mide qué compra y
+  qué cuesta una máscara del sujeto. **Importa** `kinelab.tools.camera_drift` (`mascara`,
+  `estimar`, `alto_cuerpo_px`, `primer_cuadro_con_pose`, `Params`) en vez de copiarla, más
+  `perception.video.iter_frames` y `perception.posestore.load_pose`. Nada de `kinelab/` lo
+  importa a él, no escribe en `analysis.json` ni en `pose.npz`, y no corre pose sobre nada.
+- **El método**: estabilizar contra el cuadro de referencia con la homografía del fondo del
+  29 · **mediana temporal por píxel** descartando de cada muestra los píxeles donde la pose
+  dice que está el sujeto (silueta dibujada desde los keypoints, **no** el `bbox`) · umbral
+  por píxel `max(12, 3 · 1,4826 · MAD)` con el MAD temporal del propio modelo · **dos
+  máscaras** del mismo umbral, la del sujeto (con cierre) y la **fina**.
+- **El palo** se ajusta con una **Hough anclada en las muñecas** más `cv2.fitLine` (Huber) en
+  tres vueltas. Anclar aguanta el shaft punteado; soltar después recupera la punta.
+- **Dos modelos de fondo**: el **global** (muestras de todo el clip, con el sujeto
+  enmascarado) y el **local** (±0,5 s alrededor de un evento, **sin** enmascarar, así el
+  cuerpo casi quieto entra al modelo y sólo queda de primer plano lo rápido).
+- **Controles por CLI**: `--ocupacion silueta|bbox|bbox-y-palo`, `--gris`, `--umbral`,
+  `--k-mad`, `--ventana-local`, `--paso-local`, `--solo-recortes` (escribe los recortes con
+  grilla para etiquetar sin armar ningún fondo), `--recorte-radio`, `--recorte-zoom`.
+- **Salidas** en `data/incoming/<clip>.kinelab/mascara/` y en `~/Desktop/cortado.kinelab/mascara/`
+  (las dos ignoradas por git): `mascara.json`, `etiquetas.json` (a ojo, `estimacion`),
+  `fondo-global.png`, `sin-fondo.png`, `palo-{global,local}-<cuadro>.png` con la recta
+  ajustada y la etiqueta a ojo dibujadas, `escala-<cuadro>.png` y `recorte-<cuadro>.png`.
+
+### Medido
+
+- **El palo en el top se separa y la recta coincide con lo que se ve.** `cortado3-lento`,
+  10 cuadros alrededor del top (1284), fondo local: error de ángulo contra la etiqueta a ojo
+  **0,9° de mediana, 1,6° de máximo, 10 de 10 por debajo de 5°**; punta a 37 px,
+  perpendicular a 13 px. Con fondo global, 8 de 10 (pierde el 1281 y el 1282).
+- **El palo en el impacto no existe en el archivo.** 10 cuadros alrededor de 1364: error
+  **66° de mediana** con fondo local, **0 de 8** por debajo de 5°. **A ojo tampoco**: en 2 de
+  los 10 cuadros no se distingue ningún shaft y en los otros 8 sólo un tramo pegado a la
+  mano. En `vid1` (UHD 60) **no se ve en ninguno de los 5** cuadros.
+- **La silueta del cuerpo sale a medias y depende de que el sujeto se corra del lugar**:
+  cobertura del bbox **0,378 / 0,422 / 0,182** y keypoints adentro de la máscara **62 % /
+  77 % / 27 %** en `cortado3-lento` / `vid1` / `cortado`. El indicador que lo explica es
+  **«sin fondo»** —píxeles que ninguna muestra mostró sin el sujeto encima—: **1,93 % · 0,58 %
+  · 6,09 %** del cuadro.
+- **La escala no mejora**: la extensión vertical de la máscara da **1,165–1,181** contra la
+  cadena (913–926 px en cinco cuadros, ±0,7 %) donde de coronilla a suela daría **1,044**. El
+  sobrante está abajo, 117–122 px por debajo de los tobillos (26–27 cm), y en `escala-1594.png`
+  se ve que **el zapato que no se mueve no entra en la máscara**. En `vid1`, 1,099–1,104.
+- **Cuesta** 68 ms/cuadro en FHD y 407 en UHD, más 27–72 s de modelo de fondo **por toma**
+  (no se reusa entre tomas: cambia la escena). Corridas completas: 148 s, 287 s y 43 s.
+- **Controles**: la ocupación por silueta contra `bbox` contra `bbox-y-palo` da **1,93 % ·
+  7,76 % · 10,53 %** de «sin fondo»; el color contra `--gris`, **0,383 / 62 %** contra
+  **0,309 / 50 %** de cobertura y keypoints, a cambio de 4× el tiempo del modelo.
+- **Suite del motor: 390 pasados, 0 fallados, exit 0** (sin cambios; no se tocó `kinelab/`).
+
+### Qué falta o no se probó
+
+- **La recomendación es no abrir un encargo de producto del shaft como evento**, y está en el
+  informe §6 con sus tres líneas. El evento que peor mide el motor es el impacto, y ahí la
+  máscara no ve el palo en ninguno de los tres clips.
+- **Lo que bloquea el impacto no es visión, es el obturador**, y **nunca se midió**:
+  `CAPTURA.md` §Luz calcula 21,2 px de barrido a 1/240 s y pide 1/1000 s, pero ningún clip del
+  repo tiene el obturador medido ni declarado. Está propuesto como encargo chico en el informe.
+- **La tabla de modelos de segmentación** (informe §5) es de licencias, no de mediciones: dos
+  de sus seis filas **no tienen respuesta a la tercera pregunta de ADR-010** (datos de
+  entrenamiento). Nada se instaló ni se corrió.
+- **No se probó en `down_the_line`** porque no hay ningún clip de esa vista.
+- **La máscara fina resta la silueta de la pose** antes de buscar el palo, así que el tramo de
+  shaft que pasa por delante del cuerpo se pierde por construcción.
+- **`cortado` tiene una segunda persona en cuadro** con su palo visible; no rompió nada acá,
+  pero es material que el gate `single_subject` debería mirar.
+- No se tocó `kinelab/`, `sports/`, `service/`, `web/`, `truth/`, ningún `analysis.json`,
+  ningún `pose.npz` ni ningún umbral del motor. No se instaló nada, no se corrió pose sobre
+  cuadros enmascarados, no se estimó el palo desde el antebrazo y no se compensó la deriva en
+  ninguna métrica. El prompt no tenía front.
+
+### Desviaciones
+
+- **Del contrato, ninguna.** No entra ni sale ningún campo de ningún schema y ningún valor
+  del motor cambia: todo lo que escribe esta sesión vive en `data/incoming/*/mascara/` y en
+  `~/Desktop/cortado.kinelab/mascara/`, que git ignora.
+- **Del prompt, una: el fondo local.** El prompt pedía «mediana temporal de los cuadros donde
+  el sujeto no está». Eso es el fondo **global**, y está hecho; pero el palo en el impacto vive
+  encima del propio cuerpo, donde ese modelo no tiene fondo, así que se agregó un segundo
+  modelo con una ventana de ±0,5 s **sin** enmascarar. Es la misma mediana con otra ventana,
+  no otro algoritmo, y los dos se reportan por separado. Sin él, el fondo global perdía además
+  2 de los 10 cuadros del top.
+
+---
+
 ## 18 de septiembre de 2026 — encargo 31: el fin del acompañamiento, dentro de su repetición
 
 Prompt: `docs/prompts/31-follow-end-en-su-repeticion.md`. Informe:
