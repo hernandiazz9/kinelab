@@ -3,6 +3,115 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 20 de septiembre de 2026 — encargo 36: el selector de repetición
+
+Prompt: `docs/prompts/36-selector-de-repeticion.md`. Informe:
+`docs/informes/2026-09-20-36-selector-de-repeticion.md`. **Sin sesión en paralelo** (lo
+pedía el prompt). Commits: `196e3a4` (contrato 2.2.0 y `scale_frame`), `e9e2f6e` (el
+selector y el respaldo), `a2cded3` (el rótulo de los picos) y el de cierre, con este
+archivo y el informe. Hecho en un worktree, arrancado desde `main` (`4b31009`).
+
+### Qué existe ahora
+
+- **La pantalla deja elegir la repetición y toda cambia con ella**: las métricas, la tabla
+  por evento, la tabla por cuadro (cabecera y tramo marcado), el reproductor, los dos
+  cuadros del impacto, la barra de sub-cuadro y las fotos. El selector
+  (`web/src/components/SelectorRepeticion.tsx`) va arriba de las métricas y **no se muestra
+  con una sola repetición** ni con un trabajo viejo.
+- **El respaldo está en UN solo lugar**, `web/src/lib/repeticiones.ts`: devuelve las
+  repeticiones de un trabajo desde `repeticiones_detalle` y, cuando no está, el primer nivel
+  como repetición única. Ahí viven también la frase «Repetición N de M» —que antes se
+  componía en tres componentes desde dos fuentes—, los nombres de las fotos
+  (`evento-<id>` para la 1 y `evento-r<N>-<id>` para las demás, en PNG y en JPG) y la
+  búsqueda de la repetición en `analysis.reps` **por número, no por índice**.
+- **`analysis.json` está en 2.2.0** con `reps[].scale_frame`: el cuadro del máximo de la
+  cadena de la estatura en ESA repetición, o sea de dónde salió su `scale_px`. Campo nuevo,
+  opcional y **nullable** (con el fallback de escala no hay máximo que mirar). **Minor**:
+  un 2.1.0 sigue validando y ningún valor publicado se mueve, así que no se movió ningún
+  `metric_version` ni el `registry_version` (golf sigue en 0.3.0). **No hay entrada en
+  `CONTRATO.md` §Desviaciones**: el bump sigue §Versionado tal como está escrita.
+- **`escala_cuadro` dejó de ser inútil.** Se calculaba una vez fuera del bucle desde
+  `quality.scale_px["frame"]` y salía en `null` con más de una repetición; ahora sale el de
+  cada una. El de primer nivel pasa de `null` a el de la repetición 1, igual que su
+  `escala_px`; con una sola repetición vale exactamente lo mismo que antes.
+- **El estado que se quedaba pegado**: al cambiar de repetición el reproductor salta a su
+  address, los dos cuadros del impacto se cierran y la tabla por cuadro se lleva a su primer
+  cuadro. El **filtro de columnas no se resetea a propósito**: es una preferencia de quien
+  mira, no un dato de ninguna repetición.
+- **El rótulo de los picos dice de qué son**: «máximo en esta repetición» con el detalle y
+  «máximo en todo el clip» con el respaldo, donde lo único que hay es el de primer nivel.
+  Se descubrió mirando la pantalla, no leyendo el código.
+- **Tests nuevos**: 4 en `tests/test_una_sola_escala.py`.
+
+### Medido
+
+- **Suites**: motor **462 pasados, 0 fallados, exit 0** con `KINELAB_MODELS` apuntando a los
+  pesos del checkout principal (eran 458 en la misma condición; **+4 tests**); sin esa
+  variable, 461 + 1 salteado. Arnés **43 pasados, 0 fallados, exit 0**. `pnpm lint` exit 0 ·
+  `pnpm build` exit 0 · verificador de retirados **exit 0, 0 fallas, 13 bordes de versión**.
+- **Corrida real**: `cortado3-lento.mp4` subido por la API (2977 cuadros, 240,15 fps),
+  trabajo `b84c7b2679bf470097e52d5b8a3fdc08`, `analysis.json` **2.2.0**, 2 repeticiones.
+  Rep 1: 1052–1765, eventos 1052 · 1284 · 1364, **783,9 px en el cuadro 1594**, 966,1 /
+  333,1 ms, tempo 2,90, pico 4,76 bh/s, `pelvis_sway_top_cm` +3,7 e `impact` 22,6 cm.
+  Rep 2: 2322–2970, eventos 2322 · 2548 · 2624, **831,3 px en el cuadro 2970**, 941,1 /
+  316,5 ms, tempo 2,97, pico **4,85 bh/s**, `pelvis_sway_top_cm` **−7,1** e `impact` **7,7**.
+- **`quality.scale_px` publica `{value: 783.9, frame: 1594}`**: el cuadro de la repetición
+  **1**. Ésa es la demostración de por qué hacía falta `scale_frame` — era el único cuadro
+  que la pantalla tenía y con dos repeticiones no es el de las dos.
+- **La fila cruda de la tabla por evento**, repetición 2: `pelvis_dx_vs_address_cm` da
+  **−7,053** en el top (la métrica, −7,1) y **0,0** en su propio address. Los **4,84 cm**
+  que el 35 midió contra un MDC de 2,42, ahora visibles en pantalla.
+- **En el navegador** (excepción que pidió Hernán): tocando el botón «2» cambian las tres
+  frases a «repetición 2 de 2», la escala en los tres lugares, los «vs address» a «contra el
+  address (cuadro 2322)», las fotos a `evento-r2-*.png`, el reproductor a «cuadro 2322 /
+  2976 · 9,669 s · ADDRESS» y la tabla por cuadro a «esta repetición: 2322–2970», con
+  `escala usada en esta fila` vacía hasta el 2321 y **831,3** desde el 2322. Volviendo a la
+  1, todo vuelve. Un trabajo viejo (`vid1`, contrato 1.2.0): **cero botones de selector**,
+  «Repetición 1 de 1.», sin línea de escala, las cuatro fotos `evento-*.png` y el aviso
+  «1.2.0 y el vigente es 2.2.0».
+- **El ejemplo del repo**, con tres repeticiones, sale con `scale_frame` **118 / 811 / 1503**
+  y el `quality` publica 118.
+
+### Qué falta o no se probó
+
+- **Los campos de primer nivel de `datos-eventos.json` siguen ahí**, duplicando
+  `repeticiones_detalle[0]`, y el test que los ata sigue en pie: el prompt los dejó para
+  **R10**, el encargo que regenera todo después de la sesión de validación. Hoy son lo único
+  que hace visibles a los 19 trabajos de `data/exploracion/` y a los 3 de la demo, que son
+  anteriores al 33.
+- **El `picos` de primer nivel sigue siendo el del clip entero.** No se movió: cambiarlo es
+  mover un valor publicado y es decisión de dominio. Por eso el rótulo tiene dos versiones.
+- **El selector no viaja en la URL**: un enlace `?trabajo=<id>` siempre abre la repetición 1,
+  y el índice se resetea al abrir otro trabajo y al recargar.
+- **Las tres frases dicen lo mismo en un trabajo NUEVO.** En uno viejo, la tabla por evento y
+  la tabla por cuadro siguen sin decirla —es lo que hacían hoy, porque el resumen no declara
+  `repeticion_mostrada`— y sólo la dicen las métricas. Las dos cosas que pedía el prompt
+  («que digan las tres lo mismo» y «que un trabajo viejo se vea exactamente como hoy») no se
+  pueden cumplir a la vez ahí, y se eligió la segunda.
+- **El verificador de retirados no corre en un worktree limpio**: lee `web/public/demo/`, que
+  git ignora. Para correrlo con el código de esta rama hubo que **copiar** los archivos que
+  mira (`datos-eventos.json`, `datos-por-cuadro.csv`, `analysis.json` de cada trabajo,
+  `index.json`, y `data/incoming/vid1.kinelab/datos-eventos.json`). Con la carpeta
+  incompleta muere con ENOENT y **exit 1**; el `exit 0` que anotó el 35 es cuando falta
+  entera. Nada de lo copiado entró a ningún commit: está en `.gitignore`.
+- **No se regeneró `data/exploracion/` ni la demo** (lo prohíbe el prompt). El trabajo nuevo
+  de `cortado3-lento` (`b84c7b26…`) es el único al contrato vigente y **queda en disco**.
+- **No se tocó** `kinelab/metrics/`, `sports/`, `truth/`, `service/`, ningún umbral, el 717,
+  ningún `metric_version` ni el `registry_version`. No se agregó infraestructura de tests a
+  `web/` (ADR-015).
+
+### Desviaciones
+
+- **Del contrato, ninguna**, y por eso no hay entrada en §Desviaciones: 2.1.0 → 2.2.0 es
+  minor por §Versionado tal como está escrita —campo nuevo, opcional, ningún valor
+  publicado se mueve— y no hace falta la excusa que necesitó el bump de `fps_provenance`.
+- **Del prompt, dos.** (1) Las tres frases «repetición N de M» coinciden en un trabajo nuevo
+  pero no en uno viejo, donde dos de ellas siguen sin decirla; ver arriba. (2) El rótulo de
+  los picos no estaba en el prompt y se corrigió igual: con el respaldo, decir «máximo en
+  esta repetición» sobre el máximo del clip era falso, y se vio en la pantalla.
+
+---
+
 ## 20 de septiembre de 2026 — encargo 35: el motor publica todas las repeticiones
 
 Prompt: `docs/prompts/35-el-motor-publica-todas-las-repeticiones.md`. Informe:
