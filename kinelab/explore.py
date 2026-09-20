@@ -160,7 +160,34 @@ def _vs_vertical_deg(k, i, j):
     return np.degrees(np.arctan2(d[:, 0], d[:, 1]))
 
 
-def per_frame_table(pose, fps: float, height_m: float | None, address: int | None, *, wrist_score_min: float = 0.0) -> tuple[list[str], list[dict]]:
+def _scale_per_frame(bh: np.ndarray, reps: list[dict] | None) -> np.ndarray:
+    """El divisor en píxeles de cada cuadro: `(T,)`, `NaN` donde no hay ninguno.
+
+    Sin `reps` es `body_height_px` del cuadro, que es la convención anterior. Con
+    `reps`, es la escala de la repetición que contiene al cuadro — la misma que
+    dividió a sus métricas en cm— y `NaN` afuera de todas. Ver `per_frame_table`
+    y `CONTRATO.md` §La escala."""
+    if reps is None:
+        return np.asarray(bh, dtype=float)
+    out = np.full(len(bh), np.nan)
+    for r in reps:
+        lo = max(0, int(r.get("frame_start", 0)))
+        hi = min(len(bh) - 1, int(r.get("frame_end", len(bh) - 1)))
+        if hi < lo:
+            continue
+        v = r.get("scale_px")
+        # `stature_chain_rep` con su número: un solo divisor para toda la
+        # repetición. Cualquier otro caso —la caída a `body_height_px` del
+        # cuadro, o un trabajo sin escala publicada— usa la altura de cuerpo
+        # cuadro a cuadro, que es lo que hizo `px_to_cm`.
+        if r.get("scale_source") == "stature_chain_rep" and isinstance(v, (int, float)) and np.isfinite(v) and v > 0:
+            out[lo : hi + 1] = float(v)
+        else:
+            out[lo : hi + 1] = np.asarray(bh, dtype=float)[lo : hi + 1]
+    return out
+
+
+def per_frame_table(pose, fps: float, height_m: float | None, address: int | None, *, wrist_score_min: float = 0.0, reps: list[dict] | None = None) -> tuple[list[str], list[dict]]:
     """Una fila por cuadro. `wrist_score_min` es el umbral del DEPORTE por debajo del
     cual una muñeca no entra al centro de manos: lo pasa `explore()` desde
     `sport.events.params`, igual que `build_analysis`.
@@ -172,6 +199,26 @@ def per_frame_table(pose, fps: float, height_m: float | None, address: int | Non
     overlay mostraba un centro de manos que no era el que había elegido el evento.
     Default 0,0 = sin umbral, la firma anterior (la usa el arnés, que no tiene
     deporte).
+
+    **`reps` es la escala.** Son las repeticiones de `analysis.json`, cada una con
+    su `scale_px` y su `scale_source` (CONTRATO.md §La escala). Con ellas, cada
+    fila divide por la escala de la repetición que la contiene, que es la misma que
+    usaron las métricas: hasta el encargo 33 esta tabla convertía con el
+    `body_height_px` **de cada cuadro** y las métricas con la escala de la
+    repetición, así que la misma pantalla mostraba dos números en cm distintos para
+    el mismo evento y ninguno decía cuál había usado.
+
+    - repetición con `scale_source: stature_chain_rep` → todas sus filas dividen por
+      ese único número;
+    - repetición con `scale_source: body_height_px_frame` → la cadena no se pudo
+      medir y las métricas cayeron a la altura de cuerpo del cuadro: la tabla hace
+      lo mismo, cuadro a cuadro;
+    - **cuadro fuera de toda repetición → no hay cm**, porque no hay ninguna escala
+      que sea la suya. Antes había un número, y era el de una escala que no usaba
+      nadie más.
+    - `reps=None` → la conversión de antes (`body_height_px` por cuadro, en todos
+      los cuadros). Es la firma anterior, y la columna `escala_px` lo declara fila
+      por fila en lugar de dejarlo a la imaginación.
     """
     k = interpolate_gaps(pose.keypoints, 5).astype(float)
     sig = swing_signals(pose, fps, wrist_score_min=wrist_score_min)
@@ -181,10 +228,17 @@ def per_frame_table(pose, fps: float, height_m: float | None, address: int | Non
     mid_sh = (k[:, H.LEFT_SHOULDER] + k[:, H.RIGHT_SHOULDER]) / 2
     ankle_y = np.nanmean(np.stack([k[:, H.LEFT_ANKLE, 1], k[:, H.RIGHT_ANKLE, 1]]), axis=0)
     hands = sig.hands_raw
-    cm = (height_m * 100.0 / bh) if height_m else None  # cm por píxel, por cuadro
+    escala = _scale_per_frame(bh, reps)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        cm = (height_m * 100.0 / escala) if height_m else None  # cm por píxel, por cuadro
     ref = address if address is not None else 0
     cols: dict[str, np.ndarray] = {
         "frame": np.arange(T), "t_s": pose.timestamps_s, "plausibility_flags": pose.plausibility.astype(int), "body_height_px": bh,
+        # El divisor de las columnas en cm de ESTA fila, en píxeles. Está en la
+        # tabla y no sólo en la cabecera porque con dos repeticiones son dos
+        # números distintos, y porque un cm sin su divisor no se puede auditar
+        # (cementerio 6 y 8 de HERENCIA.md). Vacío = esta fila no tiene cm.
+        "escala_px": escala,
         "elbow_left_deg": _ang(k, H.LEFT_SHOULDER, H.LEFT_ELBOW, H.LEFT_WRIST), "elbow_right_deg": _ang(k, H.RIGHT_SHOULDER, H.RIGHT_ELBOW, H.RIGHT_WRIST),
         "knee_left_deg": _ang(k, H.LEFT_HIP, H.LEFT_KNEE, H.LEFT_ANKLE), "knee_right_deg": _ang(k, H.RIGHT_HIP, H.RIGHT_KNEE, H.RIGHT_ANKLE),
         "hip_left_deg": _ang(k, H.LEFT_SHOULDER, H.LEFT_HIP, H.LEFT_KNEE), "hip_right_deg": _ang(k, H.RIGHT_SHOULDER, H.RIGHT_HIP, H.RIGHT_KNEE),
@@ -374,7 +428,15 @@ def explore(video: Path | None, out_dir: Path, sport: SportConfig, *, height_m: 
         # El instante entre dos cuadros, donde el deporte lo defina (hoy: sólo el
         # impacto). El cuadro entero de arriba no cambia: esto lo acompaña.
         subframes = {k: rep[k]["subframe"] for k in EVENT_ORDER if rep.get(k) and rep[k].get("subframe")}
-    names, rows = per_frame_table(pose, fps, height_m, events.get("address"), wrist_score_min=float(getattr(sport.events.params, "wrist_score_min", 0.0) or 0.0) if sport.events is not None else 0.0)
+    # La tabla por cuadro divide por la escala de la repetición que contiene a cada
+    # cuadro: la MISMA que usaron las métricas de `analysis.json` (CONTRATO.md §La
+    # escala). Antes dividía por el `body_height_px` de cada cuadro y los dos
+    # números en cm del mismo evento no coincidían, sin que nada lo dijera.
+    names, rows = per_frame_table(
+        pose, fps, height_m, events.get("address"),
+        wrist_score_min=float(getattr(sport.events.params, "wrist_score_min", 0.0) or 0.0) if sport.events is not None else 0.0,
+        reps=analysis["reps"],
+    )
     with (take / "datos-por-cuadro.csv").open("w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=names)
         w.writeheader()
@@ -392,10 +454,36 @@ def explore(video: Path | None, out_dir: Path, sport: SportConfig, *, height_m: 
             durations[f"{a}_to_{b}_ms"] = round((events[b] - events[a]) / fps * 1000.0, 1)
     if "address" in events and "top" in events and "impact" in events and events["impact"] > events["top"]:
         durations["tempo_ratio"] = round((events["top"] - events["address"]) / (events["impact"] - events["top"]), 2)
-    peaks = {k: (None if not np.isfinite(v := np.nanmax([r[k] for r in rows if r[k] is not None] or [np.nan])) else round(float(v), 2)) for k in ("hands_speed_bh_s", "hands_speed_cm_s") if k in names}
+    # Sin ninguna repetición no hay escala, así que `hands_speed_cm_s` queda entero
+    # en `None` y la lista de abajo sale vacía: el pico es `None`, no un aviso de
+    # numpy. `max` sobre la lista ya filtrada evita el `nanmax` de un eje todo NaN.
+    peaks = {k: (round(float(max(vs)), 2) if (vs := [r[k] for r in rows if r[k] is not None and np.isfinite(r[k])]) else None) for k in ("hands_speed_bh_s", "hands_speed_cm_s") if k in names}
+    # De dónde sale cada cm y contra qué cuadro se mide cada «vs address», dicho.
+    # Toda esta pantalla es la repetición que el motor eligió —la primera—: el
+    # overlay, las fotos por evento, la tabla por evento y el `address` de la tabla
+    # por cuadro salen de `analysis["events"][0]`. Dejarlo sin decir es suponer que
+    # el que mira sabe que hay otras.
+    rep1 = analysis["reps"][0] if analysis["reps"] else None
+    escala_px = rep1["scale_px"] if rep1 else None
+    escala_fuente = rep1["scale_source"] if rep1 else None
+    # El cuadro del máximo de la cadena sólo se publica con UNA repetición: con
+    # varias, el que trae `quality.scale_px` es el de la repetición que aportó la
+    # mediana, que puede no ser ésta. Mostrar ese cuadro al lado de esta escala
+    # sería mandar a mirar un cuadro que no la produjo.
+    escala_cuadro = analysis["quality"]["scale_px"]["frame"] if len(analysis["reps"]) == 1 else None
+    # `explore.py` cae al cuadro 0 cuando no hay address (`ref` arriba). El valor no
+    # cambia; lo que cambia es que ahora se dice cuál fue, porque «vs address» sin
+    # address no es «vs address».
+    tiene_address = events.get("address") is not None
+    referencia_cuadro = events.get("address") if tiene_address else (0 if rows else None)
+    referencia_fuente = "address" if tiene_address else ("cuadro 0 (sin address)" if rows else None)
     summary = {"aviso": AVISO, "video": capture.original_name, "camino": capture.capture_path_id, "camino_calibrado": capture.capture_path_calibrated,
                "fps_provenance": capture.fps_provenance, "fps_aviso": nota_fuente or next((w for w in analysis["warnings"] if w.startswith("Tasa de cuadros sin verificar")), None),
-               "fps_archivo": fps, "cuadros": len(rows), "altura_m": height_m, "gate_diria": gate_notes, "eventos_frame": events, "eventos_t_s": {k: round(f / fps, 3) for k, f in events.items()}, "eventos_tol_frames": tolerancias, "eventos_subcuadro": subframes, "duraciones": durations, "picos": peaks, "en_cada_evento": finite_or_none(at), "diferencias_vs_address": deltas, "calidad": analysis["quality"], "columnas": names}
+               "fps_archivo": fps, "cuadros": len(rows), "altura_m": height_m, "gate_diria": gate_notes, "eventos_frame": events, "eventos_t_s": {k: round(f / fps, 3) for k, f in events.items()}, "eventos_tol_frames": tolerancias, "eventos_subcuadro": subframes,
+               "escala_px": escala_px, "escala_fuente": escala_fuente, "escala_cuadro": escala_cuadro,
+               "referencia_cuadro": referencia_cuadro, "referencia_fuente": referencia_fuente,
+               "repeticion_mostrada": rep1["rep"] if rep1 else None, "repeticiones": len(analysis["reps"]),
+               "duraciones": durations, "picos": peaks, "en_cada_evento": finite_or_none(at), "diferencias_vs_address": deltas, "calidad": analysis["quality"], "columnas": names}
     (take / "datos-eventos.json").write_text(json.dumps(finite_or_none(summary), ensure_ascii=False, indent=2), encoding="utf-8")
     _stage("dibujando", total=len(rows))
     overlay, snaps = render(take, pose, rows, events, fps, capture, progress_cb=progress, banner=banner)

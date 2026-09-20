@@ -49,6 +49,15 @@ STATURE_CHAIN: tuple[tuple[int, ...], ...] = (
 # del finish dura poco y una ventana larga la aplanaría.
 SCALE_SMOOTH_S = 0.25
 
+# De dónde sale el divisor de cada cm. Son dos y sólo dos, porque son los dos
+# caminos que tiene `px_to_cm`: la cadena de la estatura de la repetición, o la
+# caída a `body_height_px` del cuadro cuando la cadena no se puede medir.
+# Viajan a `reps[].scale_source` (CONTRATO.md §La escala) y a la pantalla: un
+# número en cm que no dice por cuál de los dos se dividió no se puede auditar,
+# y es la familia de falsedad del cementerio 6 y 8 de `HERENCIA.md`.
+SCALE_SOURCE_CHAIN = "stature_chain_rep"
+SCALE_SOURCE_FRAME = "body_height_px_frame"
+
 
 def _link_point(kpts: np.ndarray, joints: tuple[int, ...]) -> np.ndarray:
     """El punto medio de `joints` por cuadro, `(T,2)`. Con un solo keypoint es
@@ -148,12 +157,19 @@ class MetricContext:
 
     def scale_detail(self) -> dict:
         """La escala de esta repetición, con el cuadro en que la cadena llegó a su
-        máximo y cómo se obtuvo. Es el número que divide a toda métrica en cm: va
-        a `quality.scale_px` para que se pueda auditar (CONTRATO.md §La escala)."""
+        máximo, cómo se obtuvo y **de dónde sale el divisor de cada cm**
+        (`source`). Va a `reps[].scale_px` / `reps[].scale_source` y, agregada
+        entre repeticiones, a `quality.scale_px` (CONTRATO.md §La escala).
+
+        `source` es `stature_chain_rep` cuando hay cadena —un solo número para
+        toda la repetición— y `body_height_px_frame` cuando no la hay: ahí
+        `px_to_cm` cae a la altura de cuerpo **del cuadro**, así que no hay un
+        divisor único y `value` queda en `None`. Los dos casos siguen dando
+        números; lo que cambia es que ahora dicen cuál de los dos son."""
         value = self.scale_px()
         if value is None:
-            return {"value": None, "frame": None, "method": "sin_cadena_medible"}
-        return {"value": round(value, 1), "frame": int(self._scale_frame), "method": "max_stature_chain_px"}
+            return {"value": None, "frame": None, "method": "sin_cadena_medible", "source": SCALE_SOURCE_FRAME}
+        return {"value": round(value, 1), "frame": int(self._scale_frame), "method": "max_stature_chain_px", "source": SCALE_SOURCE_CHAIN}
 
     def px_to_cm(self, px: float, frame: int) -> float | None:
         """Píxeles → cm con la escala de la repetición y la altura declarada.

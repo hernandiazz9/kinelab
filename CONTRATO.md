@@ -255,7 +255,7 @@ quality       detection_rate, body_height_px {median, min, max, frac_of_frame},
               scale_px {value, frame, method}, camera_motion_px,
               verdict: confiable | con_reservas | no_usar, reasons[]
 events[]      una por repetición — ver abajo
-reps[]        una por repetición — métricas con su sextuplo
+reps[]        una por repetición — scale_px, scale_source y las métricas con su sextuplo
 summary       agregados + repetibilidad
 series        t[], y algunas señales a ≤ 10 Hz para los gráficos
 warnings[]    avisos legibles
@@ -534,7 +534,30 @@ proyectada** (`kinelab/metrics/core.py`: `stature_chain_px`,
   cero, que es la convención anterior: un número con su sesgo conocido antes que
   un `null`.
 
-**Y queda escrito en el JSON**, en `quality.scale_px`:
+**Y queda escrito en el JSON, en dos lugares que no son el mismo número.**
+
+El divisor de verdad es **por repetición**, y desde 2.1.0 viaja en `reps[]`:
+
+```json
+{"rep": 1, "frame_start": 1052, "frame_end": 1765,
+ "scale_px": 783.9, "scale_source": "stature_chain_rep", "metrics": {…}}
+```
+
+`scale_source` tiene dos valores y sólo dos, porque son los dos caminos de
+`px_to_cm`:
+
+- **`stature_chain_rep`** — hay cadena: `scale_px` es el máximo de la cadena en
+  la repetición y divide a todas sus métricas en cm.
+- **`body_height_px_frame`** — la cadena no se pudo medir en ningún cuadro de la
+  repetición, y cada métrica cayó a la altura de cuerpo **del cuadro de su
+  propio evento cero**. Ahí `scale_px` es `null`, porque no hay un divisor
+  único: dos métricas con eventos cero distintos se dividieron por números
+  distintos. El fallback **sigue vivo** —un número con su sesgo conocido antes
+  que un `null`—, lo que cambia es que ahora dice que lo es. La frase para el
+  entrenador va a `warnings[]`: `$defs/metric` es `additionalProperties: false`
+  y no admite un campo nuevo en el sextuplo.
+
+Y el agregado sigue en `quality.scale_px`:
 
 ```json
 "scale_px": {"value": 1089.6, "frame": 75, "method": "max_stature_chain_px"}
@@ -544,10 +567,25 @@ Es un solo número que multiplica a ocho métricas: si está mal por un factor,
 las ocho devuelven valores plausibles multiplicados por ese factor y nada las
 delata (cementerio 6 de `HERENCIA.md`). Por eso viaja con el **cuadro** en que
 se midió —el del máximo de la cadena, que se puede ir a mirar— y con el método.
-Hay una escala **por repetición**; con varias, el que se publica es la mediana y
-el cuadro es el de la repetición que la aporta, nunca un promedio de cuadros
-(que no sería ningún cuadro). Sin ninguna escala medible, `value` y `frame` son
-`null` y `method` dice por qué.
+Hay una escala **por repetición**; con varias, el que se publica acá es la
+**mediana entre repeticiones** y el cuadro es el de la repetición que la aporta,
+nunca un promedio de cuadros (que no sería ningún cuadro). **Con dos o más
+repeticiones, entonces, `quality.scale_px` no es el divisor de ninguna**, y el
+`method` lo dice y manda a `reps[].scale_px`. Sin ninguna escala medible,
+`value` y `frame` son `null` y `method` dice por qué.
+
+**Una sola escala por pantalla.** La tabla por cuadro (`datos-por-cuadro.csv`)
+divide cada fila por la escala de **la repetición que la contiene**, que es la
+misma que usaron las métricas, y la publica fila por fila en la columna
+`escala_px`. Un cuadro fuera de toda repetición **no tiene cm**: no hay ninguna
+escala que sea la suya. Hasta el 20/9 esa tabla convertía con el
+`body_height_px` de **cada cuadro** mientras las métricas usaban la de la
+repetición, así que la misma pantalla mostraba dos números en cm para el mismo
+evento sin que nada lo dijera: medido sobre los `pose.npz` guardados, de **1,7
+a 4,4 cm** de diferencia —`pelvis_sway_impact_cm` de `cortado3-lento` daba 22,6
+cm en las métricas y 26,99 en la tabla, contra un MDC de 2,42—. Es la misma
+familia del cementerio 6 y 8 de `HERENCIA.md`: una constante de normalización
+que nadie escribe devuelve números plausibles multiplicados por un factor.
 
 **Por qué no la altura cabeza→tobillos del address, que es lo que había.** Un
 golfista en address está agachado hacia la pelota, o sea **hacia la cámara** en
@@ -599,7 +637,26 @@ homografía.
 
 - `schema_version` semver. **Renombrar un campo o cambiar una unidad es
   major**, aunque parezca inocente: la IA que lee el JSON ya aprendió el
-  nombre viejo. Métrica nueva y opcional es minor. Va en **2.0.0**.
+  nombre viejo. Métrica nueva y opcional es minor. Va en **2.1.0**.
+
+  **2.1.0 es minor, sin discusión**: entran **dos campos nuevos y opcionales**,
+  `reps[].scale_px` y `reps[].scale_source` (§La escala). Un `analysis.json`
+  2.0.0 sigue validando contra el schema nuevo —no le falta nada obligatorio— y
+  ningún lector se rompe. **Ningún valor publicado cambia**: los dos campos
+  dicen cuál era el divisor que ya se estaba usando, así que tampoco se mueve
+  ningún `metric_version` ni el `registry_version`. Van opcionales y no
+  requeridos a propósito: hacerlos obligatorios habría invalidado los
+  `analysis.json` 2.0.0 ya escritos, que es lo que §Versionado llama major, y
+  para eso habría hecho falta la excusa que se usó en el bump de
+  `fps_provenance` (§Desviaciones). El motor los escribe **siempre**, en `null`
+  cuando no hay escala: un `null` nunca se omite.
+
+  Lo que se arregla con ellos: `quality.scale_px` es la **mediana entre
+  repeticiones**, así que con dos o más **no es el divisor de ninguna**, y la
+  tabla por cuadro no tenía de dónde sacar la escala correcta. Convertía con el
+  `body_height_px` de cada cuadro y las métricas con la de la repetición: dos
+  números en cm para el mismo evento en la misma pantalla, de 1,7 a 4,4 cm de
+  diferencia en los clips reales, y ninguno decía cuál usaba.
 
   **Por qué 2.0.0 es major, sin discusión**: se **sacan dos campos requeridos**,
   `summary.gain` y `events[].sequence_order` (ADR-018). Un `analysis.json` 1.2.0

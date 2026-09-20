@@ -1,6 +1,6 @@
 {
   "header": {
-    "schema_version": "2.0.0",
+    "schema_version": "2.1.0",
     "engine_version": "0.0.1",
     "registry_version": "0.3.0",
     "generated_at": "2026-09-12T12:00:00+00:00",
@@ -37,7 +37,7 @@
     "scale_px": {
       "value": 900.0,
       "frame": 118,
-      "method": "max_stature_chain_px · mediana de 3 repeticiones"
+      "method": "max_stature_chain_px · mediana entre 3 repeticiones: no es el divisor de ninguna, el de cada una está en reps[].scale_px"
     },
     "verdict": "confiable",
     "reasons": []
@@ -110,7 +110,7 @@
         "t_s": 2.7833,
         "tol_frames": 2,
         "uncertainty_s": 0.01667,
-        "method": "stable_window",
+        "method": "stable_window_in_rep",
         "manual": false,
         "frame_detected": null,
         "subframe": null
@@ -183,7 +183,7 @@
         "t_s": 8.5583,
         "tol_frames": 2,
         "uncertainty_s": 0.01667,
-        "method": "stable_window",
+        "method": "stable_window_in_rep",
         "manual": false,
         "frame_detected": null,
         "subframe": null
@@ -256,7 +256,7 @@
         "t_s": 14.325,
         "tol_frames": 2,
         "uncertainty_s": 0.01667,
-        "method": "stable_window",
+        "method": "stable_window_in_rep",
         "manual": false,
         "frame_detected": null,
         "subframe": null
@@ -271,6 +271,8 @@
       "t_start": 0.9833,
       "t_end": 2.7833,
       "peak_speed_bh_s": 1.383,
+      "scale_px": 900.0,
+      "scale_source": "stature_chain_rep",
       "metrics": {
         "backswing_duration_ms": {
           "value": 916.7,
@@ -526,6 +528,8 @@
       "t_start": 6.7583,
       "t_end": 8.5583,
       "peak_speed_bh_s": 1.383,
+      "scale_px": 900.0,
+      "scale_source": "stature_chain_rep",
       "metrics": {
         "backswing_duration_ms": {
           "value": 908.3,
@@ -781,6 +785,8 @@
       "t_start": 12.525,
       "t_end": 14.325,
       "peak_speed_bh_s": 1.383,
+      "scale_px": 900.0,
+      "scale_source": "stature_chain_rep",
       "metrics": {
         "backswing_duration_ms": {
           "value": 908.3,
