@@ -28,3 +28,9 @@ banco/models/
 
 # lanzador local del navegador de Claude Code (rutas de esta máquina)
 .claude/launch.json
+
+# Los worktrees de los agentes de la cadena caen acá dentro y pesan cientos de
+# MB (554 el 20/9, con una sola rama viva). Git no los ignora solo: el
+# directorio es del harness, no del repo. Un `git add` que los alcance mete el
+# repo dentro del repo.
+.claude/worktrees/
