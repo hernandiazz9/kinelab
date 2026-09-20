@@ -264,6 +264,21 @@ conectado, a su teléfono, así puede contestarte desde ahí sin sentarse.
 - No avises por un encargo que cerró bien y no pide nada: la cadena existe
   justamente para que eso no lo moleste.
 
+**Si `PushNotification` contesta que no se envió, leé por qué.** Si dice que
+el terminal está activo, está bien: el dueño está mirando y tu respuesta ya le
+llegó; no insistas por otro lado. Si dice cualquier otra cosa —Remote Control
+apagado, la app cerrada, notificaciones desactivadas—, entonces **sí** mandalo
+por Telegram, que llega igual:
+
+```bash
+~/.claude/skills/orquestador/scripts/avisar "kinelab 32: mirá … y decime si …"
+~/.claude/skills/orquestador/scripts/avisar -f <ruta.png> "qué tiene que ver acá"
+```
+
+Con `-f` le mandás la imagen misma al teléfono: un overlay, una foto de
+evento, un recorte. Para una pregunta que se contesta mirando, eso vale más
+que describirla — puede responderte desde donde esté, sin sentarse.
+
 Existe porque falló: el 32 dejó una pregunta que sólo Hernán podía contestar
 —si en un cuadro se ve el palo o no, de lo que depende el número del impacto—
 en la línea 287 de un informe de 310, y su resumen de diez líneas no la
