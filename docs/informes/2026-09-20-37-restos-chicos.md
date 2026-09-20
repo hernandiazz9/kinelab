@@ -85,3 +85,15 @@ Preguntas para el orquestador:
    habría cambiado el orden de las 116 columnas del CSV, que nadie estaba mirando. Si
    hay más limpiezas de este tipo, conviene que el prompt diga «sin mover el orden de
    columnas» junto a «sin mover valores».
+4. **`scripts/integrar` colgado 10 minutos si se lo corre desde el worktree, que es
+   justo lo que dice la skill.** Medido acá: sin segundo argumento el script hace
+   `repo=$(git rev-parse --show-toplevel)`, que en un worktree es el worktree; su candado
+   es `mkdir "$repo/.git/integrar.lock.d"` y en un worktree **`.git` es un archivo**, así
+   que el `mkdir` falla siempre con ENOTDIR, el script lo lee como «hay otra integración
+   en curso» y espera los 600 segundos enteros antes de salir con *«esperé 10 min por el
+   candado y no se soltó»*. **No integra nada y `main` queda intacto**, que es lo único
+   bueno del asunto. Anda pasándole el repo: `integrar <rama>
+   /Users/heralc/Desktop/HDDev/kinelab` (así entró esta rama, fast-forward a `7c23f81`).
+   Es la misma familia del exit 127 de `flock` del encargo 33: el arreglo es una línea
+   —resolver el checkout principal con `git rev-parse --path-format=absolute
+   --git-common-dir` en vez de `--show-toplevel`— y es del repo de la skill, no de éste.
