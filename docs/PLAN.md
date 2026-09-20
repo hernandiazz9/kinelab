@@ -1,6 +1,26 @@
 # Plan
 
-Última ronda: 2026-09-20 (noche) — **cerró el 35** (`4cb85a5`, `3114f86`,
+Última ronda: 2026-09-20 (noche) — **cerró el 36** (`196e3a4`, `e9e2f6e`,
+`a2cded3`, `3483cd9`): la pantalla deja elegir repetición y toda la pantalla
+la sigue. El respaldo para trabajos viejos vive en un solo lugar,
+`web/src/lib/repeticiones.ts`, que además concentra la frase «repetición N de
+M» (antes en tres componentes desde dos fuentes) y busca en `analysis.reps`
+por número y no por índice. `analysis.json` **2.2.0** con `reps[].scale_frame`
+—el cuadro de donde salió la escala de cada repetición— y con él las cuatro
+cosas que arrastra el bump. **Los 4,84 cm del 35 ahora se ven**: al pasar a la
+repetición 2 de `cortado3-lento` la escala va de 783,9 px (cuadro 1594) a
+831,3 (cuadro 2970) y `pelvis_sway_top_cm` de +3,7 a −7,1 cm. Motor
+**462/0** (+4), arnés 43/0, front en verde, verificador de retirados 0 fallas.
+**La sesión lo verificó en el navegador** (excepción pedida por Hernán) y
+encontró algo que el prompt no tenía: con el respaldo, `picos` es el máximo
+del clip y el encabezado decía «máximo en esta repetición»; corregido en
+`a2cded3`. Un trabajo viejo (`vid1`) sigue viéndose igual, sin selector.
+**Diferencia declarada con el prompt**: en un trabajo viejo no se puede
+cumplir a la vez «las tres frases dicen lo mismo» y «se ve exactamente como
+hoy»; la sesión eligió lo segundo. Tres preguntas en su informe, todas para
+Hernán.
+
+Ronda anterior, 2026-09-20 (noche) — **cerró el 35** (`4cb85a5`, `3114f86`,
 `5730219`, `9aa699d`): `datos-eventos.json` publica todas las repeticiones en
 `repeticiones_detalle`, el overlay rotula las de todas (`R2 IMPACT`) y las
 fotos de la 2 en adelante salen como `evento-r<N>-<id>.png`. Los 27 campos de
@@ -321,7 +341,7 @@ una sola sesión por vez.
   solo de front era imposible. `analysis.json` ya tiene todas las
   repeticiones: no hay que recalcular nada. Los campos de primer nivel quedan
   como están para no romper el front, y el 36 los retira.
-- **R8** · [en curso] **36** selector-de-repeticion — el front, con respaldo
+- **R8** · [hecho] **36** selector-de-repeticion — el front, con respaldo
   al formato viejo, y `scale_frame` en `reps[]` (analysis **2.2.0**).
   Verificado con tres subagentes: encontraron que **ningún trabajo en disco
   tiene `repeticiones_detalle`** (los 19 de `data/exploracion/` y los 3 de la
