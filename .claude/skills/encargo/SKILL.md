@@ -43,6 +43,13 @@ worktree. Los clips y `data/` viven en `$KLAB`: pasá la ruta absoluta.
 a git y un `git worktree remove` vacía el original; hay repos públicos rotos
 así. Con `PYTHONPATH` no hacen falta.
 
+**Si ya hay un marcador de otro encargo, es huérfano: borralo.** Lo deja una
+sesión que murió sin cerrar —la mataron, se cayó— y después bloquea a
+cualquiera que pase por ese worktree, porque el hook de cierre lo lee y pide
+un informe que nadie va a escribir. Antes de borrarlo, mirá que no haya
+trabajo suelto: si `git status --porcelain` muestra algo, commitealo primero
+en la rama con un mensaje `WIP:`, que es de quien se fue, no tuyo.
+
 **Dejá el marcador antes de empezar**, con el número de tu encargo. El hook
 `Stop` lo lee para no dejarte cerrar a medias:
 
