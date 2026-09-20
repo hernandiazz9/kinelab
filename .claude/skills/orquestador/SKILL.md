@@ -285,6 +285,42 @@ en la línea 287 de un informe de 310, y su resumen de diez líneas no la
 mencionaba. Nadie se enteró hasta que él lo vio de casualidad en la pantalla
 de la sesión.
 
+### Que el aviso se pueda contestar sin sentarse
+
+Un aviso que dice «hay una pregunta» y obliga al dueño a ir hasta el ordenador
+sirve la mitad. Tiene que traer el camino de vuelta:
+
+1. **Al abrir la ronda, encendé Remote Control una vez**, con
+   `mcp__ccd_session_mgmt__set_remote_control` sobre `"self"` y
+   `enabled: true`. Es lo que hace que tu sesión sea alcanzable desde el
+   teléfono. Al principio, no en el momento de avisar: la primera vez el dueño
+   tiene que aprobarlo, y no querés que esa aprobación lo espere justo cuando
+   está lejos del teclado.
+2. **El enlace que mandás es el tuyo**, el de la sesión orquestadora: sale de
+   `get_session` con `"self"`, campo `link`. Los encargos de la cadena son
+   agentes tuyos, no sesiones aparte, así que el dueño vuelve siempre acá, te
+   contesta, y vos seguís desde donde estabas.
+3. **El aviso trae tres cosas y en este orden**: qué sesión pregunta, qué se
+   pregunta, y el enlace. Así:
+
+   ```
+   kinelab · el orquestador tiene una pregunta para vos.
+   ¿Ves el shaft en el cuadro 1364? De eso depende si el impacto se rehace.
+   claude://claude.ai/epitaxy/local_<id>
+   ```
+
+   Si la pregunta se contesta mirando algo, mandá además la imagen con
+   `avisar -f`: la abre en el teléfono y contesta ahí.
+
+**Cuidado con qué enlace mandás.** Medido el 20/9 contra el Telegram de
+Hernán: el `link` que devuelve `get_session` es un `claude://…` y **Telegram
+no lo hace tocable** —queda como texto muerto—; y la variante
+`https://claude.ai/epitaxy/<id>` **no existe**: abre la portada de Claude. El
+que sirve es el de Remote Control, que el harness no te da (es del dueño, sale
+del badge de la sesión). Hasta tenerlo anotado, el aviso **nombra la sesión**
+para que el dueño la busque en la app del teléfono, y no promete un enlace que
+no lleva a ningún lado.
+
 **Y la cadena no sigue de largo sobre una pregunta abierta si lo que viene
 depende de ella.** Lanzá lo que no dependa; lo que sí, espera. Eso va dicho en
 el plan, en «Preguntas para el dueño», con qué encargo traba cada una.
