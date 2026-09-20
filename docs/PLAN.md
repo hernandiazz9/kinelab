@@ -1,6 +1,19 @@
 # Plan
 
-Última ronda: 2026-09-20 (tarde) — **cerró el 34** (`b94e1be`, `b4a981e`,
+Última ronda: 2026-09-20 (noche) — **cerró el 35** (`4cb85a5`, `3114f86`,
+`5730219`, `9aa699d`): `datos-eventos.json` publica todas las repeticiones en
+`repeticiones_detalle`, el overlay rotula las de todas (`R2 IMPACT`) y las
+fotos de la 2 en adelante salen como `evento-r<N>-<id>.png`. Los 27 campos de
+primer nivel valen exactamente lo mismo que antes, medido contra el código de
+`f95875c` con la misma pose. **El número que destapa: la repetición 2 de
+`cortado3-lento` tenía sus desplazamientos medidos contra el address de la
+1** — `pelvis_dx_vs_address_cm` en su top daba −2,21 cm y da −7,05 bien
+medido, **4,84 cm contra un MDC de 2,42**. Y el pico de manos publicado arriba
+(4,85 bh/s) es el de la repetición **2**, en una pantalla que dice
+«repetición 1». Motor **457/0/1** (+9), arnés 43/0, front en verde, mutación
+7 de 7 en rojo. Cuatro preguntas en su informe, todas para Hernán.
+
+Ronda anterior, 2026-09-20 (tarde) — **cerró el 34** (`b94e1be`, `b4a981e`,
 `a54718e`, integrado en `59f6b0b`): el fps de una toma dice de qué clip salió
 su calibración. `capture-paths` **1.2.0** con `calibration_clip_sha256`
 (opcional, fuera de los seis campos del cronómetro), `capture.json` **1.3.0**
@@ -286,7 +299,7 @@ una sola sesión por vez.
   `analysis.json` se movió.** 398 tests; mutación manual 8 de 8 en rojo.
   Falta que Hernán mire el front (la celda «pelvis vs address» en el top:
   −3,5 cm, antes −4,6).
-- **R8** · [en curso] **35** el-motor-publica-todas-las-repeticiones — la
+- **R8** · [hecho] **35** el-motor-publica-todas-las-repeticiones — la
   mitad del motor de «repeticion-elegible». Verificado con tres subagentes
   antes de lanzarlo: **la premisa del plan estaba mal**, no es
   `explore.py:366` sino `:428` (`analysis["events"][0]`) y `:474`
