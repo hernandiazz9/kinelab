@@ -13,7 +13,8 @@
 // archivo. Lo desconocido no se esconde: lo que no tiene nombre legible se
 // muestra con su identificador.
 
-import type { EventoId, Resumen } from "@/lib/api";
+import type { EventoId, Fila as FilaCsv } from "@/lib/api";
+import type { Repeticion } from "@/lib/repeticiones";
 import { DURACIONES, EVENTOS, etiqueta, fmt, fmtCol, textoEscala, textoSubcuadro, textoTolerancia } from "@/lib/etiquetas";
 import { sinRetirados } from "@/lib/retirados";
 import { COLOR_EVENTO } from "./Reproductor";
@@ -59,15 +60,15 @@ const td = "px-3 py-1 tabular-nums";
 const tabla = "w-full border-collapse text-sm [&_tbody_tr]:border-t [&_tbody_tr]:border-zinc-800";
 const h2 = "mt-6 mb-2 text-base font-semibold";
 
-function Cabecera({ evs, resumen, onIr }: { evs: EventoId[]; resumen: Resumen; onIr: (n: number) => void }) {
+function Cabecera({ evs, rep, onIr }: { evs: EventoId[]; rep: Repeticion; onIr: (n: number) => void }) {
   return (
     <thead className="bg-zinc-900">
       <tr>
         <th className={th}></th>
         {evs.map((ev) => {
-          const f = resumen.eventos_frame[ev];
-          const tol = textoTolerancia(resumen.eventos_tol_frames?.[ev]);
-          const sub = textoSubcuadro(resumen.eventos_subcuadro?.[ev]);
+          const f = rep.eventos_frame[ev];
+          const tol = textoTolerancia(rep.eventos_tol_frames?.[ev]);
+          const sub = textoSubcuadro(rep.eventos_subcuadro?.[ev]);
           return (
             <th key={ev} className={th}>
               <button type="button" className="hover:underline" style={{ color: COLOR_EVENTO[ev] }} onClick={() => f !== undefined && onIr(f)} title="ir a ese cuadro">
@@ -75,7 +76,7 @@ function Cabecera({ evs, resumen, onIr }: { evs: EventoId[]; resumen: Resumen; o
               </button>
               {f !== undefined && (
                 <span className="block text-xs font-normal text-zinc-500">
-                  cuadro {f} · {fmt(resumen.eventos_t_s[ev], 3)} s{tol && ` · ${tol}`}
+                  cuadro {f} · {fmt(rep.eventos_t_s[ev], 3)} s{tol && ` · ${tol}`}
                 </span>
               )}
               {sub && <span className="block text-xs font-normal text-zinc-400">{sub}</span>}
@@ -87,22 +88,30 @@ function Cabecera({ evs, resumen, onIr }: { evs: EventoId[]; resumen: Resumen; o
   );
 }
 
-export default function TablaEventos({ resumen, onIr }: { resumen: Resumen; onIr: (n: number) => void }) {
-  const evs = (Object.keys(EVENTOS) as EventoId[]).filter((k) => resumen.en_cada_evento[k]);
-  const valor = (ev: EventoId, col: string) => resumen.en_cada_evento[ev]?.[col] ?? null;
+/** `rep` es la repetición elegida (`lib/repeticiones.ts`): sus eventos, sus
+ *  duraciones, sus picos y sus diferencias contra SU address. `frase` es
+ *  «Repetición N de M», la misma que dicen las métricas y la tabla por cuadro, o
+ *  `null` en un trabajo anterior al encargo 35, que no declara cuál es (y ahí no
+ *  se inventa ninguna: es lo que esta tabla ya hacía). `columnas` y `calidad`
+ *  son del clip, no de la repetición. */
+export default function TablaEventos({ rep, frase, columnas: todas, calidad, onIr }: { rep: Repeticion | null; frase: string | null; columnas: string[]; calidad: unknown; onIr: (n: number) => void }) {
+  const enCadaEvento: Partial<Record<EventoId, FilaCsv>> = rep?.en_cada_evento ?? {};
+  const evs = (Object.keys(EVENTOS) as EventoId[]).filter((k) => enCadaEvento[k]);
+  const valor = (ev: EventoId, col: string) => enCadaEvento[ev]?.[col] ?? null;
   const filas = FILAS.filter((f) => evs.some((ev) => f.cols.some((c) => valor(ev, c) !== null)));
   const celda = (f: FilaResumen, ev: EventoId) => {
     const vals = f.cols.map((c) => valor(ev, c));
     if (vals.every((v) => v === null)) return "—";
     return vals.map((v) => fmt(v, f.dec, f.signo)).join(" / ") + f.unidad;
   };
-  const difs = Object.keys(resumen.diferencias_vs_address);
-  const difCols = Array.from(new Set(difs.flatMap((k) => Object.keys(resumen.diferencias_vs_address[k]))));
-  const duraciones = Object.entries(resumen.duraciones);
-  const picos = sinRetirados(Object.entries(resumen.picos), ([k]) => k);
-  const columnas = sinRetirados(resumen.columnas, (c) => c);
+  const diferencias = rep?.diferencias_vs_address ?? {};
+  const difs = Object.keys(diferencias);
+  const difCols = Array.from(new Set(difs.flatMap((k) => Object.keys(diferencias[k]))));
+  const duraciones = Object.entries(rep?.duraciones ?? {});
+  const picos = sinRetirados(Object.entries(rep?.picos ?? {}), ([k]) => k);
+  const columnas = sinRetirados(todas, (c) => c);
 
-  if (evs.length === 0) {
+  if (evs.length === 0 || !rep) {
     return <p className="mt-6 rounded border border-amber-700 bg-amber-950/40 p-3 text-sm">El motor no encontró ningún evento (address, top, impacto) en este video: no hay tabla por evento. La tabla por cuadro está abajo igual.</p>;
   }
 
@@ -110,29 +119,26 @@ export default function TablaEventos({ resumen, onIr }: { resumen: Resumen; onIr
   // convirtieron los cm, tal como los manda el motor. Sin address, `explore.py`
   // cae al cuadro 0: los valores no cambian, pero ocho filas se llaman «vs
   // address» y no hay address, y eso hasta hoy no se decía en ningún lado.
-  const escala = textoEscala(resumen.escala_px, resumen.escala_fuente, resumen.escala_cuadro);
-  const ref = resumen.referencia_fuente;
-  const cual = resumen.repeticion_mostrada;
-  const cuantas = resumen.repeticiones;
+  const escala = textoEscala(rep.escala_px, rep.escala_fuente, rep.escala_cuadro);
+  const ref = rep.referencia_fuente;
 
   return (
     <div>
       <h2 className={h2}>En cada evento</h2>
-      {cual && cuantas !== undefined && cuantas > 0 && (
+      {frase && (
         <p className="mb-2 text-sm text-zinc-400">
-          Repetición {cual} de {cuantas}: todo lo de esta pantalla —los eventos, las fotos, el video con los palitos, la tabla por cuadro y las métricas— es esa repetición.
-          {cuantas > 1 && " Las otras están en analysis.json; elegir cuál se muestra todavía no se puede."}
+          {frase}: todo lo de esta pantalla —los eventos, las fotos, el video con los palitos, la tabla por cuadro y las métricas— es esa repetición.
         </p>
       )}
       {(ref || escala) && (
         <p className="mb-2 text-xs text-zinc-500">
-          {ref && `Las filas «vs address» se miden contra el ${ref === "address" ? `address (cuadro ${resumen.referencia_cuadro})` : ref}. `}
+          {ref && `Las filas «vs address» se miden contra el ${ref === "address" ? `address (cuadro ${rep.referencia_cuadro})` : ref}. `}
           {escala && `Los cm salen de dividir por ${escala}.`}
         </p>
       )}
       <div className="overflow-x-auto rounded border border-zinc-800">
         <table className={tabla}>
-          <Cabecera evs={evs} resumen={resumen} onIr={onIr} />
+          <Cabecera evs={evs} rep={rep} onIr={onIr} />
           <tbody>
             {filas.map((f, i) => (
               <tr key={i}>
@@ -170,7 +176,11 @@ export default function TablaEventos({ resumen, onIr }: { resumen: Resumen; onIr
           </div>
         </div>
         <div>
-          <h2 className={`${h2} mt-0`}>Picos (máximo en todo el clip)</h2>
+          {/* El pico DENTRO de esta repetición. El de primer nivel de
+              `datos-eventos.json` es el del clip entero y con dos swings no es de
+              ninguno de los dos: medido en `cortado3-lento`, el 4,85 bh/s que se
+              publicaba arriba es el de la repetición 2 (informe del 35). */}
+          <h2 className={`${h2} mt-0`}>Picos (máximo en esta repetición)</h2>
           <div className="rounded border border-zinc-800">
             <table className={tabla}>
               <tbody>
@@ -217,7 +227,7 @@ export default function TablaEventos({ resumen, onIr }: { resumen: Resumen; onIr
                     </td>
                     {difs.map((k) => (
                       <td key={k} className={td}>
-                        {fmt(resumen.diferencias_vs_address[k][c], 1, true)}°
+                        {fmt(diferencias[k][c], 1, true)}°
                       </td>
                     ))}
                   </tr>
@@ -232,7 +242,7 @@ export default function TablaEventos({ resumen, onIr }: { resumen: Resumen; onIr
         <summary className="cursor-pointer text-base font-semibold">Todas las variables en cada evento ({columnas.length} columnas)</summary>
         <div className="mt-2 overflow-x-auto rounded border border-zinc-800">
           <table className={tabla}>
-            <Cabecera evs={evs} resumen={resumen} onIr={onIr} />
+            <Cabecera evs={evs} rep={rep} onIr={onIr} />
             <tbody>
               {columnas.map((c) => (
                 <tr key={c}>
@@ -253,7 +263,7 @@ export default function TablaEventos({ resumen, onIr }: { resumen: Resumen; onIr
 
       <details className="mt-4">
         <summary className="cursor-pointer text-base font-semibold">Calidad según el motor (analysis.json → quality)</summary>
-        <pre className="mt-2 overflow-x-auto rounded border border-zinc-800 bg-zinc-950 p-3 text-xs">{JSON.stringify(resumen.calidad, null, 2)}</pre>
+        <pre className="mt-2 overflow-x-auto rounded border border-zinc-800 bg-zinc-950 p-3 text-xs">{JSON.stringify(calidad, null, 2)}</pre>
       </details>
     </div>
   );

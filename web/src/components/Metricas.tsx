@@ -66,11 +66,16 @@ function Fila({ id, m }: { id: string; m: Metrica }) {
   );
 }
 
-export default function Metricas({ analysis, error }: { analysis: Analysis | null; error: string | null }) {
-  const rep = analysis?.reps?.[0];
+/** `rep` es la repetición ELEGIDA de `analysis.reps`, no `reps[0]`: la elige
+ *  `page.tsx` y la resuelve `lib/repeticiones.ts`. Hasta el encargo 35 el índice
+ *  estaba quemado acá en tres lugares, así que la pantalla mostraba siempre la
+ *  primera aunque el clip tuviera dos swings. `frase` es la misma cadena que
+ *  dicen las otras dos tablas: una sola fuente para los tres lugares. */
+export default function Metricas({ analysis, rep, frase, error }: { analysis: Analysis | null; rep: Analysis["reps"][number] | null; frase: string | null; error: string | null }) {
   // `quality.scale_px` NO sirve acá: con dos o más repeticiones es la mediana
-  // entre ellas y no es el divisor de ninguna. El divisor es `reps[i].scale_px`.
-  const escala = rep ? textoEscala(rep.scale_px, rep.scale_source) : null;
+  // entre ellas y no es el divisor de ninguna. El divisor es `reps[i].scale_px`,
+  // y desde el contrato 2.2.0 viene con el cuadro del que salió (`scale_frame`).
+  const escala = rep ? textoEscala(rep.scale_px, rep.scale_source, rep.scale_frame) : null;
   return (
     <div>
       <div className="mt-6 mb-2 flex flex-wrap items-baseline gap-x-3">
@@ -90,12 +95,11 @@ export default function Metricas({ analysis, error }: { analysis: Analysis | nul
       {analysis && analysis.reps.length > 0 && (
         <>
           {/* Cuál repetición es ésta, siempre — no sólo cuando hay más de una. La
-              pantalla entera es `reps[0]` y hasta hoy eso era un supuesto que no
-              se escribía. No hay selector a propósito: elegir otra desincroniza
-              motor y pantalla (el overlay, las fotos y la tabla por cuadro salen
-              de la primera), y eso es un encargo propio. */}
+              frase la compone `lib/repeticiones.ts` y es la misma que dicen la
+              tabla por evento y la tabla por cuadro: hasta el encargo 35 salía de
+              dos fuentes distintas y podían no coincidir. */}
           <p className="mb-2 text-sm text-zinc-400">
-            Repetición {analysis.reps[0].rep} de {analysis.reps.length}
+            {frase ?? `Repetición ${analysis.reps[0].rep} de ${analysis.reps.length}`}
             {analysis.reps.length > 1 && " — todo lo de esta pantalla es esa"}.
           </p>
           {/* La escala de ESTA repetición, al lado de los números que divide. Es el
@@ -105,7 +109,7 @@ export default function Metricas({ analysis, error }: { analysis: Analysis | nul
           <div className="overflow-x-auto rounded border border-zinc-800">
             <table className="w-full border-collapse text-sm [&_tbody_tr]:border-t [&_tbody_tr]:border-zinc-800">
               <tbody>
-                {Object.entries(analysis.reps[0].metrics).map(([id, m]) => (
+                {Object.entries((rep ?? analysis.reps[0]).metrics).map(([id, m]) => (
                   <Fila key={id} id={id} m={m} />
                 ))}
               </tbody>

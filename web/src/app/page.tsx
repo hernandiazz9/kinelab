@@ -24,6 +24,7 @@ import FichaArchivo from "@/components/FichaArchivo";
 import ListaTrabajos from "@/components/ListaTrabajos";
 import Metricas from "@/components/Metricas";
 import Reproductor, { COLOR_EVENTO, type ReproductorHandle } from "@/components/Reproductor";
+import SelectorRepeticion from "@/components/SelectorRepeticion";
 import Subida from "@/components/Subida";
 import TablaCuadros from "@/components/TablaCuadros";
 import TablaEventos from "@/components/TablaEventos";
@@ -52,6 +53,7 @@ import {
   type Transformacion,
 } from "@/lib/api";
 import { EVENTOS, PROCEDENCIA, fmt, textoSubcuadro } from "@/lib/etiquetas";
+import { elegir, fraseRepeticion, nombresDeFoto, repDelAnalysis, repeticionesDe } from "@/lib/repeticiones";
 
 type Fase =
   | { tipo: "inicio" }
@@ -71,6 +73,10 @@ function faseDe(t: Trabajo): Fase {
 export default function Pagina() {
   const [fase, setFase] = useState<Fase>({ tipo: "inicio" });
   const [cuadro, setCuadro] = useState(0);
+  // Cuál de las repeticiones del clip se está mirando. Vive acá y no en
+  // `Resultado` porque se resetea al abrir otro trabajo, igual que `cuadro`: el
+  // índice 1 de un clip de dos swings no quiere decir nada en el siguiente.
+  const [repElegida, setRepElegida] = useState(0);
   const [filas, setFilas] = useState<TrabajoFila[]>([]);
   const [lista, setLista] = useState<{ cargando: boolean; error: string | null }>({ cargando: true, error: null });
   const [nota, setNota] = useState<string | null>(null);
@@ -94,6 +100,7 @@ export default function Pagina() {
         .then((t) => {
           setNota(null);
           setCuadro(0);
+          setRepElegida(0);
           setFase(faseDe(t));
           recordarTrabajo(t.id);
           ponerTrabajoEnLaUrl(t.id);
@@ -150,6 +157,7 @@ export default function Pagina() {
       try {
         const t = await subirVideo(archivo, alturaM, camino, (p) => setFase({ tipo: "subiendo", pct: p, nombre: archivo.name }));
         setCuadro(0);
+        setRepElegida(0);
         setFase({ tipo: "procesando", trabajo: t });
         ponerTrabajoEnLaUrl(t.id);
       } catch (e) {
@@ -235,7 +243,18 @@ export default function Pagina() {
       )}
 
       {fase.tipo === "listo" && (
-        <Resultado trabajo={fase.trabajo} cuadro={cuadro} onCuadro={setCuadro} ir={ir} irArriba={irArriba} reproductor={reproductor} analysis={analysis} errorAnalysis={errorAnalysis} />
+        <Resultado
+          trabajo={fase.trabajo}
+          cuadro={cuadro}
+          onCuadro={setCuadro}
+          ir={ir}
+          irArriba={irArriba}
+          reproductor={reproductor}
+          analysis={analysis}
+          errorAnalysis={errorAnalysis}
+          repElegida={repElegida}
+          onRepElegida={setRepElegida}
+        />
       )}
     </main>
   );
@@ -264,6 +283,8 @@ function Resultado({
   reproductor,
   analysis,
   errorAnalysis,
+  repElegida,
+  onRepElegida,
 }: {
   trabajo: Trabajo;
   cuadro: number;
@@ -273,9 +294,29 @@ function Resultado({
   reproductor: React.RefObject<ReproductorHandle | null>;
   analysis: Analysis | null;
   errorAnalysis: string | null;
+  repElegida: number;
+  onRepElegida: (i: number) => void;
 }) {
   const r = trabajo.resumen!;
   const [verDosCuadros, setVerDosCuadros] = useState(false);
+  // Las repeticiones de este trabajo, en UN solo lugar (`lib/repeticiones.ts`):
+  // `repeticiones_detalle` cuando está, y si no el primer nivel como repetición
+  // única, que es lo que hace visible a un trabajo anterior al encargo 35.
+  const reps = repeticionesDe(r, analysis);
+  const rep = elegir(reps, repElegida);
+  const repAnalysis = repDelAnalysis(analysis, rep);
+  const frase = fraseRepeticion(rep, reps.total);
+  // Al cambiar de repetición: el reproductor salta al primer evento de la nueva
+  // y los dos cuadros del impacto se cierran. Sin esto la pantalla mentiría — el
+  // `cuadro` del reproductor se inicializa al montar y se quedaría en el impacto
+  // de la repetición anterior mientras todo lo demás habla de la nueva, y los dos
+  // cuadros abiertos serían los del impacto viejo.
+  const elegirRep = (i: number) => {
+    onRepElegida(i);
+    setVerDosCuadros(false);
+    const destino = reps.lista[i]?.eventos_frame.address ?? reps.lista[i]?.frame_start ?? null;
+    if (destino !== null && destino !== undefined) ir(destino);
+  };
   // `transformacion.json` sólo existe en un trabajo exportado a la demo: ahí el
   // video es un recorte al tramo del gesto y hay que decirle al reproductor qué
   // cuadro del ORIGEN es su segundo 0. En local no hay archivo y todo queda en 0,
@@ -297,12 +338,21 @@ function Resultado({
   const tr = leido?.id === trabajo.id ? leido.valor : null;
   const primerCuadro = tr?.cuadro_offset ?? 0;
   const cuadrosVideo = tr?.cuadros ?? r.cuadros;
-  const subImpacto = r.eventos_subcuadro?.impact;
+  const subImpacto = rep?.eventos_subcuadro?.impact;
   // Los dos cuadros entre los que cayó el instante estimado, si los hay.
   const parImpacto = subImpacto && subImpacto.frame_before !== null && subImpacto.frame_after !== null ? { antes: subImpacto.frame_before, despues: subImpacto.frame_after } : null;
   const csv = archivoUrl(trabajo, "datos-por-cuadro.csv");
-  // JPEG en la demo (un PNG del overlay de vid1 pesa 18 MB), PNG en local.
-  const foto = (ev: EventoId) => archivoUrl(trabajo, `evento-${ev}.png`) ?? archivoUrl(trabajo, `evento-${ev}.jpg`);
+  // La foto de ese evento EN LA REPETICIÓN ELEGIDA. La 1 conserva
+  // `evento-<id>` y las demás son `evento-r<N>-<id>` (`kinelab.explore.foto_de_evento`),
+  // y cada una puede estar en PNG (local) o en JPEG (la demo: un PNG del overlay
+  // de vid1 pesa 18 MB). Los nombres los arma `lib/repeticiones.ts`.
+  const foto = (ev: EventoId) => {
+    for (const n of nombresDeFoto(rep?.rep ?? 1, ev)) {
+      const u = archivoUrl(trabajo, n);
+      if (u) return u;
+    }
+    return null;
+  };
   const fotos = (Object.keys(EVENTOS) as EventoId[]).filter((ev) => foto(ev));
   const descargas: [string, string][] = [
     ["video.mp4", "video sin palitos"],
@@ -331,7 +381,7 @@ function Resultado({
 
       {overlay ? (
         <section className="flex flex-col gap-2">
-          <Reproductor ref={reproductor} src={overlay} fps={r.fps_archivo} cuadros={cuadrosVideo} primerCuadro={primerCuadro} eventos={r.eventos_frame} onCuadro={onCuadro} />
+          <Reproductor ref={reproductor} src={overlay} fps={r.fps_archivo} cuadros={cuadrosVideo} primerCuadro={primerCuadro} eventos={rep?.eventos_frame ?? {}} onCuadro={onCuadro} />
           {tr && (
             <p className="text-xs text-zinc-500">
               Video recortado al sujeto y al tramo del gesto para poder desplegarlo: cuadros {tr.tramo_origen[0]}–{tr.tramo_origen[1]} de {tr.cuadros_origen ?? "?"}, recorte {tr.recorte.ancho}×{tr.recorte.alto} px en ({tr.offset_x},{tr.offset_y}) del cuadro de {tr.tamano_origen[0]}×{tr.tamano_origen[1]}, escala {fmt(tr.escala, 4)}. Los números de cuadro de abajo son los del video original, sin renumerar.
@@ -341,7 +391,7 @@ function Resultado({
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
               <span style={{ color: COLOR_EVENTO.impact }}>impacto</span>
               <span className="text-zinc-300">
-                {textoSubcuadro(subImpacto) ?? `cuadro ${r.eventos_frame.impact}`}
+                {textoSubcuadro(subImpacto) ?? `cuadro ${rep?.eventos_frame.impact}`}
                 {subImpacto.t_sub_s !== null && (
                   <span className="text-zinc-500">
                     {" · "}
@@ -379,15 +429,15 @@ function Resultado({
       {fotos.length > 0 && (
         <section className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
           {fotos.map((ev) => {
-            const f = r.eventos_frame[ev];
+            const f = rep?.eventos_frame[ev];
             return (
               <figure key={ev} className="cursor-pointer rounded-lg border border-zinc-800 bg-black p-1" onClick={() => f !== undefined && irArriba(f)} title="ver ese cuadro en el reproductor">
                 {/* eslint-disable-next-line @next/next/no-img-element -- PNG grande servido por el backend, sin optimizar */}
                 <img src={foto(ev)!} alt={`cuadro del evento ${EVENTOS[ev]}`} loading="lazy" className="mx-auto max-h-96 object-contain" />
                 <figcaption className="mt-1 text-center text-sm" style={{ color: COLOR_EVENTO[ev] }}>
                   {EVENTOS[ev]}
-                  {f !== undefined && <span className="text-zinc-400"> · cuadro {f} · {fmt(r.eventos_t_s[ev], 3)} s</span>}
-                  {textoSubcuadro(r.eventos_subcuadro?.[ev]) && <span className="block text-xs text-zinc-400">{textoSubcuadro(r.eventos_subcuadro?.[ev])}</span>}
+                  {f !== undefined && <span className="text-zinc-400"> · cuadro {f} · {fmt(rep?.eventos_t_s[ev], 3)} s</span>}
+                  {textoSubcuadro(rep?.eventos_subcuadro?.[ev]) && <span className="block text-xs text-zinc-400">{textoSubcuadro(rep?.eventos_subcuadro?.[ev])}</span>}
                 </figcaption>
               </figure>
             );
@@ -403,17 +453,22 @@ function Resultado({
         </section>
       )}
 
+      {/* El selector, antes que cualquier número: de qué swing habla todo lo de
+          abajo. Con una sola repetición —y con un trabajo viejo, que entra como
+          repetición única— no se muestra. */}
+      <SelectorRepeticion reps={reps.lista} elegida={repElegida} onElegir={elegirRep} />
+
       {/* Qué se pudo medir con ESTE archivo, métrica por métrica y con la razón
           cuando no se pudo. Antes de las tablas de exploración, que son la lupa. */}
       {archivoUrl(trabajo, "analysis.json") && (
         <section>
           {/* El JSON lo bajó `Pagina`, que lo necesita también para los avisos. */}
-          <Metricas analysis={analysis} error={errorAnalysis} />
+          <Metricas analysis={analysis} rep={repAnalysis} frase={frase} error={errorAnalysis} />
         </section>
       )}
 
       <section>
-        <TablaEventos resumen={r} onIr={irArriba} />
+        <TablaEventos rep={rep} frase={reps.respaldo ? null : frase} columnas={r.columnas} calidad={r.calidad} onIr={irArriba} />
       </section>
 
       <section>
@@ -435,7 +490,7 @@ function Resultado({
         </div>
         {/* `r` lleva la escala con la que se dividieron los cm y el cuadro contra el
             que se miden los «vs address»: la tabla los dice arriba (encargo 33). */}
-        {csv ? <TablaCuadros url={csv} cuadroActual={cuadro} onIr={ir} resumen={r} /> : <p className="text-sm text-red-300">No hay datos-por-cuadro.csv en este trabajo.</p>}
+        {csv ? <TablaCuadros url={csv} cuadroActual={cuadro} onIr={ir} rep={rep} frase={reps.respaldo ? null : frase} /> : <p className="text-sm text-red-300">No hay datos-por-cuadro.csv en este trabajo.</p>}
       </section>
     </>
   );

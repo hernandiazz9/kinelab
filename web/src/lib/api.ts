@@ -93,6 +93,32 @@ export interface FichaArchivo {
   grabado: string | null;
 }
 
+/** Una entrada de `repeticiones_detalle`: TODO lo que hasta el encargo 35 existía
+ *  sólo para la primera repetición, ahora por repetición. Las claves son las
+ *  mismas que las de primer nivel a propósito — es el mismo dato, una repetición
+ *  más abajo — y cada una se mide contra SU address, no contra el de la 1. */
+export interface RepeticionDetalle {
+  rep: number;
+  frame_start: number;
+  frame_end: number;
+  eventos_frame: Eventos;
+  eventos_t_s: Eventos;
+  eventos_tol_frames?: Partial<Record<EventoId, number>>;
+  eventos_subcuadro?: Partial<Record<EventoId, Subcuadro>>;
+  escala_px: number | null;
+  escala_fuente: EscalaFuente | null;
+  /** El cuadro del que salió esa escala (contrato 2.2.0, `reps[].scale_frame`).
+   *  `null` con el fallback de escala: ahí no hay ningún máximo que mirar. */
+  escala_cuadro: number | null;
+  referencia_cuadro: number | null;
+  referencia_fuente: string | null;
+  duraciones: Record<string, number>;
+  /** El pico DENTRO de esta repetición, no el del clip entero. */
+  picos: Record<string, number | null>;
+  en_cada_evento: Partial<Record<EventoId, Fila>>;
+  diferencias_vs_address: Record<string, Fila>;
+}
+
 /** El contenido de `datos-eventos.json` tal como lo escribe `kinelab.explore`. */
 export interface Resumen {
   aviso: string;
@@ -125,10 +151,16 @@ export interface Resumen {
    *  motor cae al cuadro 0 — el valor no cambia, pero deja de ser mudo. */
   referencia_cuadro?: number | null;
   referencia_fuente?: string | null;
-  /** Toda esta pantalla es UNA repetición, la que eligió el motor. Sin selector
-   *  (elegir otra desincroniza motor y pantalla): lo que se hace es decirlo. */
+  /** Los campos de arriba —eventos, escala, referencia, duraciones, picos y las
+   *  dos tablas— son los de la repetición `repeticion_mostrada`, o sea la 1, y son
+   *  **transitorios**: están duplicados en `repeticiones_detalle[0]` y los retira
+   *  el encargo que regenera todo (R10). Hasta entonces son lo único que hace
+   *  visible a un trabajo anterior al 35, que no trae el detalle. */
   repeticion_mostrada?: number | null;
   repeticiones?: number;
+  /** Una entrada por repetición (encargo 35). Falta en un trabajo anterior: ahí
+   *  el primer nivel se lee como repetición única (`lib/repeticiones.ts`). */
+  repeticiones_detalle?: RepeticionDetalle[];
   duraciones: Record<string, number>;
   picos: Record<string, number | null>;
   en_cada_evento: Partial<Record<EventoId, Fila>>;
@@ -265,11 +297,12 @@ export interface Metrica {
 /** Lo que la pantalla usa de `analysis.json`; el archivo tiene bastante más. */
 export interface Analysis {
   header: { schema_version: string; engine_version: string; registry_version: string; source: { fps_real: number; fps_provenance: Procedencia | null; capture_path_id: string } };
-  /** `scale_px` / `scale_source` son del contrato 2.1.0 y van opcionales: un
-   *  trabajo anterior no los trae y no se le inventa ninguno. Son el divisor de
-   *  las métricas en cm de ESA repetición — `quality.scale_px` es la mediana
-   *  entre repeticiones y con dos o más no es el divisor de ninguna. */
-  reps: { rep: number; frame_start: number; frame_end: number; scale_px?: number | null; scale_source?: EscalaFuente | null; metrics: Record<string, Metrica> }[];
+  /** `scale_px` / `scale_source` son del contrato 2.1.0 y `scale_frame` del 2.2.0;
+   *  los tres van opcionales: un trabajo anterior no los trae y no se le inventa
+   *  ninguno. Son el divisor de las métricas en cm de ESA repetición y el cuadro
+   *  del que salió — `quality.scale_px` es la mediana entre repeticiones y con
+   *  dos o más no es el divisor de ninguna, ni su cuadro el de ninguna. */
+  reps: { rep: number; frame_start: number; frame_end: number; scale_px?: number | null; scale_source?: EscalaFuente | null; scale_frame?: number | null; metrics: Record<string, Metrica> }[];
   warnings: string[];
 }
 
