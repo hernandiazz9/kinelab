@@ -423,6 +423,37 @@ def test_datos_unknown_file_and_traversal_are_404(client_datos, clips):
     assert client_datos.get(f"{base}/../../capture-paths.yaml").status_code == 404
 
 
+def test_datos_sirve_las_fotos_de_todas_las_repeticiones(client_datos, data_dir):
+    """La repetición 1 conserva `evento-top.png` y las demás salen como
+    `evento-r2-top.png` (encargo 35). No pueden estar en la lista fija —son
+    tantas como repeticiones tenga el clip— así que la lista blanca las acepta
+    **por forma**: número de una a tres cifras y uno de los cuatro eventos. Todo
+    lo demás sigue siendo 404, incluido lo que se le parece."""
+    d = _carpeta(data_dir, "9" * 32, video="dos-swings.mp4", creado="2026-09-20T10:00:00+00:00")
+    for n in ("evento-top.png", "evento-r2-top.png", "evento-r2-address.png", "evento-r10-impact.png"):
+        (d / n).write_bytes(b"\x89PNG\r\n\x1a\n" + n.encode())
+    (d / "evento-r2-rodilla.png").write_bytes(b"no es un evento")
+
+    j = client_datos.get("/api/datos/" + "9" * 32).json()
+    assert list(j["archivos"]) == ["evento-top.png", "evento-r2-address.png", "evento-r2-top.png", "evento-r10-impact.png"], \
+        "por repetición y, dentro de ella, en el orden de los eventos"
+
+    base = f"/api/datos/{'9' * 32}/archivos"
+    for n in ("evento-top.png", "evento-r2-top.png", "evento-r10-impact.png"):
+        r = client_datos.get(f"{base}/{n}")
+        assert r.status_code == 200 and r.headers["content-type"] == "image/png", n
+        assert r.content.endswith(n.encode()), f"{n}: se sirvió otro archivo"
+    # lo que no es un evento, lo que no tiene número y lo que quiere salir de la
+    # carpeta siguen siendo 404, estén en disco o no
+    assert client_datos.get(f"{base}/evento-r2-rodilla.png").status_code == 404
+    assert client_datos.get(f"{base}/evento-r-top.png").status_code == 404
+    assert client_datos.get(f"{base}/evento-r2-top.png.txt").status_code == 404
+    assert client_datos.get(f"{base}/evento-r2%2F..%2Ftrabajo.json").status_code == 404
+    # y una foto de una repetición que este trabajo no tiene: el nombre es
+    # válido, el archivo no está → 404 con la razón, no 200 con nada
+    assert client_datos.get(f"{base}/evento-r7-top.png").status_code == 404
+
+
 def test_datos_unknown_job_is_404(client_datos):
     assert client_datos.get("/api/datos/no-existe").status_code == 404
     assert client_datos.get("/api/datos/" + "0" * 32).status_code == 404
