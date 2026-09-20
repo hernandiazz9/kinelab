@@ -1,6 +1,27 @@
 # Plan
 
-Última ronda: 2026-09-20 (noche) — **cerró el 36** (`196e3a4`, `e9e2f6e`,
+Última ronda: 2026-09-20 (noche) — **cerró el 37** (`cee5ee7`, `4d9610a`,
+`df5e794`, `a4dd478`, `08e8d8b`, `7c23f81`, `598c5dd`): los cinco restos, un
+commit cada uno. `hands_speed_curve_top_to_impact` fuera del summary sin
+tocar el contrato (`summary.metrics` es objeto libre), la lista blanca del
+servicio de vuelta como `media_type()` sin que cambiara un solo test, y el
+`trunk_lean_deg` muerto. **462 tests, los mismos de antes**: el encargo no
+agrega ni saca. La prueba que valió: las tablas por cuadro de los **20
+`pose.npz`** guardados salen **byte a byte idénticas, 20 de 20** — y hacía
+falta, porque borrar el cálculo muerto sin más movía `trunk_lean_deg` al
+final de las 116 columnas del CSV (el dict literal fija el orden). **Segundo
+pendiente fantasma en dos encargos**: el bug de `--data` de `explore()` no
+existe; lo arregló el encargo 09 y la nota se venía copiando.
+
+**Para arreglar en la skill, no en este repo**: `scripts/integrar` cuelga 10
+minutos si se lo corre desde un worktree —su candado es
+`mkdir "$repo/.git/integrar.lock.d"` y en un worktree `.git` es un archivo,
+así que el mkdir falla siempre y el script lo lee como cola ocupada—. No
+integra nada y `main` queda intacto, así que no se pierde trabajo, pero se
+pierden diez minutos por encargo. Misma familia que el `flock` del 33. Se
+esquiva pasándole el repo como segundo argumento.
+
+Ronda anterior, 2026-09-20 (noche) — **cerró el 36** (`196e3a4`, `e9e2f6e`,
 `a2cded3`, `3483cd9`): la pantalla deja elegir repetición y toda la pantalla
 la sigue. El respaldo para trabajos viejos vive en un solo lugar,
 `web/src/lib/repeticiones.ts`, que además concentra la frase «repetición N de
@@ -398,7 +419,7 @@ una sola sesión por vez.
 - **Ronda del orquestador con evidencia** — ADRs de definición (finish, top,
   address), la banda, el 717, qué condiciones de ADR-019 cumple cada métrica, y
   si la Fase 5 arranca con descriptivos.
-- **R8** · [en curso] **37** restos-chicos — la lista blanca del servicio como
+- **R8** · [hecho] **37** restos-chicos — la lista blanca del servicio como
   `media_type()`, `hands_speed_curve_top_to_impact` fuera del summary,
   dos comentarios que mienten, el literal de `capture-paths.yaml` en
   `service/app.py:160` y el `trunk_lean_deg` muerto de `explore.py:265`.
