@@ -29,6 +29,16 @@ from kinelab.perception.gaps import interpolate_gaps
 from kinelab.perception.posestore import POSE_FILE, PoseData, load_pose
 from kinelab.sport import SportConfig
 
+# 2.2.0 (encargo 36): entra `reps[].scale_frame`, OPCIONAL y nullable — campo
+# nuevo y opcional es minor (§Versionado). Es el cuadro en que la cadena de la
+# estatura llegó a su máximo en ESA repetición, o sea de dónde salió su
+# `scale_px`: un número que multiplica a ocho métricas tiene que viajar con el
+# cuadro que se puede ir a mirar, y hasta hoy eso sólo estaba en
+# `quality.scale_px.frame`, que con dos o más repeticiones es el de la que
+# aportó la mediana y no el de ninguna en particular. Es **nullable** porque con
+# el fallback de escala (`body_height_px_frame`) no hay un cuadro del máximo:
+# `MetricContext.scale_detail()` devuelve `frame: None`, y por §Frontera un
+# `null` se escribe, no se omite. Ningún valor publicado cambia.
 # 2.1.0 (encargo 33): entran `reps[].scale_px` y `reps[].scale_source`, los dos
 # OPCIONALES — un campo nuevo y opcional es minor (§Versionado). Son el divisor
 # en píxeles de las métricas en cm de ESA repetición y de dónde sale, porque
@@ -39,7 +49,7 @@ from kinelab.sport import SportConfig
 # entran `metric_version` en cada sextuplo, `quality.scale_px` y el lugar
 # opcional de `events[].<evento>.subframe.mdc`. 1.2.0: `fps_provenance` en el
 # header y en cada métrica (ADR-016); 1.1.0: `subframe` opcional en los eventos.
-SCHEMA_VERSION = "2.1.0"
+SCHEMA_VERSION = "2.2.0"
 SERIES_MAX_HZ = 10.0
 QUALITY_MIN_DETECTION = 0.90
 QUALITY_MAX_PLAUSIBILITY_REJECT = 0.05
@@ -198,7 +208,7 @@ def build_analysis(take_dir: Path, capture: CaptureJson, pose: PoseData, sport: 
         # la tabla por cuadro que caen adentro (CONTRATO.md §La escala). Arrancan
         # en `None` porque un `null` nunca se omite, y quedan en `None` si el
         # deporte no tiene registro de métricas: ahí no hay ningún cm que dividir.
-        reps.append({"rep": n, "frame_start": int(start), "frame_end": int(end), "t_start": round(start / fps, 4), "t_end": round(end / fps, 4), "peak_speed_bh_s": round(c.peak_speed, 3), "scale_px": None, "scale_source": None, "metrics": {}})
+        reps.append({"rep": n, "frame_start": int(start), "frame_end": int(end), "t_start": round(start / fps, 4), "t_end": round(end / fps, 4), "peak_speed_bh_s": round(c.peak_speed, 3), "scale_px": None, "scale_source": None, "scale_frame": None, "metrics": {}})
         prev_end = end
     edits = load_edits(take_dir)
     if edits:
@@ -233,7 +243,12 @@ def build_analysis(take_dir: Path, capture: CaptureJson, pose: PoseData, sport: 
             # La escala de ESTA repetición, al lado de sus métricas. `quality.scale_px`
             # es la mediana entre repeticiones y con dos o más no es el divisor de
             # ninguna: el divisor es éste (CONTRATO.md §La escala).
-            r["scale_px"], r["scale_source"] = det["value"], det["source"]
+            # Y el CUADRO del que salió esa escala (2.2.0): el máximo de la cadena
+            # dentro de la repetición. `scale_detail()` ya lo conocía y hasta hoy
+            # `analysis.py` lo tiraba; sin él, la pantalla sólo podía mostrar el de
+            # `quality.scale_px`, que con dos o más repeticiones es el de otra. Es
+            # `None` con el fallback, donde no hay un cuadro del máximo que mirar.
+            r["scale_px"], r["scale_source"], r["scale_frame"] = det["value"], det["source"], det["frame"]
             if det["source"] == SCALE_SOURCE_FRAME and any(m.unit == "cm" for m in registry):
                 # La procedencia del fallback de `px_to_cm`, en una frase. No puede ir
                 # en el sextuplo —`$defs/metric` es `additionalProperties: false`— así

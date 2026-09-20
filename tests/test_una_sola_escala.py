@@ -181,7 +181,7 @@ def test_la_escala_por_repeticion_viaja_en_el_analysis(clips, capture_paths_yaml
         assert r["metrics"]["pelvis_sway_top_cm"]["value"] == pytest.approx(dx / r["scale_px"] * ALTURA_M * 100.0, abs=0.11)
     assert "mediana entre" in a["quality"]["scale_px"]["method"] and "reps[].scale_px" in a["quality"]["scale_px"]["method"]
     # un campo nuevo y opcional: el schema sube minor, no major
-    assert a["header"]["schema_version"] == "2.1.0"
+    assert a["header"]["schema_version"] == "2.2.0"
 
 
 def test_sin_cadena_el_analysis_dice_que_cayo_al_fallback(clips, capture_paths_yaml, tmp_path):
@@ -298,3 +298,96 @@ def test_sin_address_la_referencia_lo_dice(tmp_path):
     # sin repeticiones no hay escala, así que no hay cm: la columna está, vacía
     assert "pelvis_dx_vs_address_cm" in d["columnas"] and d["escala_px"] is None and d["escala_fuente"] is None
     assert r["picos"]["hands_speed_cm_s"] is None
+
+
+# --- el CUADRO de la escala, por repetición (encargo 36, contrato 2.2.0) -------------
+
+
+def test_el_cuadro_de_la_escala_sale_por_repeticion(clips, capture_paths_yaml, tmp_path):
+    """`reps[].scale_frame`: el cuadro donde la cadena de la estatura llegó a su
+    máximo en ESA repetición, que es de donde salió su `scale_px`.
+
+    Hasta el encargo 35 el único cuadro publicado era `quality.scale_px.frame`, y
+    con dos o más repeticiones ése es el de la que aportó la mediana: mostrarlo al
+    lado de la escala de otra manda a mirar un cuadro que no la produjo. El dato
+    existía adentro del motor (`MetricContext.scale_detail()` devuelve `frame`) y
+    `analysis.py` lo tiraba.
+
+    El test pide que los cuadros sean **distintos entre repeticiones** y que cada
+    uno caiga dentro de la suya: si `scale_frame` fuera el mismo número para todas
+    —el del `quality`, por ejemplo— las dos cosas fallarían."""
+    sw = _primera_repeticion_mas_grande(synth_swing(120.0, n_reps=3))
+    take, _ = _take(clips, capture_paths_yaml, tmp_path, sw=sw)
+    a = analyze_take(take, GOLF, write=False, height_m=ALTURA_M)
+    assert len(a["reps"]) >= 3
+
+    for r in a["reps"]:
+        assert r["scale_source"] == SCALE_SOURCE_CHAIN and r["scale_px"] is not None
+        assert isinstance(r["scale_frame"], int)
+        assert r["frame_start"] <= r["scale_frame"] <= r["frame_end"], (
+            f"el cuadro de la escala de la repetición {r['rep']} ({r['scale_frame']}) "
+            f"cae fuera de ella ({r['frame_start']}–{r['frame_end']})"
+        )
+    cuadros = [r["scale_frame"] for r in a["reps"]]
+    assert len(set(cuadros)) == len(cuadros), f"los cuadros de la escala se repiten ({cuadros}): sería uno solo para todas"
+    # y el del `quality` es el de UNA de ellas, no el de todas: es justamente por
+    # eso que hace falta el campo por repetición.
+    assert a["quality"]["scale_px"]["frame"] in cuadros
+    assert sum(1 for c in cuadros if c == a["quality"]["scale_px"]["frame"]) == 1
+    assert validate_analysis(json.loads(json.dumps(a, default=lambda o: o.tolist()))) == []
+    assert a["header"]["schema_version"] == "2.2.0", "campo nuevo y opcional: minor (CONTRATO.md §Versionado)"
+
+
+def test_sin_cadena_el_cuadro_de_la_escala_es_null_y_valida(clips, capture_paths_yaml, tmp_path):
+    """Con el fallback de escala no hay ningún máximo de cadena que mirar, así que
+    `scale_frame` es `null` — y un `null` se escribe, no se omite (§Frontera)."""
+    sw = synth_swing(120.0, n_reps=2)
+    sw = replace(sw, keypoints=np.array(sw.keypoints, dtype=np.float32, copy=True))
+    sw.keypoints[:, [H.LEFT_KNEE, H.RIGHT_KNEE]] = np.nan
+    take, _ = _take(clips, capture_paths_yaml, tmp_path, sw=sw)
+    a = analyze_take(take, GOLF, write=False, height_m=ALTURA_M)
+    assert a["reps"]
+    for r in a["reps"]:
+        assert r["scale_source"] == SCALE_SOURCE_FRAME
+        assert "scale_frame" in r and r["scale_frame"] is None, "el null va escrito, no omitido"
+    assert validate_analysis(json.loads(json.dumps(a, default=lambda o: o.tolist()))) == []
+
+
+def test_un_analysis_sin_scale_frame_sigue_validando(clips, capture_paths_yaml, tmp_path):
+    """2.2.0 es **minor**: un `analysis.json` 2.1.0 —que no trae el campo— sigue
+    validando contra el schema nuevo. Es la condición de §Versionado para que un
+    campo nuevo no sea major, y el repo tiene 19 trabajos anteriores en
+    `data/exploracion/` que no se regeneran."""
+    take, _ = _take(clips, capture_paths_yaml, tmp_path, sw=synth_swing(120.0, n_reps=2))
+    a = json.loads(json.dumps(analyze_take(take, GOLF, write=False, height_m=ALTURA_M), default=lambda o: o.tolist()))
+    assert validate_analysis(a) == []
+    viejo = json.loads(json.dumps(a))
+    viejo["header"]["schema_version"] = "2.1.0"
+    for r in viejo["reps"]:
+        del r["scale_frame"]
+    assert validate_analysis(viejo) == [], "un 2.1.0 sin el campo tiene que seguir validando"
+    # y lo que NO pasa: un cuadro que no es un entero
+    roto = json.loads(json.dumps(a))
+    roto["reps"][0]["scale_frame"] = "118"
+    assert validate_analysis(roto) != []
+
+
+def test_datos_eventos_publica_el_cuadro_de_la_escala_de_cada_repeticion(tmp_path):
+    """Lo que ve la pantalla. Hasta el encargo 35 `escala_cuadro` salía en `null`
+    con más de una repetición —se calculaba una vez fuera del bucle— y ahora sale
+    el de cada una, el de primer nivel incluido (que es el de la repetición 1)."""
+    from kinelab.explore import explore
+
+    sw = _primera_repeticion_mas_grande(synth_swing(120.0, n_reps=3, frame=(1920, 1080), body_height_px=0.8 * 1920, amplitude_px=300.0))
+    explore(None, tmp_path / "out", GOLF, height_m=ALTURA_M, pose_npz=_pose_sintetica(tmp_path, sw), nota_fuente="prueba")
+    d = json.loads((tmp_path / "out" / "datos-eventos.json").read_text(encoding="utf-8"))
+    a = json.loads((tmp_path / "out" / "analysis.json").read_text(encoding="utf-8"))
+
+    assert len(d["repeticiones_detalle"]) == len(a["reps"]) >= 3
+    for det, r in zip(d["repeticiones_detalle"], a["reps"]):
+        assert det["escala_cuadro"] == r["scale_frame"] is not None
+        assert det["escala_px"] == r["scale_px"]
+    cuadros = [det["escala_cuadro"] for det in d["repeticiones_detalle"]]
+    assert len(set(cuadros)) == len(cuadros), f"un solo cuadro para todas las repeticiones ({cuadros})"
+    # el de primer nivel es el de la repetición 1, como su `escala_px`
+    assert d["escala_cuadro"] == a["reps"][0]["scale_frame"] == cuadros[0]

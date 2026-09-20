@@ -114,7 +114,8 @@ for (const id of trabajos) {
 
 // 2 · el aviso de contrato anterior, del otro lado: un `analysis.json` al día no
 //     lo tiene que sacar. El ejemplo del repo es el único al día que va a git
-//     (hoy 2.1.0: el encargo 33 agregó `reps[].scale_px` y `reps[].scale_source`).
+//     (hoy 2.2.0: el encargo 36 agregó `reps[].scale_frame`; el 33, `reps[].scale_px`
+//     y `reps[].scale_source`).
 {
   console.log(`\n· el aviso de contrato anterior (vigente: ${CONTRATO_VIGENTE})`);
   const p = resolve(REPO, "data/examples/analysis.example.json");
@@ -134,8 +135,13 @@ for (const id of trabajos) {
     // no trae `reps[].scale_px`, así que la pantalla no muestra la escala y lo dice.
     ["2.0.0", true],
     ["2.0.1", true],
-    ["2.1.0", false],
-    ["2.1.1", false],
+    // y 2.1.0 con el bump a 2.2.0: un trabajo suyo no trae `reps[].scale_frame`,
+    // así que la pantalla no puede decir de qué cuadro salió la escala de cada
+    // repetición. Lo mismo que antes: no se muestra, no se inventa.
+    ["2.1.0", true],
+    ["2.1.1", true],
+    ["2.2.0", false],
+    ["2.2.1", false],
     ["3.0.0", false],
     [null, false],
     ["", false],
@@ -143,7 +149,7 @@ for (const id of trabajos) {
   ]) {
     if (contratoAnterior(v) !== esperado) mal(`contratoAnterior(${JSON.stringify(v)}) da ${contratoAnterior(v)} y se esperaba ${esperado}`);
   }
-  console.log(`  los 11 bordes de versión dan lo esperado`);
+  console.log(`  los 13 bordes de versión dan lo esperado`);
 }
 
 // 3 · un trabajo al día no pierde nada. `data/incoming/` está fuera de git: si

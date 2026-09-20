@@ -596,8 +596,16 @@ El divisor de verdad es **por repetición**, y desde 2.1.0 viaja en `reps[]`:
 
 ```json
 {"rep": 1, "frame_start": 1052, "frame_end": 1765,
- "scale_px": 783.9, "scale_source": "stature_chain_rep", "metrics": {…}}
+ "scale_px": 783.9, "scale_source": "stature_chain_rep", "scale_frame": 1284, "metrics": {…}}
 ```
+
+**`scale_frame` (2.2.0) es el cuadro del que salió esa escala**: el máximo de la
+cadena dentro de la repetición. Va por la misma razón que el `frame` de
+`quality.scale_px` —un número que multiplica a ocho métricas viaja con el cuadro
+que se puede ir a mirar— y porque el del `quality` es el de **una** repetición, la
+que aportó la mediana: con dos o más no es el de las demás. Es `null` con
+`body_height_px_frame`, donde no hay un máximo de cadena sino la altura de cuerpo
+del cuadro de cada métrica.
 
 `scale_source` tiene dos valores y sólo dos, porque son los dos caminos de
 `px_to_cm`:
@@ -699,7 +707,24 @@ homografía.
 
 - `schema_version` semver. **Renombrar un campo o cambiar una unidad es
   major**, aunque parezca inocente: la IA que lee el JSON ya aprendió el
-  nombre viejo. Métrica nueva y opcional es minor. Va en **2.1.0**.
+  nombre viejo. Métrica nueva y opcional es minor. Va en **2.2.0**.
+
+  **2.2.0 es minor, sin discusión**: entra **un campo nuevo y opcional**,
+  `reps[].scale_frame` (§La escala). Un `analysis.json` 2.1.0 sigue validando
+  contra el schema nuevo —no le falta nada obligatorio— y **ningún valor
+  publicado se mueve**: el campo dice de qué cuadro salió la escala que ya se
+  estaba usando, así que tampoco se mueve ningún `metric_version` ni el
+  `registry_version`. Es **nullable**: con el fallback de escala
+  (`body_height_px_frame`) no hay ningún máximo de cadena que mirar, y por
+  §Frontera un `null` se escribe, no se omite.
+
+  Lo que se arregla con él: `quality.scale_px` viaja con el cuadro en que se
+  midió —el que se puede ir a mirar— pero con dos o más repeticiones ese
+  cuadro es el de la que aportó la mediana, así que ponerlo al lado de la
+  escala de otra manda a mirar un cuadro que no la produjo. Hasta el 20/9 la
+  pantalla resolvía eso no mostrando ninguno con más de una repetición
+  (`escala_cuadro` en `null`), y el dato existía: `MetricContext.scale_detail()`
+  devuelve `frame` y `analysis.py` lo tiraba.
 
   **2.1.0 es minor, sin discusión**: entran **dos campos nuevos y opcionales**,
   `reps[].scale_px` y `reps[].scale_source` (§La escala). Un `analysis.json`

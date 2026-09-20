@@ -1,6 +1,6 @@
 {
   "header": {
-    "schema_version": "2.1.0",
+    "schema_version": "2.2.0",
     "engine_version": "0.0.1",
     "registry_version": "0.3.0",
     "generated_at": "2026-09-12T12:00:00+00:00",
@@ -273,6 +273,7 @@
       "peak_speed_bh_s": 1.383,
       "scale_px": 900.0,
       "scale_source": "stature_chain_rep",
+      "scale_frame": 118,
       "metrics": {
         "backswing_duration_ms": {
           "value": 916.7,
@@ -530,6 +531,7 @@
       "peak_speed_bh_s": 1.383,
       "scale_px": 900.0,
       "scale_source": "stature_chain_rep",
+      "scale_frame": 811,
       "metrics": {
         "backswing_duration_ms": {
           "value": 908.3,
@@ -787,6 +789,7 @@
       "peak_speed_bh_s": 1.383,
       "scale_px": 900.0,
       "scale_source": "stature_chain_rep",
+      "scale_frame": 1503,
       "metrics": {
         "backswing_duration_ms": {
           "value": 908.3,
@@ -1639,6 +1642,7 @@
   },
   "warnings": [
     "Ejemplo generado desde un swing SINTÉTICO (tests/helpers/gen_analysis_example.py): sirve para el schema, no como referencia de valores.",
+    "Esta toma no registra con qué clip se calibró el camino 'iphone17pro-video-1080p120-airdrop': no se puede saber si el fps de captura (120 fps) lo midió este archivo o algún otro. La tasa se usa igual; lo que falta es su procedencia. Se arregla declarando `calibration_clip_sha256` del camino en capture-paths.yaml y volviendo a ingestar la toma.",
     "Ninguno de estos números es un juicio: se muestran como descriptivos, con su banda, y no se comparan contra ningún rango. Para que una métrica pueda juzgarse hay que validar su MDC sobre material real —el mismo estimador, el mismo camino de captura, los eventos contra etiquetas humanas, la deriva de cámara medida y la escala trazable— y tener un rango de referencia con procedencia. Hasta entonces, comparar dos tomas es mirar, no medir (ADR-019).",
     "El MDC que viaja con cada número todavía no está validado en material real: los midió el arnés de verdad en su nivel 0 —un esqueleto proyectado con una cámara virtual más ruido, sin estimador de pose en el medio— y con una cámara (iphone17pro-1080p120) que no es la que filmó y que nadie verificó. Sirven para ordenar magnitudes; no describen todavía el error de este teléfono sobre un swing real (sports/golf/mdc.yaml, ADR-019)."
   ],

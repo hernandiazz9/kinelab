@@ -557,13 +557,16 @@ def explore(video: Path | None, out_dir: Path, sport: SportConfig, *, height_m: 
     peaks = _picos(rows, names)
     # De dónde sale cada cm y contra qué cuadro se mide cada «vs address», dicho.
     rep1 = analysis["reps"][0] if analysis["reps"] else None
-    # El cuadro del máximo de la cadena sólo se publica con UNA repetición: con
-    # varias, el que trae `quality.scale_px` es el de la repetición que aportó la
-    # mediana, que puede no ser ésta. Mostrar ese cuadro al lado de esta escala
-    # sería mandar a mirar un cuadro que no la produjo. Publicarlo por repetición
-    # pide un campo más en `reps[]` de `analysis.json`, o sea otro bump de
-    # contrato: no es de este encargo.
-    escala_cuadro = analysis["quality"]["scale_px"]["frame"] if len(analysis["reps"]) == 1 else None
+    # El cuadro del máximo de la cadena, POR REPETICIÓN. Hasta el encargo 35 se
+    # calculaba una vez fuera del bucle y sólo sobrevivía con una repetición
+    # (`quality.scale_px["frame"] if len(reps) == 1 else None`): con dos o más, el
+    # cuadro de `quality` es el de la repetición que aportó la mediana y puede no
+    # ser ésta, así que mostrarlo al lado de esta escala era mandar a mirar un
+    # cuadro que no la produjo. Ahora el dato viaja por repetición en
+    # `reps[].scale_frame` (contrato 2.2.0) y sale el de cada una. Es `None` con el
+    # fallback de escala, donde no hay ningún máximo de cadena que mirar.
+    def escala_cuadro_de(r: dict | None) -> int | None:
+        return r.get("scale_frame") if r else None
     # `explore.py` cae al cuadro 0 cuando no hay address (`ref` arriba). El valor no
     # cambia; lo que cambia es que ahora se dice cuál fue, porque «vs address» sin
     # address no es «vs address».
@@ -587,7 +590,7 @@ def explore(video: Path | None, out_dir: Path, sport: SportConfig, *, height_m: 
             "eventos_frame": ev_f, "eventos_t_s": {k: round(f / fps, 3) for k, f in ev_f.items()},
             "eventos_tol_frames": {k: rep_ev[k]["tol_frames"] for k in EVENT_ORDER if rep_ev.get(k)},
             "eventos_subcuadro": {k: rep_ev[k]["subframe"] for k in EVENT_ORDER if rep_ev.get(k) and rep_ev[k].get("subframe")},
-            "escala_px": r["scale_px"], "escala_fuente": r["scale_source"], "escala_cuadro": escala_cuadro,
+            "escala_px": r["scale_px"], "escala_fuente": r["scale_source"], "escala_cuadro": escala_cuadro_de(r),
             "referencia_cuadro": addr if addr is not None else (0 if rows else None),
             "referencia_fuente": "address" if addr is not None else ("cuadro 0 (sin address)" if rows else None),
             "duraciones": _duraciones(ev_f, fps),
@@ -605,7 +608,7 @@ def explore(video: Path | None, out_dir: Path, sport: SportConfig, *, height_m: 
                # `repeticiones_detalle[0]`. Lo retira el encargo 36, cuando el front
                # lea la repetición elegida.
                "fps_archivo": fps, "cuadros": len(rows), "altura_m": height_m, "gate_diria": gate_notes, "eventos_frame": events, "eventos_t_s": {k: round(f / fps, 3) for k, f in events.items()}, "eventos_tol_frames": tolerancias, "eventos_subcuadro": subframes,
-               "escala_px": rep1["scale_px"] if rep1 else None, "escala_fuente": rep1["scale_source"] if rep1 else None, "escala_cuadro": escala_cuadro,
+               "escala_px": rep1["scale_px"] if rep1 else None, "escala_fuente": rep1["scale_source"] if rep1 else None, "escala_cuadro": escala_cuadro_de(rep1),
                "referencia_cuadro": referencia_cuadro, "referencia_fuente": referencia_fuente,
                "repeticion_mostrada": rep1["rep"] if rep1 else None, "repeticiones": len(analysis["reps"]),
                "duraciones": durations, "picos": peaks, "en_cada_evento": finite_or_none(at), "diferencias_vs_address": deltas,
