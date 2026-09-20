@@ -374,6 +374,31 @@ Cómo se pregunta, que no es un trámite:
 Lo que no se hace: guardar para el final una pregunta que traba trabajo. Ésa
 se hace en el momento, aunque sea la única.
 
+## Cuándo suena el teléfono
+
+No se adivina si está frente al ordenador: se mide con el reloj. Si está,
+contesta en un par de minutos. Si a los diez no contestó, no estaba.
+
+Cuando tengas una pregunta que traba trabajo:
+
+1. **Preguntásela en pantalla** con `AskUserQuestion`. Si está sentado, la ve
+   ahí y no hace falta nada más.
+2. **Mandá `PushNotification`** con la misma pregunta en una línea, y leé qué
+   contesta:
+   - dice **«terminal activo»** → está sentado. No le mandes Telegram ahora;
+     programalo por si se levanta:
+     `~/.claude/skills/orquestador/scripts/avisar --en 10 "…"`.
+   - dice **cualquier otra cosa** (Remote Control apagado, app cerrada) → no
+     está. Telegram ya: `avisar "…"`.
+3. **Apenas conteste, cancelá el pendiente**: `avisar --cancelar`. Si te
+   olvidás, le llega al teléfono una pregunta que ya resolvió, y esos avisos
+   de más son los que hacen que uno termine silenciando el canal.
+4. Si se contesta mirando algo, mandá además la imagen: `avisar -f <ruta>`.
+
+El aviso programado **sobrevive a tu sesión**: si te quedás sin contexto o te
+matan mientras esperás, el teléfono suena igual. Es a propósito — una pregunta
+que traba la cadena no puede morirse con vos.
+
 ## Un agente que duda frena, y lo reanudás con la respuesta
 
 Un agente de la cadena no puede preguntarle a Hernán: nadie está mirando su
