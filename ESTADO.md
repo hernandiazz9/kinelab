@@ -3,6 +3,126 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 20 de septiembre de 2026 — encargo 34: de dónde sale la calibración del fps
+
+Prompt: `docs/prompts/34-fuente-de-la-calibracion.md`. Informe:
+`docs/informes/2026-09-20-34-fuente-de-la-calibracion.md`. **Sin sesión en paralelo**
+(lo pedía el prompt). Commits: `b94e1be` (motor, datos, contrato y tests), `b4a981e`
+(front) y el de cierre, con este archivo y el informe. Hecho en un worktree; el
+primer intento del 34 se abandonó y éste arrancó limpio desde `main`.
+
+### Qué existe ahora
+
+- **`capture-paths.yaml` está en 1.2.0** con `calibration_clip_sha256`: de qué clip
+  salió el cronómetro de un camino calibrado. **Opcional y FUERA de
+  `_CALIBRATION_FIELDS`**, que son todo o nada: un camino calibrado que no lo declara
+  sigue cargando, sigue analizando y sigue habilitando juicio. La procedencia **se
+  registra, no se exige** — exigirla habría tumbado el único camino calibrado que
+  existe (n = 1). Un camino **declarado** no puede declararlo y el validador lo
+  rechaza: sin cronómetro no hay clip que lo haya medido.
+- **`capture.json` está en 1.3.0** con `fps_calibration {clip_sha256, same_file}`.
+  `same_file`: `true` si la toma se calibró a sí misma, `false` si hereda la tasa de
+  otro archivo del mismo camino, `null` cuando no se puede saber (el camino no declara
+  sha, el camino no está calibrado, o el archivo es anterior a 1.3.0). **`null` no es
+  `false`.** Sale sin hash extra: `sha256_original` ya se calculaba.
+- **Los dos bumps son minor**, y por la misma razón: campo nuevo, opcional, ningún
+  valor publicado se mueve. Un `capture-paths` 1.1.0 y un `capture.json` 1.2.0 siguen
+  validando. **No hay entrada en `CONTRATO.md` §Desviaciones**: los dos siguen
+  §Versionado tal como está escrita, sin la excusa que necesitó `fps_provenance`.
+- **El sha del único camino calibrado está declarado**: `Cortado-lenta.mp4`,
+  `ff13415e0a1a…`, el único de los tres clips lentos con el cronómetro **andando** en
+  el cuadro. Se leyó del `capture.json` de su exploración y se verificó contra el
+  archivo con `shasum -a 256`: no se inventó.
+- **No hay `Check` nuevo y `CHECK_ORDER` no se movió.** Es procedencia, no un chequeo:
+  ningún veredicto cambia y ninguna toma se rechaza por esto. La frase va a
+  `analysis.warnings`, que es el canal que llega a la pantalla también en exploración,
+  donde el gate no corre. Queda **junto al aviso de ADR-016 y después de él**, que es
+  el más fuerte: ahí la tasa entera es un supuesto, acá está medida y lo único que
+  falta es de qué clip salió. Hay un test que fija ese orden.
+- **`fps_truth` imprime el sha al terminar**, en la línea exacta que se pega en el
+  YAML (`calibration_clip_sha256: "…"`), y también en `--json`. Reusa `sha256_file`;
+  se calcula en el CLI y no en `analyze()` para no releer 90 MB en cada ingesta.
+- **Las dos fichas de captura tienen quien las vigile.**
+  `service.exploracion.ficha_de_captura` y `exportar_demo.ficha_de_captura_min` son
+  copias paralelas y hasta hoy nada testeaba que coincidieran:
+  `tests/test_fichas_de_captura.py` compara **el conjunto entero de claves y todos los
+  valores**, en cuatro casos.
+- **El front lo dice en un solo lugar**, la ficha del archivo
+  (`FichaArchivo.tsx`), que es el natural: ya muestra el camino y si está calibrado.
+  Los otros tres lugares donde aparece el fps quedan como estaban. Si el motor no mandó
+  el campo, **no se muestra nada**.
+- **`kinelab/ingest/__main__.py` usa `CAPTURE_PATHS_FILE`** en vez del literal.
+- **Tests nuevos**: `tests/test_procedencia_calibracion.py` (37) y
+  `tests/test_fichas_de_captura.py` (14).
+
+### Medido
+
+- **Suites**: motor **448 pasados, 0 fallados, 1 salteado, exit 0** (eran 397 + 1
+  salteado; **+51 tests**). El salteado es el de los pesos de `models/`, que git ignora
+  y por eso no están en el worktree. Arnés **43 pasados, 0 fallados, exit 0**.
+  `pnpm lint` exit 0 · `pnpm build` exit 0.
+- **La corrida real**, `cortado3-lento.mp4` re-ingestado por CLI a un directorio
+  temporal (no se pisó ningún trabajo): **gate ok, 9 de 9**, los mismos nueve ids de
+  `CHECK_ORDER`, `schema_version: "1.3.0"`, y
+  `fps_calibration: {"clip_sha256": "ff13415e0a1a…", "same_file": false}`. El aviso
+  sale como **`warnings[0]`** de los 5 del análisis.
+- **`Cortado-lenta.mp4`, el clip que calibró el camino, da `same_file: true`** y se
+  rechaza igual por `duration_plausible` (2,49 s reales contra 3): la procedencia no
+  toca el veredicto, que es el punto.
+- **Censo de los 26 `capture.json` que hay en `data/`** (leídos, no regenerados): **2
+  quedan en `same_file: false`** y con aviso — la exploración de `cortado3-lento` y
+  `sessions/hernan/2026-09-15/.../take-01` —, **1 en `true`** (`Cortado-lenta`) y **23
+  en `null` sin aviso**, porque usan caminos **declarados** y de ésos ya avisa ADR-016.
+  El prompt esperaba «varios trabajos de exploración»: son dos, y la razón es que casi
+  toda la exploración corrió con `desconocido-video`.
+- **Mutación manual**: sacarle una clave a una sola de las dos fichas pone **13 de 14**
+  en rojo en `test_fichas_de_captura.py`.
+
+### Qué falta o no se probó
+
+- **Los 26 `capture.json` que ya están en disco no se regeneraron** (la demo y
+  `data/exploracion/` están congelados): siguen en 1.2.0, sin `fps_calibration`. Al
+  re-analizarlos van a mostrar el aviso de `null` —«esta toma no registra con qué
+  clip…»— hasta que se los re-ingeste. La frase está redactada para ser cierta también
+  en ese caso: dice lo que sabe la **toma**, no lo que dice el YAML de hoy, porque
+  `analysis.py` no vuelve a resolver el camino contra `capture-paths.yaml` (y no
+  debería: el `capture.json` es lo que la ingesta escribió).
+- **El front no se abrió** (regla de trabajo): lo prueba Hernán, con la lista del
+  informe. Para ver los tres estados hay que **subir un trabajo nuevo**: los que están
+  en la lista son anteriores a 1.3.0 y no traen el campo, así que no muestran nada.
+- **`same_file: true` sigue siendo n = 1 y es el clip corto.** El único archivo que se
+  calibró a sí mismo es `Cortado-lenta`, que el gate rechaza por durar 2,49 s. El clip
+  que pasa el gate (`cortado3-lento`) es justamente el que hereda la tasa. Eso no lo
+  arregla este encargo: lo arregla el pedido que viene desde el 24 y el 26 — una toma
+  de 25 s con el cronómetro andando en el cuadro.
+- **No se tocó** `kinelab/contract/schema.json` ni nada de `analysis.json` (su
+  `schema_version` sigue en 2.1.0), ni `kinelab/metrics/`, ni ningún umbral, ni el 717,
+  ni `sports/`, ni `truth/`. No se corrió pose sobre ningún clip. No se regeneró
+  `data/exploracion/` ni la demo.
+- **El bug de `--data` de `explore()` que anota `ESTADO.md` sigue abierto**: es de otro
+  encargo y no se tocó.
+
+### Desviaciones
+
+- **Del contrato, ninguna**, y por eso no hay entrada en §Desviaciones. Los dos bumps
+  son minor por §Versionado tal como está escrita.
+- **Del prompt, dos cosas que agrega y una premisa que confirma como falsa.**
+  1. El prompt nombraba sólo `same_file`; el `capture.json` lleva además
+     **`clip_sha256`**. Sin él la frase del punto 3 no se puede escribir: `analysis.py`
+     sólo lee el `capture.json` y no tendría de dónde sacar **de qué clip** salió el
+     fps, que es literalmente lo que el prompt pide decir.
+  2. El validador **rechaza** un `calibration_clip_sha256` en un camino sin calibrar, y
+     exige que el sha tenga forma de sha (64 hex en minúscula). No es «exigir la
+     procedencia»: faltar sigue estando permitido. Lo que se prohíbe es declarar una
+     calibración que no existe, y un sha mal pegado, que sería peor que ninguno —
+     diría `same_file: false` sobre el archivo correcto.
+  3. **El punto 8 tenía razón y queda confirmado**: el bug que suponía el plan en
+     `__main__.py:103` **no existe**. `default_capture_paths_file()` no toma argumentos
+     y usarla ahí habría ignorado `--data`: sería una regresión. Se cambió sólo el
+     literal por la constante, que es lo que el prompt pedía.
+
+---
+
 ## 20 de septiembre de 2026 — encargo 33: una sola escala en la pantalla, y dicha
 
 Prompt: `docs/prompts/33-una-sola-escala-en-la-pantalla.md`. Informe:
