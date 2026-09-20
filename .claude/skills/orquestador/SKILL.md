@@ -249,6 +249,31 @@ cómo corre, o cuando la cadena está parada esperándolo.
 Si `spawn_task` no existe en la sesión, una línea de texto: «pegá `/encargo
 NN` en una sesión nueva».
 
+## Cuando el dueño hace falta: avisale
+
+Cada informe trae arriba una línea «Para <dueño>». Es lo primero que mirás,
+antes que el resumen. Si no dice «nada», **mandale una notificación en el
+acto** con `PushNotification`: llega a su escritorio y, si Remote Control está
+conectado, a su teléfono, así puede contestarte desde ahí sin sentarse.
+
+- Una línea, menos de 200 caracteres, sin markdown, con lo accionable
+  adelante: «encargo 32: mirá palo-local-1364.png y decime si ves el shaft;
+  de eso depende el número del impacto». No «el encargo 32 terminó».
+- **Una sola por parada**, no una por encargo. Si la cadena cerró tres y dos
+  te necesitan, juntalas en un aviso.
+- No avises por un encargo que cerró bien y no pide nada: la cadena existe
+  justamente para que eso no lo moleste.
+
+Existe porque falló: el 32 dejó una pregunta que sólo Hernán podía contestar
+—si en un cuadro se ve el palo o no, de lo que depende el número del impacto—
+en la línea 287 de un informe de 310, y su resumen de diez líneas no la
+mencionaba. Nadie se enteró hasta que él lo vio de casualidad en la pantalla
+de la sesión.
+
+**Y la cadena no sigue de largo sobre una pregunta abierta si lo que viene
+depende de ella.** Lanzá lo que no dependa; lo que sí, espera. Eso va dicho en
+el plan, en «Preguntas para el dueño», con qué encargo traba cada una.
+
 ## Decisiones que aparecen a mitad de la cadena
 
 Si un informe trae una decisión que no era de la sesión, no pares por defecto.

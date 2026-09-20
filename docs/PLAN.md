@@ -262,6 +262,11 @@ los dos dejó números propios, y los informes lo dicen. Demo pública:
    acota el fin del acompañamiento a su repetición, pero qué es el finish lo
    tenés que decir vos.
 
+9. **Del 32, y traba el número del impacto:** abrí
+   `data/incoming/cortado3-lento.kinelab/mascara/palo-local-1364.png` y decí si
+   ves el shaft. La sesión marcó una estela tenue y no marcó nada en 1367 y
+   1368. Si vos lo ves y ella no, el impacto se rehace.
+
 ## Aparcado
 
 - Pádel (invariante 17). SynthPose (1.5) después de los intrínsecos reales.

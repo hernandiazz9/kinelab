@@ -17,6 +17,13 @@ máscara. Cuesta **68 ms/cuadro en FHD y 407 en UHD**, más 27–72 s de modelo 
 un modelo de segmentación —ninguno inventa píxeles que el obturador no registró— sino un
 obturador más corto, que es lo que `CAPTURA.md` §Luz ya pide y nadie midió todavía.
 
+Para Hernán: abrí `data/incoming/cortado3-lento.kinelab/mascara/palo-local-1364.png`
+y decime si ves el shaft en el impacto. Yo marqué una estela tenue y en los
+cuadros 1367 y 1368 no marqué nada; si vos lo ves y la sesión no, el número del
+impacto cambia y hay que rehacerlo. (Línea agregada el 20/9 por el orquestador:
+el informe la tenía en §Para que mire Hernán, línea 272 de 310, y el resumen no
+la mencionaba.)
+
 Encargo: medir, en vez de discutir, qué compra y qué cuesta una máscara del sujeto: la
 silueta, el palo contra etiquetas a ojo, la escala en cm, y la robustez en dos clips más.
 Todo en `banco/`, sin tocar el motor y sin instalar nada.

@@ -23,9 +23,16 @@ sucio=$(git status --porcelain --untracked-files=no)
 [ -n "$sucio" ] && falta="Quedan cambios sin commitear:
 $sucio"
 
-if ! ls docs/informes/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-"$nn"-*.md >/dev/null 2>&1; then
+informe=$(ls docs/informes/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-"$nn"-*.md 2>/dev/null | head -1)
+if [ -z "$informe" ]; then
   falta="${falta:+$falta
 }No hay informe del encargo $nn en docs/informes/ (AAAA-MM-DD-$nn-<slug>.md)."
+elif ! grep -qiE '^#*[[:space:]]*Para (Hernán|Hernan|el dueño)[[:space:]]*:?[[:space:]]*\S' "$informe"; then
+  falta="${falta:+$falta
+}El informe $informe no tiene la línea «Para Hernán:» arriba. Va siempre, aunque
+diga «nada»: es lo que el orquestador lee para saber si tiene que avisarte, y
+lo que evita que una pregunta tuya quede enterrada en la línea 287 (pasó en
+el 32)."
 fi
 
 [ -z "$falta" ] && exit 0
