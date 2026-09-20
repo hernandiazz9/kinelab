@@ -3,6 +3,131 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 20 de septiembre de 2026 — encargo 33: una sola escala en la pantalla, y dicha
+
+Prompt: `docs/prompts/33-una-sola-escala-en-la-pantalla.md`. Informe:
+`docs/informes/2026-09-20-33-una-sola-escala-en-la-pantalla.md`. **Sin sesión en
+paralelo** (lo pedía el prompt). Commits: `9f8c008` (motor, contrato, schema, ejemplo y
+tests), `5c469e9` (front) y el de cierre, con este archivo y el informe.
+
+### Qué existe ahora
+
+- **`analysis.json` está en 2.1.0.** Entran `reps[].scale_px` y `reps[].scale_source`,
+  los dos **opcionales** —campo nuevo y opcional es minor por §Versionado, y así un 2.0.0
+  ya escrito sigue validando—. El motor los escribe siempre, en `null` cuando no hay
+  escala. **Ningún valor publicado cambia**, así que no se movió ningún `metric_version`
+  ni el `registry_version` (golf sigue en 0.3.0).
+- **`scale_source` tiene dos valores y sólo dos**, porque son los dos caminos de
+  `px_to_cm`: `stature_chain_rep` (hay cadena; `scale_px` es el divisor de todas las
+  métricas en cm de esa repetición) y `body_height_px_frame` (no hay cadena; `scale_px` es
+  `null` porque el divisor **no es uno solo**: es la altura de cuerpo del cuadro del evento
+  cero de cada métrica). El fallback **sigue vivo**; lo que deja de ser es mudo.
+- **La tabla por cuadro usa la escala de la repetición que contiene a cada fila.**
+  `per_frame_table` gana `reps=None` **al final** de la firma, así que las tres llamadas
+  posicionales (dos de `tests/test_eventos_senal.py` y una de `truth/tests/test_angulos.py`)
+  siguen andando y con los números de antes. Un cuadro fuera de toda repetición **no tiene
+  cm**. Columna nueva `escala_px`: el divisor de esa fila, en píxeles, vacío donde no hay.
+  **115 → 116 columnas** con altura declarada y **106 → 107** sin ella.
+- **`datos-eventos.json`** suma `escala_px`, `escala_fuente`, `escala_cuadro`,
+  `referencia_cuadro`, `referencia_fuente`, `repeticion_mostrada` y `repeticiones`.
+  `escala_cuadro` sólo con una repetición: con varias, el cuadro de `quality.scale_px` es
+  el de la que aportó la mediana y puede no ser la que se muestra.
+- **`quality.scale_px` no cambió de valor ni de cuadro en ningún clip**; su `method` dice
+  ahora que es la mediana **entre repeticiones** y que con dos o más no es el divisor de
+  ninguna, y manda a `reps[].scale_px`.
+- **La pantalla lo dice**, en tres lugares: la cabecera de `TablaCuadros` (escala,
+  referencia, y que los cuadros fuera de una repetición no tienen cm), la de
+  `TablaEventos` (lo mismo, más «Repetición 1 de N: todo lo de esta pantalla es esa») y al
+  lado de las métricas (`Metricas`, con la escala de **esa** repetición: `quality.scale_px`
+  no sirve ahí). Si el motor no mandó el campo —trabajo anterior a 2.1.0— **no se muestra
+  nada**. `CONTRATO_VIGENTE` del front pasa a 2.1.0, así que un trabajo 2.0.0 saca el aviso
+  de contrato anterior, y es cierto: no trae la escala por repetición.
+- **Sin address, «vs address» lo dice.** `explore.py` cae al cuadro 0 y los valores no
+  cambian; `referencia_fuente` dice `cuadro 0 (sin address)` y la pantalla lo muestra al
+  lado de las ocho columnas `*_vs_address_*`.
+- **`tests/test_una_sola_escala.py`** (nuevo, 7 tests) y uno nuevo en `tests/test_escala.py`.
+  El comentario de `TablaCuadros.tsx:4` decía 118 columnas (eran los CSV congelados de la
+  demo): corregido con los números de hoy.
+
+### Medido
+
+- **Antes → después desde los ocho `pose.npz` guardados** (invariante 1: el modelo no se
+  volvió a correr; el «antes» es HEAD extraído con `git archive` y corrido con el mismo
+  script). **Ninguna métrica de `analysis.json` se movió en ningún clip** — era la
+  condición de parada del prompt. Lo único que se mueve son las ocho columnas en cm de la
+  tabla por cuadro y `hands_speed_cm_s`.
+- **Los dos números del mismo evento.** Peor caso `cortado3-lento` / `take-01`:
+  `pelvis_sway_impact_cm` valía **22,6 cm** en las métricas y **26,99 cm** en la tabla —
+  **4,39 cm**, contra un MDC de **2,416**. En los ocho clips la peor diferencia iba de
+  **1,66 a 4,39 cm** y ahora es **≤ 0,046 cm**, que es el `round(value, 1)` del sextuplo.
+- **`cortado3-lento` muestra por qué `quality.scale_px` no alcanzaba**: sus dos
+  repeticiones tienen **783,9 y 831,3 px** (6,0 % de diferencia) y el número publicado es
+  el de la primera.
+- **Filas con cm**, antes → después: `cortado` 76 → 69 · `20260907_170638` 265 → 78 ·
+  `vid1` 1066 → 163 · `vid2` 292 → 164 · `Cortado-lenta` 598 → 500 · `cortado3-lento` y
+  `take-01` 2977 → 1363 · `vid3` 189 → **0** y `cartado2-lenta` 292 → **0** (los dos sin
+  ninguna repetición). El pico de `hands_speed_cm_s` baja en consecuencia (por ejemplo
+  `cortado` 835,6 → 675,3 cm/s) y pasa a `null` en los dos sin repeticiones.
+- **Ningún clip real cae al fallback**: los ocho dan `stature_chain_rep`. El camino
+  `body_height_px_frame` se prueba con el swing sintético con las rodillas en `NaN`.
+- **Suites**: motor **397 pasados, 0 fallados, 1 salteado, exit 0** (eran 389 pasados;
+  +8 tests). El salteado es `test_perception.py:534`, que pide los pesos de `models/` y
+  esos no están en el worktree porque git los ignora. Arnés **43 pasados, 0 fallados,
+  exit 0**. `cd web && pnpm lint` exit 0 · `pnpm build` exit 0 ·
+  `node --experimental-strip-types src/lib/retirados.verificar.mjs` exit 0, 0 fallas.
+- **Mutación manual: 8 bugs inyectados, 8 en rojo, control en verde.** El octavo —mostrar
+  la mediana de `quality` en vez de la escala de la repetición 1— **no lo agarraba nada**
+  al principio, porque con repeticiones del mismo tamaño la mediana *es* la de la primera:
+  su test construye un clip de **tres** repeticiones con la primera 1,15× más grande.
+
+### Qué falta o no se probó
+
+- **La rama quedó SIN integrar a main, y no por un conflicto.**
+  `~/.claude/skills/orquestador/scripts/integrar` usa `flock` (línea 15) y `flock` **no
+  existe en macOS**: el script muere con exit 127 **antes** de tocar nada, así que main
+  quedó intacto. La rama es `worktree-agent-a01c88f39db55f574` (`976c06a`) y el merge es
+  **limpio** (`git merge-tree --write-tree main HEAD` → exit 0, sin conflictos; el único
+  commit que main ganó es `fc4959d`, que no toca estos archivos). Desde el checkout
+  principal y en main: `git merge --no-edit worktree-agent-a01c88f39db55f574`. **Esto le
+  va a pasar a toda sesión que trabaje en un worktree** hasta que se arregle el script; la
+  cola sigue haciendo falta y en macOS se puede hacer con `mkdir` o `shlock`.
+- **No hay selector de repetición** (lo prohibía el prompt, y con razón). Lo que haría
+  falta está en el informe §Queda abierto: `explore()` arma `datos-eventos.json`, el
+  overlay, las fotos por evento y el `address` de la tabla con `analysis["events"][0]`
+  (`explore.py:366`), así que no es un índice en el front — hay que parametrizar `explore()`
+  por repetición. Mientras tanto la pantalla lo dice.
+- **La tabla por cuadro perdió los cm de la mayoría de sus filas** (en `vid1`, 903 de
+  1066). Es lo que el prompt pedía y es lo correcto —no hay escala que sea la de esos
+  cuadros—, pero es un cambio visible en la lupa de exploración. Las columnas en `%` de
+  altura no cambiaron.
+- **El fallback de `px_to_cm` sigue vivo y ningún clip real lo ejercita.** Matarlo sigue
+  siendo una decisión del dominio, y ahora se puede tomar con la procedencia publicada.
+- **El front no se abrió** (regla de trabajo): lo prueba Hernán, con la lista de seis
+  puntos del informe. Los trabajos que ya están en la lista son 2.0.0 y no traen los campos
+  nuevos: hay que subir uno para ver esto.
+- **`data/exploracion/` y la demo no se regeneraron** (congelados por el prompt): el sitio
+  publicado sigue con los números viejos de la tabla por cuadro.
+- No se tocó `kinelab/ingest/`, `sports/`, `truth/`, `service/`, ningún umbral, ningún
+  `metric_version` ni el `registry_version`; no se corrió pose sobre ningún clip.
+
+### Desviaciones
+
+- **Del contrato, ninguna**, y por eso no hay entrada en §Desviaciones. El bump
+  `analysis.json` **2.0.0 → 2.1.0** sigue la regla de §Versionado tal como está escrita
+  —«métrica nueva y opcional es minor»—: entran dos campos **opcionales**, ninguno se
+  renombra, ninguna unidad cambia y ningún valor publicado se mueve. Van opcionales a
+  propósito: requeridos habrían invalidado los `analysis.json` 2.0.0 ya escritos, que es
+  lo que §Versionado llama major, y eso sí habría necesitado una desviación como la del
+  bump de `fps_provenance`. El bump queda documentado en §Versionado con sus tres razones.
+- **Del prompt, una.** El punto 3 pedía «la procedencia por métrica donde hoy cae el
+  fallback de `px_to_cm`». No puede ir en el sextuplo: `$defs/metric` es
+  `additionalProperties: false` y agregarle un campo sería otro bump, que el mismo prompt
+  prohibía. Va a `warnings[]` —el patrón de ADR-019— y a `reps[].scale_source`, que está
+  al lado de `reps[].metrics`. La frase dice además lo que la caída tiene de particular:
+  ahí el divisor no es uno solo.
+
+---
+
 ## 20 de septiembre de 2026 — encargo 32: la máscara del sujeto, medida
 
 Prompt: `docs/prompts/32-mascara-del-sujeto.md`. Informe:
