@@ -286,27 +286,24 @@ _EVENTOS_CON_FOTO: tuple[str, ...] = tuple(n[len("evento-") : -len(".png")] for 
 _FOTO_DE_REPETICION = re.compile(r"^evento-r([1-9][0-9]{0,2})-(" + "|".join(re.escape(e) for e in _EVENTOS_CON_FOTO) + r")\.png$")
 
 
-class _Servibles(dict):
-    """La lista blanca: los nombres fijos, más las fotos por repetición, que son
-    una familia y no una lista.
-
-    Es un `dict` de verdad —iterarlo da los nombres fijos, que es lo que sale en
-    el mensaje del 404— con `get` y `in` extendidos a `evento-r<N>-<evento>.png`.
-    Se hizo así, y no agregando N entradas por clip, porque el número de
-    repeticiones lo decide el material y no hay ningún máximo razonable que
-    quemar."""
-
-    def get(self, nombre: str, default: Any = None) -> Any:  # type: ignore[override]
-        m = super().get(nombre)
-        if m is not None:
-            return m
-        return "image/png" if isinstance(nombre, str) and _FOTO_DE_REPETICION.match(nombre) else default
-
-    def __contains__(self, nombre: object) -> bool:
-        return super().__contains__(nombre) or bool(isinstance(nombre, str) and _FOTO_DE_REPETICION.match(nombre))
+#: Los nombres fijos de la lista blanca, en orden. Es lo que el 404 enumera:
+#: las fotos de las repeticiones 2, 3, … no se pueden enumerar porque son
+#: tantas como repeticiones tenga el clip.
+ARCHIVOS_FIJOS: tuple[str, ...] = tuple(_ARCHIVOS_FIJOS)
 
 
-ARCHIVOS: dict[str, str] = _Servibles(_ARCHIVOS_FIJOS)
+def media_type(nombre: str) -> str | None:
+    """El media type con el que se sirve `nombre`, o `None` si no es servible.
+
+    La lista blanca son los nombres fijos más las fotos por repetición, que son
+    una familia y no una lista: el número de repeticiones lo decide el material
+    y no hay ningún máximo razonable que quemar. `None` es 404
+    (`service/app.py` §datos_archivo); que el archivo exista en disco se
+    pregunta después y por separado."""
+    fijo = _ARCHIVOS_FIJOS.get(nombre)
+    if fijo is not None:
+        return fijo
+    return "image/png" if _FOTO_DE_REPETICION.match(nombre) else None
 
 
 def _orden_foto(nombre: str) -> tuple[int, int]:

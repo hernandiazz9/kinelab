@@ -53,7 +53,7 @@ from kinelab.ingest.gate import CaptureJson, slomo_declared_reason
 from kinelab.ingest.session import validate_slug
 from kinelab.tools.fps_truth import FfprobeError, analyze
 from kinelab.tools.publicar import Ejecutor
-from service.exploracion import ARCHIVOS, JOB_ID, Exploracion
+from service.exploracion import ARCHIVOS_FIJOS, JOB_ID, Exploracion, media_type
 from service.publicacion import PUBLICAR, QUITAR, Publicaciones
 from sports import get_sport
 
@@ -327,9 +327,9 @@ def create_app(
     @app.get("/api/datos/{job_id}/archivos/{nombre}")
     async def datos_archivo(job_id: str, nombre: str, descargar: bool = Query(False)) -> FileResponse:
         job = trabajo_or_404(job_id)
-        media = ARCHIVOS.get(nombre)
+        media = media_type(nombre)
         if media is None:
-            raise HTTPException(404, f"'{nombre}' no es un archivo de exploración. Hay: {', '.join(ARCHIVOS)}.")
+            raise HTTPException(404, f"'{nombre}' no es un archivo de exploración. Hay: {', '.join(ARCHIVOS_FIJOS)}.")
         path = job.dir / nombre
         if not path.is_file():
             raise HTTPException(404, f"'{nombre}' todavía no existe para este trabajo (estado: {job.estado}).")
