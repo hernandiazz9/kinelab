@@ -43,7 +43,10 @@ Deja en `<out>/<id>/`:
     pose.json            los 26 puntos por cuadro del tramo, en image_px del origen
     datos-eventos.json · analysis.json · capture.json   tal cual
     datos-por-cuadro.csv recortado al tramo (los números de cuadro NO se tocan)
-    evento-<id>.jpg      las fotos por evento, en JPEG al alto pedido
+    evento-<id>.jpg      las fotos por evento, en JPEG al alto pedido; con varias
+                         repeticiones también `evento-r<N>-<id>.jpg` (encargo 35).
+                         Salen solas: `exportar_fotos` junta `evento-*.png` y no
+                         tiene ninguna lista de nombres que actualizar
     pose3d.json          si el trabajo lo tiene (ejemplos de mocap)
     trabajo.json         lo que devolvería `GET /api/datos/<id>`, para el modo demo
 

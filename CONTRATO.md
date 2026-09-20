@@ -630,6 +630,12 @@ repeticiones, entonces, `quality.scale_px` no es el divisor de ninguna**, y el
 `method` lo dice y manda a `reps[].scale_px`. Sin ninguna escala medible,
 `value` y `frame` son `null` y `method` dice por qué.
 
+Desde el 20/9 la escala de **cada** repetición llega a la pantalla, no sólo la
+de la primera: `datos-eventos.json` publica `repeticiones_detalle`, con
+`escala_px` y `escala_fuente` por repetición (§Versionado). En
+`cortado3-lento.mp4` las dos difieren **6,0 %** —783,9 y 831,3 px— y hasta hoy
+la segunda no salía a ningún lado.
+
 **Una sola escala por pantalla.** La tabla por cuadro (`datos-por-cuadro.csv`)
 divide cada fila por la escala de **la repetición que la contiene**, que es la
 misma que usaron las métricas, y la publica fila por fila en la columna
@@ -806,6 +812,23 @@ homografía.
   historial y juicio habilitado, o un cambio que supere el MDC en el rango de
   uso, o un cambio en qué se mide y no en cómo se escala.
 - `engine_version` en `provenance` y en `header`.
+- **`datos-eventos.json` NO es parte de este contrato y no lleva
+  `schema_version`.** Es la salida del **modo exploración**
+  (`kinelab/explore.py`), una vista derivada de `analysis.json` y de la tabla
+  por cuadro, para la lupa de la pantalla; lo versionado es lo que está río
+  arriba. Queda escrito acá porque dos veces se buscó en esta sección qué
+  bumpear al agregarle un campo, y la respuesta es **nada**: agregarle o
+  sacarle una clave no toca ninguna versión de las de esta sección. Lo que sí
+  vale es la regla de la frontera (§Frontera Python ↔ JSON): un `null` nunca se
+  omite, y `NaN` sale como `null`. Quien lo lee es la pantalla, y lo que la
+  pantalla sabe leer lo declara su propio `CONTRATO_VIGENTE`
+  (`web/src/lib/retirados.ts`), que habla del `analysis.json` del trabajo.
+
+  Desde el 20/9 publica **todas las repeticiones** en `repeticiones_detalle`
+  —una entrada por repetición, con sus eventos, su escala, sus duraciones, sus
+  picos y sus diferencias contra **su** address—. Los campos de primer nivel
+  siguen siendo los de la repetición 1 y son **transitorios**: están ahí para
+  que la pantalla siga andando mientras se migra componente por componente.
 - Re-analizar conserva el `analysis.json` anterior renombrado con su
   `engine_version`. Comparar dos versiones del motor sobre la misma sesión
   tiene que ser posible sin copiar carpetas a mano.

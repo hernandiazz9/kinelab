@@ -122,6 +122,9 @@ def _trabajo(tmp: Path) -> Path:
     # `test_las_fotos_llevan_el_mismo_recorte_que_el_video` no probaría nada.
     for nombre, f in EVENTOS.items():
         cv2.imwrite(str(d / f"evento-{nombre}.png"), _cuadro(f))
+    # Y una foto de una SEGUNDA repetición (encargo 35): el exportador no tiene
+    # una lista de nombres, junta `evento-*.png`, así que tiene que salir sola.
+    cv2.imwrite(str(d / "evento-r2-top.png"), _cuadro(EVENTOS["top"]))
     return d
 
 
@@ -144,6 +147,8 @@ def test_escribe_todos_los_archivos(exportado):
         ed.VIDEO_LIMPIO, ed.VIDEO_OVERLAY, ed.TRANSFORMACION, ed.POSE_JSON,
         "datos-eventos.json", "analysis.json", "capture.json", "datos-por-cuadro.csv",
         "trabajo.json", "evento-address.jpg", "evento-top.jpg", "evento-impact.jpg", "evento-follow_end.jpg",
+        # la foto de la repetición 2 viaja como cualquier otra (encargo 35)
+        "evento-r2-top.jpg",
     }
     assert esperados <= set(r.archivos), f"faltan: {sorted(esperados - set(r.archivos))}"
     assert all((r.dir / n).is_file() for n in esperados)
