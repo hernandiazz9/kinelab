@@ -270,6 +270,41 @@ def build_analysis(take_dir: Path, capture: CaptureJson, pose: PoseData, sport: 
             if registry.mdc_note and any(m.mdc_validation == "sin_validar" for m in registry):
                 warnings.append(f"El MDC que viaja con cada número todavía no está validado en material real: {registry.mdc_note}.")
     warnings += event_notes
+    # De qué clip salió el fps que se está usando (encargo 34). Es procedencia,
+    # no un chequeo: no rechaza nada y no cambia ningún número. Va por
+    # `warnings[]` y no por un `Check` porque en exploración el gate no corre
+    # —`explore.py` escribe un `Check` con `passed=None`— y ésta es la frase que
+    # llega a la pantalla en los dos modos. Sólo tiene sentido en un camino
+    # calibrado: en uno declarado no hubo cronómetro, y de eso avisa ADR-016.
+    #
+    # Se calcula acá y se inserta ABAJO, junto al aviso de ADR-016: los dos
+    # hablan del mismo eje del tiempo y van antes de cualquier número, con el de
+    # ADR-016 primero porque es el más fuerte (ahí la tasa entera es un supuesto;
+    # acá está medida y lo que falta es de qué clip salió).
+    aviso_calibracion: str | None = None
+    if capture.capture_path_calibrated:
+        cal = capture.fps_calibration
+        if cal.same_file is False:
+            aviso_calibracion = (
+                f"El fps de captura de esta toma ({fps:g} fps) NO lo midió este archivo: lo hereda del camino "
+                f"'{capture.capture_path_id}', que se calibró con otro clip (sha256 {cal.clip_sha256[:12]}…). "
+                f"Este archivo es sha256 {capture.sha256_original[:12]}…. Lo que el camino garantiza es el modo y la "
+                "transferencia, no que esta toma haya salido de ahí; para medirlo en la toma va el cronómetro "
+                "andando dentro del mismo cuadro que el gesto (CAPTURA.md §El método preferido)."
+            )
+        elif cal.same_file is None:
+            # La frase dice lo que sabe la TOMA, no lo que dice el YAML de hoy:
+            # un `capture.json` anterior al schema 1.3.0 tampoco trae el campo, y
+            # afirmar «el camino no lo declara» sería falso si el camino lo
+            # declara ahora. La salida es la misma en los dos casos: re-ingestar.
+            aviso_calibracion = (
+                f"Esta toma no registra con qué clip se calibró el camino '{capture.capture_path_id}': no se puede "
+                f"saber si el fps de captura ({fps:g} fps) lo midió este archivo o algún otro. La tasa se usa igual; "
+                "lo que falta es su procedencia. Se arregla declarando `calibration_clip_sha256` del camino en "
+                "capture-paths.yaml y volviendo a ingestar la toma."
+            )
+    if aviso_calibracion:
+        warnings.insert(0, aviso_calibracion)
     # Antes de cualquier número, por qué la tasa de cuadros no está verificada
     # (ADR-016). Son DOS casos distintos y el aviso no los puede mezclar:
     #

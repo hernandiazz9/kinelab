@@ -11,6 +11,12 @@ en el `capture.json` (`vfr_ratio_raw`, `fps_playback_raw`, `first_delta_s`) y,
 cuando difieren, el chequeo lo dice en su propio registro: nunca en silencio.
 Ver CAPTURA.md §El gate de ingesta y el informe 2026-09-14-03.
 
+`fps_calibration` NO es un chequeo: es procedencia. Dice de qué clip salió el
+cronómetro del camino y si ese clip es este mismo archivo. Un camino que no lo
+declara sigue pasando igual — la procedencia se registra, no se exige—, y lo
+que el entrenador lee sale de `analysis.warnings`, que es el canal que llega a
+la pantalla también en exploración, donde el gate no corre.
+
 Un camino DECLARADO sin cronómetro (ADR-016) pasa `capture_path_known` y lo
 dice: la tasa de captura se asume igual a la de reproducción efectiva
 (`stretch_factor` 1,0), la procedencia del fps es `sin_verificar` y viaja al
@@ -37,11 +43,13 @@ from kinelab.ingest.capture_paths import CapturePath, CapturePaths
 from kinelab.sport import SportConfig
 from kinelab.tools.fps_truth import Counted, Truth, first_delta_note
 
-# 1.2.0: aparecen `capture_path_calibrated` y `fps_provenance` (ADR-016), los
-# dos opcionales. 1.1.0: `fps_playback` y `vfr_ratio` pasan a ser los EFECTIVOS
-# y aparecen `fps_playback_raw`, `vfr_ratio_raw`, `first_delta_s` y `fps_note`.
+# 1.3.0: aparece `fps_calibration` (de qué clip salió el cronómetro del camino,
+# y si es este mismo archivo), opcional. 1.2.0: aparecen
+# `capture_path_calibrated` y `fps_provenance` (ADR-016), los dos opcionales.
+# 1.1.0: `fps_playback` y `vfr_ratio` pasan a ser los EFECTIVOS y aparecen
+# `fps_playback_raw`, `vfr_ratio_raw`, `first_delta_s` y `fps_note`.
 # Un capture.json 1.0.0 sigue validando, con los nuevos en su default.
-CAPTURE_SCHEMA_VERSION = "1.2.0"
+CAPTURE_SCHEMA_VERSION = "1.3.0"
 
 DURATION_MIN_S = 3.0
 DURATION_MAX_S = 180.0
@@ -79,6 +87,29 @@ class Gate(BaseModel):
     verdict: Literal["ok", "reject"]
     checks: list[Check]
     reasons: list[str]
+
+
+class FpsCalibration(BaseModel):
+    """De dónde sale el cronómetro con el que se midió el fps de esta toma.
+
+    Es un dato de PROCEDENCIA, no un chequeo: nada de acá rechaza una toma ni
+    cambia un número. Lo único que hace es dejar escrito lo que hasta hoy no se
+    podía saber — el camino declara un `fps_real` y había que creerle sin saber
+    de qué clip había salido (`capture-paths.yaml` §calibration_clip_sha256).
+
+    - `clip_sha256`: el clip que calibró el camino, tal como el camino lo
+      declara. `None` cuando no lo declara, o cuando el camino no está
+      calibrado (ahí no hubo cronómetro y no hay nada que declarar).
+    - `same_file`: `True` si ese clip es ESTE archivo — la toma se calibró a sí
+      misma, que es el método preferido de `CAPTURA.md` §El método preferido—;
+      `False` si el fps es heredado de otro archivo del mismo camino; `None`
+      cuando no se puede saber porque el camino no declara el sha.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    clip_sha256: str | None = None
+    same_file: bool | None = None
 
 
 class CaptureJson(BaseModel):
@@ -125,6 +156,11 @@ class CaptureJson(BaseModel):
     recorded_at: str | None
     sha256_original: str
     original_name: str
+    fps_calibration: FpsCalibration = Field(
+        default_factory=FpsCalibration,
+        description="de qué clip salió el cronómetro del camino, y si es este mismo archivo. "
+        "Opcional: un capture.json 1.2.0 sigue validando, con los dos campos en None.",
+    )
     gate: Gate
 
 
@@ -185,6 +221,23 @@ def fps_real_for(path: CapturePath | None, c: Counted) -> float | None:
 
 def fps_provenance_for(path: CapturePath | None) -> FpsProvenance:
     return "medido_aqui" if (path is not None and path.calibrated) else "sin_verificar"
+
+
+def fps_calibration_for(path: CapturePath | None, sha256_original: str) -> FpsCalibration:
+    """La procedencia del cronómetro de esta toma. Comparar sale gratis: el sha
+    del original ya se calculó para el `capture.json` y no hace falta otro.
+
+    Un camino sin calibrar no tiene cronómetro, así que tampoco tiene clip que
+    lo haya medido: los dos campos quedan en `None`. Lo mismo un camino
+    calibrado que no declara el sha — que sigue siendo válido a propósito
+    (`capture_paths._CALIBRATION_FIELDS`).
+    """
+    if path is None or not path.calibrated or path.calibration_clip_sha256 is None:
+        return FpsCalibration()
+    return FpsCalibration(
+        clip_sha256=path.calibration_clip_sha256,
+        same_file=path.calibration_clip_sha256 == sha256_original,
+    )
 
 
 def declared_reason(path: CapturePath) -> str:
@@ -421,6 +474,8 @@ def build_capture_json(
         recorded_at=d.creation_time,
         sha256_original=sha256_original,
         original_name=original_name,
+        # Sin hash extra: `sha256_original` ya llegó calculado.
+        fps_calibration=fps_calibration_for(path, sha256_original),
         gate=gate,
     )
 

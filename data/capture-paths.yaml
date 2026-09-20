@@ -9,6 +9,14 @@
 #                      (`python -m kinelab.tools.fps_truth clip.mov --duracion-real S`),
 #                      nunca del fps nominal del modo. Es el único que habilita
 #                      juicio: la procedencia del fps es `medido_aqui`.
+# `calibration_clip_sha256` (schema 1.2.0) dice DE QUÉ CLIP salió el cronómetro
+# de un camino calibrado. Es OPCIONAL: un camino que no lo declara sigue siendo
+# válido y sigue analizando — la procedencia se registra, no se exige. Cuando
+# está, cada toma dice en su capture.json si el fps que usa lo midió su propio
+# archivo (`fps_calibration.same_file: true`) o lo heredó de otro clip del
+# mismo camino (`false`). Lo imprime `python -m kinelab.tools.fps_truth CLIP`,
+# listo para pegar en la línea de abajo.
+#
 #   calibrated: false  dispositivo y modo DECLARADOS por el usuario, sin
 #                      cronómetro (ADR-016). Los seis campos de la calibración
 #                      van en null; el fps de captura se asume igual al de
@@ -17,7 +25,7 @@
 #                      Sólo mode: video — un slomo sin calibrar se rechaza.
 #
 # Ejemplo comentado campo por campo: data/examples/capture-paths.example.yaml
-schema_version: "1.1.0"
+schema_version: "1.2.0"
 paths:
   # "No sé con qué se filmó." Es el default del modo exploración
   # (`python -m kinelab datos VIDEO`): analiza igual y deja el supuesto escrito.
@@ -122,4 +130,11 @@ paths:
     fps_method: "cronómetro filmado dentro del cuadro. Primera lectura legible 00:05.27 en el cuadro 0; última 00:07.76 en el cuadro 593; 598 cuadros decodificados. Dos puntos: 593 cuadros / 2,49 s = 238,15 fps. Ajuste por mínimos cuadrados sobre las 39 lecturas del refresco del cronómetro (una cada ~0,065 s, leídas por plantilla y verificadas a ojo): 240,15 fps con 1 sigma de 0,60, residuo rms 0,011 s (2,7 cuadros) y máximo 0,037 s (9,0 cuadros) sobre 593 cuadros. Uniforme: ver notes."
     calibrated_on: 2026-09-15
     calibrated_by: hernan
+    # El clip que se leyó para medir los 240,15 fps: Cortado-lenta.mp4, el
+    # único de los tres lentos que trae el cronómetro ANDANDO en el cuadro.
+    # Verificado el 20/9 contra el archivo (shasum -a 256) y contra el
+    # capture.json de su exploración. Los otros clips del mismo camino
+    # (cortado3-lento, cartado2-lenta) heredan esta tasa sin haberla medido, y
+    # su capture.json lo dice con fps_calibration.same_file: false.
+    calibration_clip_sha256: "ff13415e0a1a4fad938b7ab636fb04cb3761ffbeb26e4c732f3dfd726ce3829b"
     notes: "UNIFORME, medido: los tres tercios del clip dan 238,38 / 239,66 / 242,73 fps, cada uno dentro de su propio 1 sigma del global (2,6 / 2,1 / 4,2), y una sola recta explica las 39 lecturas con 2,7 cuadros de rms. Si un tramo hubiera sido capturado a velocidad normal, el cronómetro habría corrido 8x más rápido ahí: el residuo máximo de 0,037 s acota ese tramo a 1,3 cuadros. vfr_ratio 1,0027 (CFR) y primer delta 0,0333 s (el recorte se llevó el arranque de la cámara). OJO: la duración REAL es 598/240,15 = 2,49 s, por debajo del mínimo de 3 s del gate."

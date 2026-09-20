@@ -97,7 +97,7 @@ def test_hevc120_on_calibrated_path_is_ok_end_to_end(clips, paths, tmp_path):
     assert [c.id for c in capture.gate.checks] == CHECK_ORDER
 
     # Lo que dice el capture.json es lo que dice el contrato.
-    assert capture.schema_version == "1.2.0"
+    assert capture.schema_version == "1.3.0"
     assert capture.capture_path_calibrated is True
     assert capture.fps_provenance == "medido_aqui"
     assert capture.codec == "hevc"

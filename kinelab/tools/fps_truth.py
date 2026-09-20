@@ -42,6 +42,8 @@ from dataclasses import asdict, dataclass
 from fractions import Fraction
 from pathlib import Path
 
+from kinelab.ingest.session import sha256_file
+
 # Por encima de esto, los deltas de PTS no son uniformes: tasa variable, o el
 # bug de captura de los iPhone (240 nominales grabando 114–227 reales).
 VFR_RATIO_MAX = 1.10
@@ -427,6 +429,20 @@ def format_human(t: Truth) -> str:
     return "\n".join(lines)
 
 
+def format_sha_line(sha: str) -> str:
+    """El sha del clip medido, listo para pegar en `capture-paths.yaml`.
+
+    Existe porque hasta hoy había que calcularlo aparte, y eso es exactamente
+    lo que hacía que nadie declarara de qué clip salía una calibración: el
+    camino decía `fps_real` y había que creerle. Ver el encargo 34 y
+    `capture_paths.CapturePath.calibration_clip_sha256`.
+    """
+    return (
+        "  para capture-paths.yaml (el clip que calibra este camino):\n"
+        f'    calibration_clip_sha256: "{sha}"'
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         prog="kinelab-fps-truth",
@@ -449,7 +465,17 @@ def main(argv: list[str] | None = None) -> int:
     except (FfprobeError, ValueError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
-    print(json.dumps(t.to_dict(), indent=2, ensure_ascii=False) if args.json else format_human(t))
+    # El sha se calcula acá y no en `analyze()`: leer 90 MB es caro y los que
+    # llaman a `analyze()` desde el motor (`explore`, la ingesta) ya tienen el
+    # suyo. Reusa `sha256_file`, no hay un segundo hasher.
+    sha = sha256_file(args.clip)
+    if args.json:
+        d = t.to_dict()
+        d["sha256"] = sha
+        print(json.dumps(d, indent=2, ensure_ascii=False))
+    else:
+        print(format_human(t))
+        print(format_sha_line(sha))
     return 0
 
 

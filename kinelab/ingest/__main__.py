@@ -15,7 +15,7 @@ import sys
 from datetime import date
 from pathlib import Path
 
-from kinelab.ingest.capture_paths import CapturePaths, load_capture_paths
+from kinelab.ingest.capture_paths import CAPTURE_PATHS_FILE, CapturePaths, load_capture_paths
 from kinelab.ingest.gate import CaptureJson, build_capture_json, run_gate
 from kinelab.ingest.session import (
     copy_original,
@@ -100,7 +100,7 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     try:
-        capture_paths = load_capture_paths(args.data / "capture-paths.yaml")
+        capture_paths = load_capture_paths(args.data / CAPTURE_PATHS_FILE)
         sport = _resolve_sport(args.deporte)
         take_dir, capture = ingest_clip(
             args.clip,

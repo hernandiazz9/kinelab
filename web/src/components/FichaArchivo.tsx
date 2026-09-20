@@ -19,9 +19,41 @@ function Dato({ que, children, ancho }: { que: string; children: React.ReactNode
   );
 }
 
+/** De qué clip salió el fps que se está usando, o `null` si no hay nada honesto
+ * que decir. Tres casos y un cuarto que no se muestra:
+ *
+ * - el camino no está calibrado → no hubo cronómetro, no hay clip: nada acá
+ *   (de eso avisa la procedencia del fps, que ya está arriba);
+ * - el motor no mandó el campo (trabajo anterior al contrato 1.3.0) → nada:
+ *   no se inventa lo que el análisis no dijo;
+ * - `false` → el fps es heredado de OTRO archivo del mismo camino;
+ * - `null` con el camino calibrado → el camino no dice con qué clip se calibró.
+ */
+function deQueClip(ficha: Ficha): React.ReactNode {
+  if (ficha.camino_calibrado !== true) return null;
+  const mismo = ficha.calibracion_mismo_archivo;
+  if (mismo === undefined) return null;
+  if (mismo === true) {
+    return <span className="text-emerald-300">de esta misma toma: el cronómetro está en este archivo</span>;
+  }
+  if (mismo === false) {
+    return (
+      <>
+        <span className="text-amber-300">heredado de otro clip</span>
+        <span className="text-zinc-500">
+          {" "}
+          · lo calibró sha256 {(ficha.calibracion_clip_sha256 ?? "").slice(0, 12)}… y este archivo es otro
+        </span>
+      </>
+    );
+  }
+  return <span className="text-zinc-400">el camino no declara con qué clip se lo calibró</span>;
+}
+
 export default function FichaArchivo({ ficha, procesando }: { ficha: Ficha; procesando: boolean }) {
   const proc = PROCEDENCIA[ficha.fps_provenance] ?? ficha.fps_provenance;
   const brutoDistinto = ficha.fps_reproduccion_bruto !== null && ficha.fps_reproduccion_bruto !== ficha.fps_reproduccion;
+  const procedencia = deQueClip(ficha);
 
   return (
     <section className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
@@ -60,6 +92,12 @@ export default function FichaArchivo({ ficha, procesando }: { ficha: Ficha; proc
           {ficha.camino}
           <span className="text-zinc-500"> · {ficha.camino_calibrado === true ? "calibrado con cronómetro" : ficha.camino_calibrado === false ? "declarado, sin cronómetro" : "sin camino conocido"}</span>
         </Dato>
+
+        {procedencia && (
+          <Dato que="de qué clip salió ese fps" ancho>
+            {procedencia}
+          </Dato>
+        )}
       </dl>
 
       {ficha.fps_note && <p className="mt-3 rounded border border-amber-800/60 bg-amber-950/20 p-2 text-sm text-amber-100">{ficha.fps_note}</p>}

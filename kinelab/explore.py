@@ -43,7 +43,7 @@ import numpy as np
 from kinelab.analysis import build_analysis, swing_signals
 from kinelab.events.signal import butterworth_lowpass, cutoff_for_fps, fill_nan_linear
 from kinelab.ingest.capture_paths import GENERIC_VIDEO_ID, CapturePaths, resolve_path_id
-from kinelab.ingest.gate import CaptureJson, Check, Gate, declared_reason, slomo_declared_reason
+from kinelab.ingest.gate import CaptureJson, Check, Gate, declared_reason, fps_calibration_for, slomo_declared_reason
 from kinelab.ingest.session import sha256_file
 from kinelab.perception.estimator import EstimatorConfig
 from kinelab.perception.gaps import interpolate_gaps
@@ -93,6 +93,8 @@ def prepare_take(video: Path, out_dir: Path, *, view: str, camino: str = GENERIC
     else:
         fps, stretch = fps_playback, 1.0
         fuente = f"declarado:{path.id}"
+    # Un solo hash del original: va al `capture.json` y decide `fps_calibration`.
+    sha = sha256_file(original)
     cj = CaptureJson(
         athlete=athlete, gesture="driver", view=view, capture_path_id=path.id,
         capture_path_calibrated=path.calibrated, fps_provenance="sin_verificar",
@@ -100,7 +102,8 @@ def prepare_take(video: Path, out_dir: Path, *, view: str, camino: str = GENERIC
         fps_source=f"{fuente} · {AVISO}", codec=d.codec, width=d.display_size[0], height=d.display_size[1], rotation_deg=d.rotation_deg,
         frames_decoded=c.frames_decoded, duration_s=round(c.frames_decoded / fps, 3), duration_playback_s=round(c.playback_span_s, 3),
         vfr_ratio=round(c.vfr_ratio_effective, 3), vfr_ratio_raw=round(c.vfr_ratio, 3), first_delta_s=round(c.delta_first_s, 6),
-        fps_note=first_delta_note(c), recorded_at=d.creation_time, sha256_original=sha256_file(original), original_name=video.name,
+        fps_note=first_delta_note(c), recorded_at=d.creation_time, sha256_original=sha, original_name=video.name,
+        fps_calibration=fps_calibration_for(path, sha),
         gate=Gate(verdict="ok", checks=[Check(id="exploracion", passed=None, value=path.id, reason=f"{AVISO} Camino: {declared_reason(path) if not path.calibrated else fuente}")], reasons=[]),
     )
     (out_dir / "capture.json").write_text(cj.model_dump_json(indent=2), encoding="utf-8")
@@ -138,6 +141,11 @@ def prepare_take_from_pose(pose_npz: Path, out_dir: Path, *, view: str, note: st
         frames_decoded=T, duration_s=round(T / fps, 3), duration_playback_s=round(T / fps, 3),
         vfr_ratio=1.0, vfr_ratio_raw=1.0, first_delta_s=round(1.0 / fps, 6), fps_note=prov.get("fps_note"),
         recorded_at=prov.get("captured_on"), sha256_original=str(prov.get("source_sha256") or ""), original_name=str(prov.get("source_name") or pose_npz.name),
+        # Acá no hay video: el sha es el que la `provenance` del `.npz` haya
+        # guardado del archivo de origen, o "" si no guardó ninguno. Con "" la
+        # comparación da `False`, que es lo correcto: lo que no se puede
+        # afirmar no se afirma.
+        fps_calibration=fps_calibration_for(path, str(prov.get("source_sha256") or "")),
         gate=Gate(verdict="ok", checks=[Check(id="exploracion", passed=None, value=path.id, reason=f"{AVISO} {note}")], reasons=[]),
     )
     (out_dir / "capture.json").write_text(cj.model_dump_json(indent=2), encoding="utf-8")

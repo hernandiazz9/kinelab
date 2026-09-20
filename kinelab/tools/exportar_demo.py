@@ -441,8 +441,13 @@ def exportar_pose(t: Trabajo, out: Path, a: int, b: int) -> str:
 def ficha_de_captura_min(c: dict[str, Any]) -> dict[str, Any]:
     """La ficha del archivo que el front espera en `Trabajo.archivo`, armada desde
     el `capture.json`. Los mismos campos que `service.exploracion.ficha_de_captura`,
-    que acá no se puede importar sin arrastrar FastAPI al motor."""
+    que acá no se puede importar sin arrastrar FastAPI al motor.
+
+    Son dos copias paralelas y tienen que seguir siendo la misma:
+    `tests/test_fichas_de_captura.py` falla si divergen.
+    """
     vfr = float(c.get("vfr_ratio") or 1.0)
+    cal = c.get("fps_calibration") or {}
     return {
         "codec": c.get("codec"), "ancho": c.get("width"), "alto": c.get("height"),
         "rotacion_deg": c.get("rotation_deg"), "cuadros": c.get("frames_decoded"),
@@ -454,6 +459,8 @@ def ficha_de_captura_min(c: dict[str, Any]) -> dict[str, Any]:
         "primer_delta_s": c.get("first_delta_s"), "fps_note": c.get("fps_note"),
         "camino": c.get("capture_path_id"), "camino_calibrado": c.get("capture_path_calibrated"),
         "fps_provenance": c.get("fps_provenance") or "sin_verificar",
+        "calibracion_clip_sha256": cal.get("clip_sha256"),
+        "calibracion_mismo_archivo": cal.get("same_file"),
         "original": c.get("original_name"), "grabado": c.get("recorded_at"),
     }
 
