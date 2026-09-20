@@ -575,7 +575,7 @@ def test_schema_rejects_the_dead_gain_and_sequence_order(clips, capture_paths_ya
     assert validate_analysis(a) == []
     assert "gain" not in a["summary"]
     assert all("sequence_order" not in e for e in a["events"])
-    assert a["header"]["schema_version"] == "2.0.0"
+    assert a["header"]["schema_version"] == "2.1.0"
 
     con_gain = json.loads(json.dumps(a))
     con_gain["summary"]["gain"] = {"pelvis_to_torso": {"value": 1.49}}
@@ -683,7 +683,7 @@ def test_repo_example_is_valid():
     # el ejemplo se genera con el motor (tests/helpers/gen_analysis_example.py), no
     # a mano: hasta el encargo 16 se editaba a mano y quedó con `gain`, con
     # `sequence_order` y con el `method` que ADR-017 había reemplazado.
-    assert d["header"]["schema_version"] == "2.0.0" and d["header"]["registry_version"] == "0.3.0"
+    assert d["header"]["schema_version"] == "2.1.0" and d["header"]["registry_version"] == "0.3.0"
     assert "gain" not in d["summary"] and all("sequence_order" not in e for e in d["events"])
     assert all(e["top"]["method"] == "direction_change_farthest" for e in d["events"])
     assert d["quality"]["scale_px"]["value"] is not None
@@ -854,7 +854,7 @@ def test_analysis_carries_the_impact_subframe(clips, capture_paths_yaml, tmp_pat
     take, sw = _synthetic_take(clips, capture_paths_yaml, tmp_path)
     a = analyze_take(take, GOLF)
     assert validate_analysis(json.loads((take / "analysis.json").read_text())) == []
-    assert a["header"]["schema_version"] == "2.0.0", "mueren gain y sequence_order (ADR-018)"
+    assert a["header"]["schema_version"] == "2.1.0", "mueren gain y sequence_order (ADR-018); 2.1.0 suma reps[].scale_px (encargo 33)"
     for rep in a["events"]:
         assert rep["impact"]["subframe"]["fraction"] is not None
         assert rep["impact"]["frame"] == json.loads((take / "analysis.json").read_text())["events"][rep["rep"] - 1]["impact"]["frame"]

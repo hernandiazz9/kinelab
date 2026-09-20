@@ -61,6 +61,8 @@
         "properties": {
           "rep": {"type": "integer"}, "frame_start": {"type": "integer"}, "frame_end": {"type": "integer"},
           "t_start": {"type": "number"}, "t_end": {"type": "number"}, "peak_speed_bh_s": {"type": ["number", "null"]},
+          "scale_px": {"type": ["number", "null"]},
+          "scale_source": {"type": ["string", "null"], "enum": ["stature_chain_rep", "body_height_px_frame"]},
           "metrics": {"type": "object", "additionalProperties": {"$metric": true}}
         }
       }

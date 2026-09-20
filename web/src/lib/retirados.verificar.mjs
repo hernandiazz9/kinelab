@@ -113,7 +113,8 @@ for (const id of trabajos) {
 }
 
 // 2 · el aviso de contrato anterior, del otro lado: un `analysis.json` al día no
-//     lo tiene que sacar. El ejemplo del repo es el único 2.0.0 que va a git.
+//     lo tiene que sacar. El ejemplo del repo es el único al día que va a git
+//     (hoy 2.1.0: el encargo 33 agregó `reps[].scale_px` y `reps[].scale_source`).
 {
   console.log(`\n· el aviso de contrato anterior (vigente: ${CONTRATO_VIGENTE})`);
   const p = resolve(REPO, "data/examples/analysis.example.json");
@@ -129,9 +130,12 @@ for (const id of trabajos) {
     ["1.0.0", true],
     ["1.2.0", true],
     ["1.9.9", true],
-    ["2.0.0", false],
-    ["2.0.1", false],
+    // 2.0.0 y 2.0.1 pasaron a ser anteriores con el bump a 2.1.0: un trabajo suyo
+    // no trae `reps[].scale_px`, así que la pantalla no muestra la escala y lo dice.
+    ["2.0.0", true],
+    ["2.0.1", true],
     ["2.1.0", false],
+    ["2.1.1", false],
     ["3.0.0", false],
     [null, false],
     ["", false],
@@ -139,7 +143,7 @@ for (const id of trabajos) {
   ]) {
     if (contratoAnterior(v) !== esperado) mal(`contratoAnterior(${JSON.stringify(v)}) da ${contratoAnterior(v)} y se esperaba ${esperado}`);
   }
-  console.log(`  los 10 bordes de versión dan lo esperado`);
+  console.log(`  los 11 bordes de versión dan lo esperado`);
 }
 
 // 3 · un trabajo al día no pierde nada. `data/incoming/` está fuera de git: si
@@ -150,7 +154,7 @@ for (const id of trabajos) {
   try {
     r = JSON.parse(readFileSync(p, "utf8"));
   } catch {
-    console.log(`\n· control con un trabajo 2.0.0: falta ${p} (está fuera de git). Se rehace con:\n    .venv/bin/python -m kinelab datos data/incoming/vid1.mp4 --altura-m 1.75`);
+    console.log(`\n· control con un trabajo al contrato vigente (${CONTRATO_VIGENTE}): falta ${p} (está fuera de git). Se rehace con:\n    .venv/bin/python -m kinelab datos data/incoming/vid1.mp4 --altura-m 1.75`);
   }
   if (r) {
     console.log(`\n· control · data/incoming/vid1.kinelab (re-analizado con HEAD)`);

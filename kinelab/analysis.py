@@ -21,7 +21,7 @@ from kinelab.events.segmentation import segment_reps
 from kinelab.events.signal import butterworth_lowpass, cutoff_for_fps, hands_center, speed
 from kinelab.ingest.gate import DECLARED_NOTE, CaptureJson
 from kinelab.ingest.session import sha256_file
-from kinelab.metrics.core import MetricContext, evaluate
+from kinelab.metrics.core import SCALE_SOURCE_FRAME, MetricContext, evaluate
 from kinelab.metrics.generic import repeatability_curves, repeatability_scalar
 from kinelab.metrics.registry import REGISTRY, Registry
 from kinelab.perception.framing import body_height_px
@@ -29,12 +29,17 @@ from kinelab.perception.gaps import interpolate_gaps
 from kinelab.perception.posestore import POSE_FILE, PoseData, load_pose
 from kinelab.sport import SportConfig
 
+# 2.1.0 (encargo 33): entran `reps[].scale_px` y `reps[].scale_source`, los dos
+# OPCIONALES — un campo nuevo y opcional es minor (§Versionado). Son el divisor
+# en píxeles de las métricas en cm de ESA repetición y de dónde sale, porque
+# `quality.scale_px` es la mediana entre repeticiones y con dos o más no es el
+# divisor de ninguna. Ningún valor publicado cambia.
 # 2.0.0 (ADR-018): mueren `summary.gain` y `events[].sequence_order`, los dos
 # requeridos por el schema — sacar un campo requerido es major. En el mismo bump
 # entran `metric_version` en cada sextuplo, `quality.scale_px` y el lugar
 # opcional de `events[].<evento>.subframe.mdc`. 1.2.0: `fps_provenance` en el
 # header y en cada métrica (ADR-016); 1.1.0: `subframe` opcional en los eventos.
-SCHEMA_VERSION = "2.0.0"
+SCHEMA_VERSION = "2.1.0"
 SERIES_MAX_HZ = 10.0
 QUALITY_MIN_DETECTION = 0.90
 QUALITY_MAX_PLAUSIBILITY_REJECT = 0.05
@@ -86,14 +91,17 @@ def swing_signals(pose: PoseData, fps: float, *, cutoff_hz_max: float = 12.0, ma
 
 
 def _scale_summary(scales: list[dict]) -> dict:
-    """`quality.scale_px`: el divisor en píxeles de toda métrica en cm, con el
+    """`quality.scale_px`: el **agregado entre repeticiones** de la escala, con el
     cuadro en que se midió (CONTRATO.md §La escala).
 
-    Hay una escala **por repetición**. Con varias, el número que se publica es la
-    mediana y el cuadro es el de la repetición que la aporta —nunca un promedio
-    de cuadros, que no sería ningún cuadro—. Sin ninguna escala medible el valor
-    es `null` y `method` dice por qué: en ese caso cada métrica en cm cae a
-    `body_height_px`, que es la convención anterior."""
+    Hay una escala **por repetición**, y es la que divide: viaja en
+    `reps[].scale_px`. Con varias, el número que se publica acá es la **mediana
+    entre repeticiones** y el cuadro es el de la repetición que la aporta —nunca
+    un promedio de cuadros, que no sería ningún cuadro—, así que con dos o más
+    repeticiones este número **no es el divisor de ninguna fila ni de ninguna
+    métrica**. El `method` lo dice, porque durante un tiempo se lo leyó como si
+    lo fuera. Sin ninguna escala medible el valor es `null` y `method` dice por
+    qué: en ese caso cada métrica en cm cae a `body_height_px` del cuadro."""
     ok = [s for s in scales if s.get("value") is not None]
     if not ok:
         method = "sin_repeticiones" if not scales else "sin_cadena_medible"
@@ -104,7 +112,7 @@ def _scale_summary(scales: list[dict]) -> dict:
         return {"value": None, "frame": None, "method": f"{method}: {note}"}
     med = float(np.median([s["value"] for s in ok]))
     pick = min(ok, key=lambda s: (abs(s["value"] - med), s["frame"]))
-    method = pick["method"] if len(ok) == 1 else f"{pick['method']} · mediana de {len(ok)} repeticiones"
+    method = pick["method"] if len(ok) == 1 else f"{pick['method']} · mediana entre {len(ok)} repeticiones: no es el divisor de ninguna, el de cada una está en reps[].scale_px"
     return {"value": round(pick["value"], 1), "frame": pick["frame"], "method": method}
 
 
@@ -185,7 +193,12 @@ def build_analysis(take_dir: Path, capture: CaptureJson, pose: PoseData, sport: 
         n = len(reps) + 1
         event_notes += [f"Repetición {n}: sin `{events[k].id}` — {events[k].reason}" for k in ev.order if isinstance(events.get(k), MissingEvent)]
         events_out.append({"rep": n, **{k: (events[k].to_dict() if events.get(k) else None) for k in ev.order}})
-        reps.append({"rep": n, "frame_start": int(start), "frame_end": int(end), "t_start": round(start / fps, 4), "t_end": round(end / fps, 4), "peak_speed_bh_s": round(c.peak_speed, 3), "metrics": {}})
+        # `scale_px` / `scale_source` se llenan abajo, con el `MetricContext` de
+        # esta repetición: son el divisor de sus métricas en cm y de las filas de
+        # la tabla por cuadro que caen adentro (CONTRATO.md §La escala). Arrancan
+        # en `None` porque un `null` nunca se omite, y quedan en `None` si el
+        # deporte no tiene registro de métricas: ahí no hay ningún cm que dividir.
+        reps.append({"rep": n, "frame_start": int(start), "frame_end": int(end), "t_start": round(start / fps, 4), "t_end": round(end / fps, 4), "peak_speed_bh_s": round(c.peak_speed, 3), "scale_px": None, "scale_source": None, "metrics": {}})
         prev_end = end
     edits = load_edits(take_dir)
     if edits:
@@ -215,7 +228,25 @@ def build_analysis(take_dir: Path, capture: CaptureJson, pose: PoseData, sport: 
                 per_metric[m.id].append(out["value"])
             if "top" in ev_frames and "impact" in ev_frames:
                 curves.append(sig.speed[ev_frames["top"] : ev_frames["impact"] + 1])
-            scales.append(ctx.scale_detail())
+            det = ctx.scale_detail()
+            scales.append(det)
+            # La escala de ESTA repetición, al lado de sus métricas. `quality.scale_px`
+            # es la mediana entre repeticiones y con dos o más no es el divisor de
+            # ninguna: el divisor es éste (CONTRATO.md §La escala).
+            r["scale_px"], r["scale_source"] = det["value"], det["source"]
+            if det["source"] == SCALE_SOURCE_FRAME and any(m.unit == "cm" for m in registry):
+                # La procedencia del fallback de `px_to_cm`, en una frase. No puede ir
+                # en el sextuplo —`$defs/metric` es `additionalProperties: false`— así
+                # que va a `warnings[]`, como las razones de ADR-019. Y dice lo que la
+                # caída tiene de particular: el divisor no es uno solo, es la altura de
+                # cuerpo del cuadro del evento cero de CADA métrica, que no es el mismo
+                # para todas.
+                warnings.append(
+                    f"Repetición {r['rep']}: la cadena de la estatura no se pudo medir en ningún cuadro "
+                    "(faltan rodillas o tobillos en todos). Cada métrica en cm se dividió por la altura de "
+                    "cuerpo del cuadro de su evento cero (`body_height_px`), que es la convención anterior con "
+                    "su sesgo conocido y no es el mismo número para todas (CONTRATO.md §La escala)."
+                )
         for m in registry:
             vals = [v for v in per_metric[m.id] if v is not None]
             summary_metrics[m.id] = {"median": round(float(np.median(vals)), 3) if vals else None, "n": len(vals), "mdc": m.mdc, "unit": m.unit, "level": m.level, "repeatability": repeatability_scalar(per_metric[m.id])}

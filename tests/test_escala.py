@@ -13,7 +13,7 @@ import math
 import numpy as np
 import pytest
 
-from kinelab.metrics.core import SCALE_SMOOTH_S, MetricContext, evaluate, stature_chain_px
+from kinelab.metrics.core import SCALE_SMOOTH_S, SCALE_SOURCE_CHAIN, SCALE_SOURCE_FRAME, MetricContext, evaluate, stature_chain_px
 from kinelab.metrics.generic import displacement_cm
 from kinelab.metrics.registry import Metric, Reference
 from kinelab.perception.framing import body_height_px
@@ -153,6 +153,11 @@ def test_la_escala_es_invariante_a_reescalar_la_imagen():
 
 
 def test_sin_cadena_medible_cae_a_la_altura_de_cuerpo_del_cuadro():
+    """El fallback sigue vivo (no se mata: cambiar valores publicados por un
+    `null` es una decisión del dominio), pero ahora **dice que es el fallback**:
+    `scale_detail()["source"]` es `body_height_px_frame` y el `value` es `None`,
+    porque con esa caída no hay un divisor único — cada métrica se divide por la
+    altura de cuerpo del cuadro de su propio evento cero."""
     s = synth_swing(FPS, n_reps=1)
     kp = np.array(s.keypoints, dtype=np.float64, copy=True)
     kp[:, [H.LEFT_KNEE, H.RIGHT_KNEE]] = np.nan  # sin rodillas no hay cadena
@@ -160,9 +165,27 @@ def test_sin_cadena_medible_cae_a_la_altura_de_cuerpo_del_cuadro():
     assert ctx.scale_px() is None
     esperado = 100.0 / float(ctx.body_height_px[0]) * ALTURA_M * 100.0
     assert ctx.px_to_cm(100.0, 0) == pytest.approx(esperado, rel=1e-9)
+    det = ctx.scale_detail()
+    assert det["source"] == SCALE_SOURCE_FRAME and det["value"] is None and det["method"] == "sin_cadena_medible"
+    # y el divisor es el del cuadro que se le pasa, no uno solo: dos cuadros con
+    # alturas de cuerpo distintas dan dos números distintos por los mismos px
+    otro = int(np.nanargmax(ctx.body_height_px))
+    if float(ctx.body_height_px[otro]) != float(ctx.body_height_px[0]):
+        assert ctx.px_to_cm(100.0, otro) != pytest.approx(esperado, rel=1e-9)
     # y sin nada que medir tampoco hay número: `null`, no un cero
     vacio = _ctx(np.full_like(kp, np.nan))
     assert vacio.scale_px() is None and vacio.px_to_cm(100.0, 0) is None
+
+
+def test_con_cadena_la_escala_dice_que_es_la_cadena():
+    """El otro lado del anterior: con cadena medible, `source` es
+    `stature_chain_rep` y el `value` es el número que divide."""
+    s = synth_swing(FPS, n_reps=1)
+    ctx = _ctx(s.keypoints.astype(np.float64))
+    det = ctx.scale_detail()
+    assert det["source"] == SCALE_SOURCE_CHAIN
+    assert det["value"] == pytest.approx(ctx.scale_px(), abs=0.05) and det["method"] == "max_stature_chain_px"
+    assert 0 <= det["frame"] < s.keypoints.shape[0]
 
 
 def test_sin_altura_declarada_no_hay_cm():

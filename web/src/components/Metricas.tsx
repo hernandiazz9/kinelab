@@ -17,7 +17,7 @@
 // ninguna puede ser juicio (ADR-016).
 
 import type { Analysis, Metrica } from "@/lib/api";
-import { METRICAS, PROCEDENCIA, fmt } from "@/lib/etiquetas";
+import { METRICAS, PROCEDENCIA, fmt, textoEscala } from "@/lib/etiquetas";
 
 const DEC: Record<string, number> = { ms: 1, cm: 1, deg: 1, ratio: 2 };
 
@@ -67,6 +67,10 @@ function Fila({ id, m }: { id: string; m: Metrica }) {
 }
 
 export default function Metricas({ analysis, error }: { analysis: Analysis | null; error: string | null }) {
+  const rep = analysis?.reps?.[0];
+  // `quality.scale_px` NO sirve acá: con dos o más repeticiones es la mediana
+  // entre ellas y no es el divisor de ninguna. El divisor es `reps[i].scale_px`.
+  const escala = rep ? textoEscala(rep.scale_px, rep.scale_source) : null;
   return (
     <div>
       <div className="mt-6 mb-2 flex flex-wrap items-baseline gap-x-3">
@@ -85,7 +89,19 @@ export default function Metricas({ analysis, error }: { analysis: Analysis | nul
 
       {analysis && analysis.reps.length > 0 && (
         <>
-          {analysis.reps.length > 1 && <p className="mb-2 text-sm text-zinc-400">{analysis.reps.length} repeticiones; abajo va la primera.</p>}
+          {/* Cuál repetición es ésta, siempre — no sólo cuando hay más de una. La
+              pantalla entera es `reps[0]` y hasta hoy eso era un supuesto que no
+              se escribía. No hay selector a propósito: elegir otra desincroniza
+              motor y pantalla (el overlay, las fotos y la tabla por cuadro salen
+              de la primera), y eso es un encargo propio. */}
+          <p className="mb-2 text-sm text-zinc-400">
+            Repetición {analysis.reps[0].rep} de {analysis.reps.length}
+            {analysis.reps.length > 1 && " — todo lo de esta pantalla es esa"}.
+          </p>
+          {/* La escala de ESTA repetición, al lado de los números que divide. Es el
+              mismo divisor que usa la tabla por cuadro desde el encargo 33; antes
+              eran dos y ninguno lo decía. Sin el campo (trabajo anterior), nada. */}
+          {escala && <p className="mb-2 text-xs text-zinc-500">Los cm de abajo se dividieron por {escala}.</p>}
           <div className="overflow-x-auto rounded border border-zinc-800">
             <table className="w-full border-collapse text-sm [&_tbody_tr]:border-t [&_tbody_tr]:border-zinc-800">
               <tbody>

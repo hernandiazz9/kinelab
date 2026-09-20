@@ -433,7 +433,9 @@ function Resultado({
               ))}
           </span>
         </div>
-        {csv ? <TablaCuadros url={csv} cuadroActual={cuadro} onIr={ir} /> : <p className="text-sm text-red-300">No hay datos-por-cuadro.csv en este trabajo.</p>}
+        {/* `r` lleva la escala con la que se dividieron los cm y el cuadro contra el
+            que se miden los «vs address»: la tabla los dice arriba (encargo 33). */}
+        {csv ? <TablaCuadros url={csv} cuadroActual={cuadro} onIr={ir} resumen={r} /> : <p className="text-sm text-red-300">No hay datos-por-cuadro.csv en este trabajo.</p>}
       </section>
     </>
   );
