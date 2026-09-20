@@ -149,6 +149,17 @@ estado-fases.md`). **Ningún número del proyecto es hoy un juicio válido.**
 
 ## Decisiones del orquestador
 
+- 2026-09-20 · **Decisiones de Hernán al parar la cadena en el 36.** (a) Un
+  trabajo viejo se sigue viendo **igual que hoy**, aunque sólo las métricas
+  digan la frase de repetición; se empareja cuando R10 regenere. (b)
+  `hands_speed_curve_top_to_impact` **sale del summary**: sin las seis cosas
+  de `AGENTS.md`, una métrica no existe (37). (c) La cadena sigue con los
+  restos chicos mientras él mira la pantalla.
+- 2026-09-20 · **Delegada por Hernán en el orquestador: el `picos` de primer
+  nivel sigue siendo el del clip entero**, no el de la repetición 1. Moverlo
+  cambiaría un valor ya publicado sin ganar nada: el detalle por repetición ya
+  trae el de cada una, y el del clip es el único lugar donde queda el mejor
+  swing. El rótulo ya dice cuál de los dos es (`a2cded3`). Reversible.
 - 2026-09-20 · **Decisión de Hernán: el retiro de los campos de primer nivel
   de `datos-eventos.json` espera a R10**, el encargo que regenera todo de una
   vez después de la sesión de validación. Retirarlos antes dejaría muda la
@@ -387,11 +398,15 @@ una sola sesión por vez.
 - **Ronda del orquestador con evidencia** — ADRs de definición (finish, top,
   address), la banda, el 717, qué condiciones de ADR-019 cumple cada métrica, y
   si la Fase 5 arranca con descriptivos.
-- [pendiente, sin ronda] `summary.metrics.hands_speed_curve_top_to_impact`
-  (`kinelab/analysis.py:215`) no es una métrica del registro y no tiene las
-  seis cosas de `AGENTS.md`: registrarla con las seis o sacarla del summary.
-  Y el comentario de `web/src/components/TablaCuadros.tsx:4` dice 118 columnas:
-  hoy son 115 con altura y 106 sin ella.
+- **R8** · [en curso] **37** restos-chicos — la lista blanca del servicio como
+  `media_type()`, `hands_speed_curve_top_to_impact` fuera del summary,
+  dos comentarios que mienten, el literal de `capture-paths.yaml` en
+  `service/app.py:160` y el `trunk_lean_deg` muerto de `explore.py:265`.
+  Verificado el 20/9: **el bug de `--data` de `explore()` no existe** —
+  `ESTADO.md` describe un arreglo ya hecho y la afirmación se venía copiando—
+  y **el comentario de `TablaCuadros.tsx` ya estaba corregido**: dice 116 con
+  altura y 107 sin ella, que es lo correcto hoy (lo que estaba mal era esta
+  línea del plan, que decía 118 → 115/106).
 - [pendiente, sin ronda] pasada-barata-local; barrido de geometría de cámara
   para los ángulos del 23; archivar `docs/checklist-captura.md` (iPhone) cuando
   la sección de la sesión de validación exista.
