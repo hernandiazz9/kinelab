@@ -53,7 +53,10 @@ los archivos, y la ficha del proyecto que vos completás después de leerlo.
    con el resumen de diez líneas arriba), `git log --oneline -10`, y la
    sección nueva del archivo de estado. Si el informe dice que algo falló o
    quedó abierto, decidí: va a la próxima sesión, se aparca en el plan, o es
-   una pregunta para el dueño. Lo que el dueño vio con sus ojos entra por acá.
+   una pregunta para el dueño. Lo que el dueño vio con sus ojos entra por acá. Leído el informe, **archivá esa sesión de trabajo**
+   (`mcp__ccd_session_mgmt__archive_session` con el id que da
+   `list_sessions`): su trabajo ya está en el repo y en el informe, y dejarla
+   en la barra es lo que convierte la lista en un cementerio.
 2. **Pensar el próximo encargo**: un bloque que una sesión pueda cerrar
    entero, commit e informe incluidos, sin depender de decisiones que no
    tiene. Una sesión, una tarde de trabajo como mucho. Si el proyecto tiene
@@ -150,22 +153,48 @@ caras existen y las decidís vos, ronda por ronda, diciendo por qué:
 
 Las dos se ofrecen al dueño con su costo estimado; se corren si dice que sí.
 
-## Cómo se entrega un encargo
+## Cómo termina tu turno
 
-Al terminar tu turno, en tres líneas: qué correr, qué va a producir, y qué
-tiene que probar el dueño si hay algo. Dos formas:
+El dueño no lee párrafos: lanza encargos. Tu turno termina **siempre** con
+este bloque, y no hay nada debajo de él:
 
-- **Chip de un clic** (app de escritorio): si existe la herramienta
-  `spawn_task`, dejá un chip con título «Encargo NN — <slug>» y prompt
-  `/encargo NN`. Atención: el chip abre la sesión en un **worktree nuevo**,
-  sin los archivos ignorados por git (entornos virtuales, modelos, datos). Si
-  el proyecto los necesita, el prompt del chip empieza con
-  «`cd <ruta del checkout principal>` y trabajá ahí, no en este worktree».
-  Si el chip no anda, texto.
-- **Texto**: «pegá `/encargo NN` en una sesión nueva». Siempre funciona.
+```
+Cerró: <NN slug — una línea con el número que importa. O «nada».>
+Va:    <NN slug — una línea de qué hace. Uno, o dos si van en paralelo.>
+De vos: <una línea de lo que necesitás de él. O «nada».>
+```
 
-Si hay dos encargos en paralelo, dos chips o dos líneas, y decí que pueden
-correr juntos. Si uno tiene que esperar al otro, decilo.
+Arriba de ese bloque, cinco líneas como mucho, y sólo si algo cambió de
+criterio. Lo demás va al plan: el plan se lee cuando hace falta, tu respuesta
+se lee siempre. Si tu turno no entra en media pantalla, estás escribiendo el
+plan dos veces.
+
+Fuera de la respuesta, sin excepción: repetir lo que ya está en el plan o en
+un informe, volver a explicar una decisión ya anotada, listar lo que NO vas a
+hacer, resumir la ronda anterior, y las tablas de estado (para eso está el
+plan). Si el dueño quiere el detalle, lo pide.
+
+## Cómo se entrega un encargo: el chip
+
+Un **chip** es una tarjeta con un botón que aparece en la conversación. El
+dueño la toca y se abre una sesión nueva e independiente con el pedido ya
+adentro: lo mismo que si abriera una ventana y tipeara `/encargo NN`, pero
+sin tipear ni acordarse del número. La herramienta es `spawn_task` y es la
+forma por defecto de entregar. Un chip por encargo.
+
+- `title`: `<proyecto> · NN <slug>`, el mismo nombre que la sesión se va a
+  poner a sí misma. Nunca sólo el número: dos proyectos con el método tienen
+  los dos un encargo 27.
+- `prompt`: `/encargo NN`. **Si el proyecto necesita archivos que git ignora**
+  (entornos virtuales, modelos, datos), el prompt empieza con `cd <ruta del
+  checkout principal> y trabajá ahí, no en este worktree.`, porque el chip
+  abre la sesión en un worktree nuevo que no los tiene.
+- `tldr`: una línea de qué va a pasar. Si este encargo espera a otro, decilo
+  acá.
+
+Dos en paralelo, dos chips, y en el bloque de cierre una línea que diga que
+pueden correr juntos. Si `spawn_task` no existe en la sesión, una línea de
+texto: «pegá `/encargo NN` en una sesión nueva».
 
 ## Cuidar tu contexto
 

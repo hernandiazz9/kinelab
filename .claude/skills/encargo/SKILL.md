@@ -17,6 +17,14 @@ Buscá `docs/prompts/$ARGUMENTS-*.md` (o `docs/prompts/*-$ARGUMENTS.md` si es un
 slug). Si no hay exactamente uno, listá `docs/prompts/` y preguntá cuál. Si no
 vino argumento, preguntá el número. Leé el prompt entero antes de nada.
 
+Apenas sepas cuál es, **ponele nombre a esta sesión** antes de leer nada más:
+`mcp__ccd_session_mgmt__set_session_title` sobre `self`, con el título
+`kinelab · NN <slug>` (por ejemplo `kinelab · 31 follow-end-en-su-repeticion`). Es una
+llamada y cuesta nada. Sin eso la barra lateral dice «Encargo 31» y no se
+distingue del encargo 31 de otro proyecto, que es como se pierde media hora
+buscando cuál sesión era cuál. Si la herramienta no está en esta sesión,
+seguí sin ella.
+
 ## 2. Leer antes de escribir una línea
 
 `AGENTS.md` ya está cargado. Leé completos y en este orden: `CONTEXTO.md`,
@@ -128,3 +136,6 @@ En este orden, y no está terminado hasta el último punto:
 5. Respuesta final a Hernán, corta: qué quedó, hashes de los commits, y si
    hay front o algo manual, la lista "probá esto, esto y esto" con lo que
    tiene que ver en cada paso.
+6. `mcp__ccd_sidebar__mark_completed` sobre `self`, para que la sesión deje
+   de pedir atención en la barra. No la archives vos: la archiva el
+   orquestador cuando ya leyó tu informe.
