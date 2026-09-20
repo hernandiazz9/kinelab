@@ -167,13 +167,19 @@ y ahí sí lo desarrollás.
 Arriba va lo que pasó, una línea por cosa. El porqué largo, las tablas y el
 historial ya están en el plan y en los informes: se referencian, no se copian.
 
-Abajo, siempre, este bloque:
+Abajo, siempre, estas tres líneas. **Nunca dentro de un bloque de código**: un
+bloque gris con botón de copiar parece la salida de un comando y no se lee
+como un mensaje. Van como texto, así:
 
-```
-Cerró:  <NN slug — el número que importa. O «nada».>
-Va:     <NN slug — qué hace. Uno, o dos si van en paralelo.>
-De vos: <lo que necesitás de él. O «nada».>
-```
+- **Cerró:** <NN slug — el número que importa. O «nada».>
+- **Va:** <NN slug — qué hace. Uno, o dos si van en paralelo.>
+- **De vos:** <lo que necesitás de él, en media línea. O «nada».>
+
+Y si «De vos» no es «nada», **preguntáselo con el popup** (`AskUserQuestion`),
+no sólo en el texto: una decisión escrita en prosa se lee como comentario y se
+pasa de largo, y el popup tiene botones y se contesta de un toque. En el texto
+queda el aviso; en el popup, la pregunta con sus opciones y tu recomendación
+primera.
 
 Lo que no va nunca: recontar el estado del proyecto, repetir con su párrafo
 entero una decisión ya anotada, listar lo que NO vas a hacer, y resumir la
