@@ -85,6 +85,10 @@ export interface FichaArchivo {
   camino: string;
   camino_calibrado: boolean | null;
   fps_provenance: Procedencia;
+  /** El clip con el que se calibró el camino. `null` = el camino no lo declara. */
+  calibracion_clip_sha256?: string | null;
+  /** ¿Ese clip es este archivo? `null` = no se puede saber (el camino no declara sha). */
+  calibracion_mismo_archivo?: boolean | null;
   original: string;
   grabado: string | null;
 }
