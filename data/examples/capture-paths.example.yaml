@@ -8,9 +8,11 @@
 #      donde <s> son los segundos entre la primera y la última lectura del
 #      cronómetro que se ven en el clip.
 #   4. Copiar acá lo que imprime: fps de captura, fps de reproducción, factor
-#      de estiramiento, codec, ratio delta_max/delta_min.
+#      de estiramiento, codec, ratio delta_max/delta_min — y la línea
+#      `calibration_clip_sha256` que imprime al final, que es la que deja
+#      escrito DE QUÉ CLIP salió todo lo anterior.
 
-schema_version: "1.1.0"
+schema_version: "1.2.0"
 paths:
   # El camino por defecto del protocolo: modo Video normal, sin retiming.
   - id: iphone17pro-video-1080p120-airdrop      # minúsculas, dígitos y guiones; es lo que se pasa en --camino
@@ -25,6 +27,12 @@ paths:
     fps_method: "cronómetro 10 s, 1199 cuadros entre 00:00.000 y 00:10.000"
     calibrated_on: 2026-09-14                    # fecha ISO
     calibrated_by: hernan
+    # OPCIONAL (schema 1.2.0): el sha256 del clip del cronómetro, el que se
+    # leyó para medir `fps_real`. Un camino que no lo declara sigue siendo
+    # válido y sigue analizando — la procedencia se registra, no se exige —,
+    # pero sin él ninguna toma puede decir si el fps que usa lo midió su propio
+    # archivo o lo heredó de otro clip del mismo camino. Lo imprime `fps_truth`.
+    calibration_clip_sha256: "0000000000000000000000000000000000000000000000000000000000000000"
     notes: "delta_max/delta_min = 1.004"         # opcional
 
   # Un camino DECLARADO (ADR-016): sin cronómetro. Dispositivo y modo los dice
@@ -45,6 +53,9 @@ paths:
     fps_method: null
     calibrated_on: null
     calibrated_by: null
+    # `calibration_clip_sha256` tampoco va acá, y no por olvido: sin cronómetro
+    # no hay clip que lo haya medido. Declararlo en un camino sin calibrar es
+    # un error de carga y el validador lo rechaza.
     notes: "filmar el cronómetro lo convierte en calibrado y los clips se re-analizan"
 
   # Un Slo-Mo: el iPhone captura a 240 y el archivo reproduce a 30. Los cuadros
@@ -62,4 +73,8 @@ paths:
     fps_method: "cronómetro 10 s, 2398 cuadros entre 00:00.000 y 00:10.000; el archivo dura 80 s"
     calibrated_on: 2026-09-14
     calibrated_by: hernan
+    # Este tercer camino es el caso válido de un calibrado SIN
+    # `calibration_clip_sha256`: carga, analiza y habilita juicio igual. Lo
+    # único que pierde es poder decir de qué clip salió su tasa, y el
+    # `analysis.json` de cada toma suya lo avisa en `warnings[]`.
     notes: "delta_max/delta_min = 1.001; verificar que AirDrop no recorte la ralentización"

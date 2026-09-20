@@ -235,6 +235,13 @@ Por **cada** combinación de modo y camino de transferencia:
 4. Anotar en `capture-paths.yaml`: `fps_real` (captura), `fps_playback`
    (reproducción, de los PTS), `stretch_factor`, `delta_max/delta_min`, codec,
    fecha, quién. `fps_truth` imprime los cinco.
+5. Y pegar la última línea que imprime `fps_truth`,
+   `calibration_clip_sha256: "…"`, que deja escrito **de qué clip salieron esos
+   números**. Es opcional —un camino sin él sigue siendo válido— y es lo que
+   después permite que cada toma diga si el fps que usa lo midió su propio
+   archivo o lo heredó de otro. Hasta el 20/9 había que calcular ese sha
+   aparte, y por eso nadie lo declaraba: el único camino calibrado del repo ya
+   se había usado con **tres clips distintos** y nada lo decía.
 
 Eso resuelve tres cosas de una vez: si el camino conserva los cuadros, si el
 teléfono entregó de verdad lo que dice (hay reportes de 240 nominales grabando
@@ -304,6 +311,7 @@ usuario, los seis campos del cronómetro (`fps_real`, `fps_playback`,
 | juicio | posible, si hay MDC | **nunca** |
 | modos | `video` y `slomo` | sólo `video` |
 | `nominal_fps`, `codec_expected` | obligatorios | opcionales (`null` = no se sabe) |
+| `calibration_clip_sha256` | **opcional**: de qué clip salió el cronómetro | prohibido: sin cronómetro no hay clip que lo mida |
 
 El supuesto es exactamente uno: **que el archivo reproduce a la velocidad a la
 que capturó.** Es cierto en un modo Video normal y falso en cualquier cosa

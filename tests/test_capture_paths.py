@@ -157,7 +157,7 @@ def test_repo_capture_paths_yaml_is_valid():
     """El archivo real del repo: válido siempre. Los calibrados los llena el
     humano con el cronómetro; los declarados ya están (ADR-016)."""
     cp = load_capture_paths(REPO / "data" / "capture-paths.yaml")
-    assert cp.schema_version == "1.1.0", "el campo `calibrated` es nuevo y opcional: minor"
+    assert cp.schema_version == "1.2.0", "`calibration_clip_sha256` es nuevo y opcional: minor"
     for p in cp.paths:
         if p.calibrated:
             assert p.stretch_factor == pytest.approx(p.fps_real / p.fps_playback, rel=0.01)

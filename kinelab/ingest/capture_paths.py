@@ -15,6 +15,13 @@ inferencia (CONTEXTO.md, invariante 2). Hay dos clases:
 
 Un clip cuyo camino no está acá se rechaza igual que antes: declarar no es
 adivinar, es dejar el supuesto escrito.
+
+Un camino calibrado puede además decir **de qué clip** salió su cronómetro
+(`calibration_clip_sha256`, schema 1.2.0). Es opcional: la procedencia se
+registra, no se exige. Cuando está, cada toma puede decir si el fps que usa lo
+midió su propio archivo o lo heredó de otro clip del mismo camino — hoy el
+único camino calibrado del repo ya se usó con tres archivos distintos y nada lo
+decía.
 """
 
 from __future__ import annotations
@@ -31,6 +38,11 @@ _STRETCH_CONSISTENCY = 0.01
 
 # Los seis campos que sólo existen si hubo cronómetro. En un camino declarado
 # los seis van en `null`: no hay medición que ponerles.
+#
+# `calibration_clip_sha256` NO está en esta lista, a propósito: es opcional
+# dentro de la calibración. La procedencia del cronómetro se REGISTRA, no se
+# exige — meterlo acá tumbaría el único camino calibrado que existe (n = 1) y no
+# hay material para reemplazarlo. Ver el encargo 34.
 _CALIBRATION_FIELDS = ("fps_real", "fps_playback", "stretch_factor", "fps_method", "calibrated_on", "calibrated_by")
 
 # El camino genérico para "no sé con qué se filmó". Existe en el archivo del
@@ -60,6 +72,12 @@ class CapturePath(BaseModel):
     fps_method: str | None = None
     calibrated_on: date | None = None
     calibrated_by: str | None = None
+    # De qué CLIP salió el cronómetro. Opcional a propósito (no está en
+    # `_CALIBRATION_FIELDS`): un camino calibrado que no lo declara sigue siendo
+    # válido y sigue analizando. Lo que cambia es que, cuando está, la toma
+    # puede decir si el fps que usa lo midió su propio archivo o lo heredó de
+    # otro (`capture.json` §fps_calibration).
+    calibration_clip_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     notes: str = ""
 
     @model_validator(mode="after")
@@ -87,6 +105,13 @@ class CapturePath(BaseModel):
                 raise ValueError(
                     f"{self.id}: un camino sin calibrar no puede declarar {', '.join(declared)}: "
                     "esos números salen del cronómetro filmado, no de una declaración (ADR-016)."
+                )
+            # No hay cronómetro, así que no hay clip que lo haya medido. Faltar
+            # está permitido; declarar uno que no existe, no.
+            if self.calibration_clip_sha256 is not None:
+                raise ValueError(
+                    f"{self.id}: un camino sin calibrar no puede declarar calibration_clip_sha256: "
+                    "no hubo cronómetro, así que no hay clip que lo haya medido (ADR-016)."
                 )
         return self
 

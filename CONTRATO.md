@@ -50,7 +50,7 @@ Slo-Mo de 240 estirado a 30. El motor convierte los PTS a tiempo real con ese
 factor, y el gate compara la reproducción del clip contra la del camino.
 
 ```yaml
-schema_version: "1.1.0"
+schema_version: "1.2.0"
 paths:
   - id: iphone17pro-video-1080p120-airdrop
     device: "iPhone 17 Pro"
@@ -65,8 +65,26 @@ paths:
     fps_method: "cronómetro 10 s, 1199 cuadros entre 00:00.000 y 00:10.000"
     calibrated_on: 2026-09-14
     calibrated_by: hernan
+    calibration_clip_sha256: "ff13…"  # OPCIONAL: de qué clip salió el cronómetro
     notes: "delta_max/delta_min = 1.004"
 ```
+
+**`calibration_clip_sha256` (1.2.0) dice de qué CLIP salió la calibración.** Es
+**opcional a propósito**: la procedencia se registra, no se exige. Un camino
+calibrado que no lo declara sigue siendo válido, sigue cargando y sigue
+habilitando juicio — exigirlo tumbaría el único camino calibrado que existe
+(n = 1) y no hay material para reemplazarlo. Lo que se gana cuando está es que
+cada toma puede decir si el fps que usa lo midió **su propio archivo** o lo
+heredó de otro clip del mismo camino (`capture.json` §fps_calibration). No va
+entre los seis campos del cronómetro: ésos son todo o nada, y éste no.
+
+Un camino **declarado** no puede declararlo: sin cronómetro no hay clip que lo
+haya medido, y el validador rechaza el archivo. Faltar está permitido; declarar
+uno que no existe, no.
+
+Lo imprime `python -m kinelab.tools.fps_truth CLIP` al terminar, en la línea
+exacta que hay que pegar acá. Hasta el 20/9 había que calcularlo aparte, y eso
+era justamente lo que hacía que nadie lo declarara.
 
 Un camino **declarado** (`calibrated: false`, ADR-016) no tiene ninguno de esos
 números: dispositivo y modo los dice el usuario, y la tasa de captura se asume
@@ -101,13 +119,14 @@ Escrito por `kinelab.ingest`. Nunca a mano después de la Fase 0.
 
 ```json
 {
-  "schema_version": "1.2.0",
+  "schema_version": "1.3.0",
   "athlete": "hernan",
   "gesture": "driver",
   "view": "face_on",
   "capture_path_id": "iphone17pro-video-1080p120-airdrop",
   "capture_path_calibrated": true,
   "fps_provenance": "medido_aqui",
+  "fps_calibration": {"clip_sha256": "ff13…", "same_file": false},
   "fps_real": 119.88,
   "fps_source": "capture-paths.yaml:iphone17pro-video-1080p120-airdrop",
   "fps_playback": 119.85,
@@ -161,6 +180,43 @@ En un camino declarado `fps_real` es el `fps_playback` efectivo y
 `stretch_factor` es 1,0 **por supuesto, no por medición**. En un `slomo`
 declarado no hay ninguno de los dos: `fps_real` y `stretch_factor` quedan en
 `null` y la toma se rechaza.
+
+### De qué clip salió esa calibración
+
+`fps_provenance` dice **cómo** se midió la tasa; `fps_calibration` dice **de qué
+archivo**. Son dos preguntas distintas y hasta el 20/9 sólo se contestaba la
+primera: el camino declaraba un `fps_real` y había que creerle, sin saber de
+qué clip había salido. Medido: el único camino calibrado del repo
+(`s22ultra-slomo-fhd240-recorte-mac`) ya se había usado con **tres archivos
+distintos**, y nada en ningún lado lo decía.
+
+```json
+"fps_calibration": {"clip_sha256": "ff13…", "same_file": false}
+```
+
+- `clip_sha256` es el clip que calibró el camino, tal como el camino lo declara
+  (`capture-paths.yaml` §calibration_clip_sha256).
+- `same_file` compara ese sha contra el `sha256_original` de esta toma: `true`
+  si la toma **se calibró a sí misma** —el cronómetro está en este archivo, que
+  es el método preferido de `CAPTURA.md`—, `false` si la tasa es **heredada** de
+  otro archivo del mismo camino, y **`null` cuando no se puede saber**: el
+  camino no declara el sha, o el camino no está calibrado, o el `capture.json`
+  es anterior a 1.3.0. `null` no es `false`: no saber no es saber que no.
+
+**Es procedencia, no un chequeo.** No hay `Check` nuevo en el gate, el veredicto
+no cambia y ninguna toma se rechaza por esto: un clip filmado por un camino
+calibrado sigue siendo medible, y lo que el camino garantiza —el modo y la
+transferencia— sigue valiendo. Lo que se gana es que deja de ser invisible.
+
+**La frase para el entrenador va a `analysis.warnings`**, junto al aviso de
+ADR-016 y después de él, porque ADR-016 es el más fuerte: ahí la tasa entera es
+un supuesto, acá está medida y lo único que falta es de dónde salió. Va por ese
+canal y no por un `Check` porque en el modo exploración **el gate no corre**
+(`explore.py` escribe un `Check` con `passed=None`), y `warnings[]` es lo único
+que llega a la pantalla en los dos modos.
+
+Los dos campos son opcionales para que un `capture.json` 1.2.0 siga validando,
+y sus defaults son los conservadores: `null` y `null`.
 
 ### El fps efectivo y el bruto
 
@@ -682,17 +738,31 @@ homografía.
   Los tres serían minor por sí solos —dos campos nuevos y uno opcional—; van
   juntos en el major porque el major ya estaba, y abrir el schema dos veces para
   lo mismo es peor.
-- `capture.json` lleva su propio `schema_version`, hoy **1.2.0**: 1.1.0 agregó
+- `capture.json` lleva su propio `schema_version`, hoy **1.3.0**: 1.1.0 agregó
   `fps_playback_raw`, `vfr_ratio_raw`, `first_delta_s` y `fps_note`; 1.2.0
-  agrega `capture_path_calibrated` y `fps_provenance` (ADR-016). Los seis son
+  agrega `capture_path_calibrated` y `fps_provenance` (ADR-016); **1.3.0 agrega
+  `fps_calibration`** (§De qué clip salió esa calibración). Los siete son
   opcionales: un `capture.json` de 1.0.0 sigue validando, con los cuatro
-  primeros en `null`, `capture_path_calibrated` en `null` y `fps_provenance` en
-  `sin_verificar`. El bump a 1.1.0 cambió de qué número hablan `fps_playback` y
-  `vfr_ratio` (bruto → efectivo): también está en §Desviaciones.
-- `capture-paths.yaml` lleva el suyo, hoy **1.1.0**: agregó `calibrated` (con
-  default `true`) y volvió opcionales `nominal_fps`, `codec_expected` y los
-  seis campos del cronómetro, que ahora sólo son obligatorios cuando
-  `calibrated: true`. Un archivo 1.0.0 sigue cargando sin cambios.
+  primeros en `null`, `capture_path_calibrated` en `null`, `fps_provenance` en
+  `sin_verificar` y `fps_calibration` con sus dos campos en `null`. El bump a
+  1.1.0 cambió de qué número hablan `fps_playback` y `vfr_ratio` (bruto →
+  efectivo): también está en §Desviaciones.
+
+  **1.2.0 → 1.3.0 es minor, sin discusión**: entra **un campo nuevo y
+  opcional**, no se renombra ninguno, no cambia ninguna unidad y **ningún valor
+  publicado se mueve** — `fps_calibration` no toca `fps_real`, ni el veredicto
+  del gate, ni una sola métrica. Un `capture.json` 1.2.0 ya escrito sigue
+  validando contra el modelo nuevo, con los dos campos en su default
+  conservador. No hace falta la excusa que necesitó el bump de
+  `fps_provenance` (§Desviaciones), porque acá el campo **sí** es opcional.
+- `capture-paths.yaml` lleva el suyo, hoy **1.2.0**: 1.1.0 agregó `calibrated`
+  (con default `true`) y volvió opcionales `nominal_fps`, `codec_expected` y los
+  seis campos del cronómetro, que sólo son obligatorios cuando
+  `calibrated: true`; **1.2.0 agrega `calibration_clip_sha256`**, opcional y
+  **fuera** de los seis campos del cronómetro. Un archivo 1.1.0 —y uno 1.0.0—
+  sigue cargando sin cambios, y un camino calibrado que no lo declara sigue
+  siendo válido: la procedencia se registra, no se exige. Minor por lo mismo
+  que arriba: campo nuevo, opcional, ningún valor se mueve.
 - `registry_version` aparte, y `metric_version` por métrica. Con un solo
   número, mejorar una métrica invalida el historial del atleta. Los dos viajan
   en el JSON: `registry_version` en el `header`, `metric_version` en cada

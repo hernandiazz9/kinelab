@@ -242,6 +242,11 @@ def ficha_de_captura(c: CaptureJson) -> dict[str, Any]:
         "camino": c.capture_path_id,
         "camino_calibrado": c.capture_path_calibrated,
         "fps_provenance": c.fps_provenance,
+        # De qué clip salió el cronómetro del camino, y si es este archivo
+        # (encargo 34). `null` = el camino no lo declara: no se muestra nada,
+        # no se inventa nada.
+        "calibracion_clip_sha256": c.fps_calibration.clip_sha256,
+        "calibracion_mismo_archivo": c.fps_calibration.same_file,
         "original": c.original_name,
         "grabado": c.recorded_at,
     }
