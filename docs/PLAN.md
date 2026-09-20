@@ -1,5 +1,24 @@
 # Plan
 
+Última ronda: 2026-09-20 (tarde) — el 33 quedó integrado en `main` (`2b0ed1b`)
+y `scripts/integrar`, que usaba `flock` —que macOS no tiene—, está arreglado y
+probado. El **34 se relanza limpio**: su primer intento quedó a medias y su
+trabajo está salvado en el commit `WIP:` `5423deb` de la rama
+`worktree-agent-ad505eed8bc47c798` (78 líneas en `capture_paths.py` y
+`gate.py`, sin probar, sin revisar, sin el canal del aviso). No se reanuda
+porque la sesión que lo escribió ya no existe: era un agente dentro de la
+sesión orquestadora anterior, que se cerró, así que su contexto —el porqué de
+esas 78 líneas— se fue con ella. Heredarlas significaría auditar código ajeno
+sin su razonamiento, que cuesta más que reescribirlo, y el prompt del 34 ya
+está completo y verificado contra el código. La rama queda como registro; no
+se borra.
+
+Desde esta ronda, **ninguna decisión del proyecto es del orquestador**: se le
+preguntan todas a Hernán, incluidas las reversibles. Al orquestador le quedan
+el orden del trabajo, el corte de los encargos y qué archivos toca cada uno.
+Las decisiones de proyecto ya anotadas abajo siguen vigentes hasta que él las
+revise.
+
 Última ronda: 2026-09-20 — cerraron el 31 (`follow_end` acotado a su
 repetición; `vid1` también estaba mal y nadie lo había visto; 390 tests) y el
 32 (la máscara compra el palo en el top con 0,9° de error y nada más: en el
@@ -244,7 +263,9 @@ una sola sesión por vez.
 - [pendiente] repeticion-elegible — hoy toda la pantalla es la rep 1 porque
   `explore.py:366` la arma así; elegirla cambia el formato de
   `datos-eventos.json`, el overlay y el `address` del CSV. Sale del 33.
-- **R7** · [en curso] **34** fuente-de-la-calibracion — `calibration_clip_sha256`
+- **R7** · [en curso] **34** fuente-de-la-calibracion — relanzado limpio el
+  20/9 por la cadena; el intento anterior está en `5423deb` (rama
+  `worktree-agent-ad505eed8bc47c798`), descartado. — `calibration_clip_sha256`
   en capture-paths 1.2.0, `fps_calibration.same_file` en capture 1.3.0, el
   aviso por `analysis.warnings`, y `fps_truth` emitiendo el sha. **La premisa
   del plan estaba mal**: no hay divergencia entre `ingest/__main__.py:103` y
