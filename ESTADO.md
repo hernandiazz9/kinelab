@@ -3,6 +3,105 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 20 de septiembre de 2026 — encargo 37: cinco restos chicos
+
+Prompt: `docs/prompts/37-restos-chicos.md`. Informe:
+`docs/informes/2026-09-20-37-restos-chicos.md`. **Sin sesión en paralelo** (lo pedía el
+prompt). Commits, uno por resto: `cee5ee7` (la lista blanca), `4d9610a` (la curva fuera
+del summary), `df5e794` (los dos comentarios), `a4dd478` (`CAPTURE_PATHS_FILE`),
+`08e8d8b` (el código muerto) y el de cierre, con este archivo y el informe. Hecho en un
+worktree, arrancado desde `main` (`ac1a2e7`).
+
+### Qué existe ahora
+
+- **La lista blanca del servicio es una función otra vez.** `_Servibles` —el `dict` con
+  `get` e `in` extendidos que el 35 dejó sólo porque `service/app.py` no estaba en su
+  lista de archivos— se reemplazó por `media_type(nombre)` en `service/exploracion.py`
+  más `ARCHIVOS_FIJOS`, la tupla de nombres que enumera el 404. Las dos líneas de
+  `app.py` son las que el 35 no pudo tocar. El `__contains__` extendido **no lo usaba
+  nadie** y se fue con el resto.
+- **`hands_speed_curve_top_to_impact` no está más en `summary.metrics`.** Estaba
+  inyectada a mano después del bucle del registro, no estaba en `sports/golf/metrics.py`,
+  no tenía las seis cosas de `AGENTS.md` y su `mdc` era `null`. `summary.metrics` es un
+  objeto libre en el schema (`schema.json:77`), así que **no se tocó el contrato ni subió
+  ninguna versión**: `schema_version` sigue en 2.2.0, `registry_version` de golf en 0.3.0
+  y ningún `metric_version` se movió. `repeatability_curves`
+  (`kinelab/metrics/generic.py`) **queda donde está**, con su test como único uso:
+  borrar código de métricas no era de este encargo.
+- **Dos comentarios dejaron de mentir.** `kinelab/explore.py` decía —en el docstring y de
+  nuevo arriba del `summary`— que los campos de primer nivel de `datos-eventos.json` «los
+  retira el encargo 36»; el 36 está integrado y no los retiró, los retira R10, que es lo
+  que dice bien `web/src/lib/api.ts`. Y la línea de `ESTADO.md` que anotaba un bug abierto
+  de `--data` en `explore()` quedó tachada con su corrección al lado: ese bug **no
+  existe** (ver Desviaciones).
+- **`service/app.py` usa `CAPTURE_PATHS_FILE`** en vez del literal `"capture-paths.yaml"`.
+  Mismo arreglo que el 34 hizo en `kinelab/ingest/__main__.py`. Una línea.
+- **El código muerto de `kinelab/explore.py` no está.** `trunk_lean_deg` se calculaba en
+  el literal del dict con `-_vs_vertical_deg(…) + 180.0 * 0` y doce líneas abajo
+  `cols["trunk_lean_deg"] = …` lo pisaba. El cálculo bueno subió a antes del dict y entra
+  en el literal **en el mismo lugar** que ocupaba el muerto: borrar la clave a secas
+  habría movido `trunk_lean_deg` al final del CSV, y el orden de columnas es un valor
+  publicado tanto como los números.
+- **Ningún test se tocó salvo los dos asserts que el prompt autorizaba** (punto 2), y el
+  que quedó afirma contra la fuente que cambia —`set(summary.metrics) == {ids del
+  registro}`— en vez de nombrar la métrica.
+
+### Medido
+
+- **Suites**: motor **462 pasados, 0 fallados, exit 0** con `KINELAB_MODELS` apuntando a
+  los pesos del checkout principal (el mismo 462 de antes de empezar: este encargo no
+  agregó ni sacó ningún test). Arnés **43 pasados, 0 fallados, exit 0**. `pnpm lint`
+  exit 0 · `pnpm build` exit 0.
+- **La tabla por cuadro no se movió**: los **20** `pose.npz` guardados de
+  `data/exploracion/` (12.756 cuadros, **116 columnas**, 24,7 MB de CSV) regenerados
+  antes y después del cambio de `trunk_lean_deg` salen **byte a byte idénticos, 20 de
+  20**. Ni un valor, ni una columna, ni el orden.
+- **La lista blanca se comporta igual**: `overlay.mp4` → `video/mp4`, `evento-r2-top.png`
+  y `evento-r999-impact.png` → `image/png`, y `evento-r2-rodilla.png`, `evento-r-top.png`,
+  `evento-r2-top.png.txt`, `pose.npz` y `../trabajo.json` → `None` (404). El mensaje del
+  404 enumera los mismos **10** nombres fijos en el mismo orden.
+- **El ejemplo del repo** (`data/examples/analysis.example.json`) se regeneró con
+  `tests/helpers/gen_analysis_example.py`: **14 líneas menos y nada más se movió** — 3
+  repeticiones, schema 2.2.0, registro 0.3.0, igual que antes.
+
+### Qué falta o no se probó
+
+- **No se corrió pose sobre ningún clip** y **no se regeneró `data/exploracion/` ni la
+  demo** (lo prohibía el prompt). Los 20 trabajos que hay en disco siguen con el
+  `summary.metrics` viejo, o sea con `hands_speed_curve_top_to_impact` adentro; se van
+  cuando R10 los regenere.
+- **El front no se abrió** (lo prohibía el prompt): sólo `pnpm lint` y `pnpm build`.
+- **No se corrió el verificador de retirados**: no estaba en los comandos del prompt y
+  además lee `web/public/demo/`, que git ignora y en un worktree no existe (lo anotó el
+  36).
+- **No se tocó** `kinelab/metrics/`, `sports/`, `truth/`, `kinelab/contract/schema.json`,
+  ningún umbral, el 717, ningún `metric_version` ni el `registry_version`. No se
+  retiraron los campos de primer nivel de `datos-eventos.json` (es R10). No se tocó
+  `docs/PLAN.md`.
+
+### Desviaciones
+
+- **Del contrato, ninguna**, y por eso no hay entrada en §Desviaciones. Sacar
+  `hands_speed_curve_top_to_impact` no toca el schema: `summary.metrics` está declarado
+  como objeto libre.
+- **Del prompt, dos, las dos por defecto.** (1) El punto 3 nombraba **un** comentario en
+  `kinelab/explore.py` y la misma afirmación estaba **dos veces** en ese archivo (el
+  docstring y el comentario de `TRANSITORIOS`); se corrigieron las dos, más un «hasta
+  entonces nada la lee» de `repeticiones_detalle` que el 36 dejó falso. (2) El punto 5
+  decía «borrá el primero» y borrarlo a secas habría movido `trunk_lean_deg` al final de
+  las 116 columnas del CSV; se movió el cálculo bueno para arriba en su lugar, que es lo
+  único que deja la tabla idéntica.
+- **Una premisa del prompt confirmada como falsa, que era el punto 3**: el bug de
+  `--data` en `explore()` **no existe**. `Exploracion` arma
+  `self.paths_file = data_dir / CAPTURE_PATHS_FILE` y se lo pasa a `explore()`
+  (`capture_paths=paths`), así que el `--data` del servicio manda; el
+  `default_capture_paths_file()` de `resolve_path_id` sólo corre cuando nadie pasa
+  caminos, y el otro llamador, `kinelab datos`, **no tiene `--data`**. Es el segundo
+  pendiente fantasma que aparece en dos encargos seguidos (el 34 encontró el de
+  `__main__.py:103`).
+
+---
+
 ## 20 de septiembre de 2026 — encargo 36: el selector de repetición
 
 Prompt: `docs/prompts/36-selector-de-repeticion.md`. Informe:
