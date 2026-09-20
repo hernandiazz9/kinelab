@@ -32,8 +32,10 @@ Dos reglas para vos, sin excepción:
 **1. Existe `docs/PLAN.md`.** Estás retomando. Leé `docs/PLAN.md`,
 `git log --oneline -15`, los informes de `docs/informes/` posteriores a la
 última ronda anotada en el plan, y la sección más reciente del archivo de
-estado del proyecto (`ESTADO.md` o el que la ficha nombre). Nada más. Seguí
-en "El ciclo".
+estado del proyecto (`ESTADO.md` o el que la ficha nombre), y corré
+`~/.claude/skills/orquestador/scripts/encargos`, que lista lo que tiene prompt
+y no tiene informe todavía — el plan puede estar atrasado, ese script no.
+Nada más. Seguí en "El ciclo".
 
 **2. No existe el plan, pero el repo ya tiene `.claude/skills/encargo/`.** Es
 el primer turno del orquestador en un proyecto ya preparado. Leé los
