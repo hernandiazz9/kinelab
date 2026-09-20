@@ -1,6 +1,20 @@
 # Plan
 
-Última ronda: 2026-09-19 — cerraron el 30 (el abort era la telemetría de
+Última ronda: 2026-09-20 — cerraron el 31 (`follow_end` acotado a su
+repetición; `vid1` también estaba mal y nadie lo había visto; 390 tests) y el
+32 (la máscara compra el palo en el top con 0,9° de error y nada más: en el
+impacto a 240 fps el shaft no existe en el archivo). **Primera ronda con la
+cadena**: el orquestador lanza el encargo con `Agent` en worktree y lo integra
+con `scripts/integrar`, sin chip. Escrito el **33** (una sola escala en la
+pantalla, y dicha), verificado contra el código antes de lanzarlo: la
+verificación encontró seis supuestos falsos del borrador —`scale_px` no es
+importable (es un método de `MetricContext`), `quality.scale_px` publicado es
+la mediana **entre** repeticiones y no el divisor de ninguna fila,
+`per_frame_table` no conoce las reps y tres tests la llaman posicional, matar
+el fallback rompe `CONTRATO.md` §La escala, el selector de repetición cascadea
+a `explore.py:366`, y el front es pnpm— y el prompt se reescribió entero.
+
+Ronda anterior, 2026-09-19 — cerraron el 30 (el abort era la telemetría de
 onnxruntime, apagada al importar `kinelab.perception`; 381 tests) y el 29 (la
 deriva se reproduce en x y en y es 26–30 px, 2× el MDC de `lift`; hasta
 +119 px en `vid1`). Escritos el 31 (follow_end dentro de su repetición, la
@@ -69,6 +83,27 @@ estado-fases.md`). **Ningún número del proyecto es hoy un juicio válido.**
 
 ## Decisiones del orquestador
 
+- 2026-09-20 · **El fallback de `px_to_cm` no se mata, se declara.** Del 33:
+  hay tres escalas conviviendo (la cadena de estatura de la repetición, el
+  `body_height_px` del cuadro en la tabla, y el mismo `body_height_px` como
+  fallback silencioso de `core.py:167-172`). Matar el fallback cambiaría
+  valores publicados por `null` y eso es del dominio; declarar la procedencia
+  de cada cm es lo que el proyecto ya exige a cualquier número, no cambia un
+  valor y se deshace. Apoyo: verificación del prompt 33 contra el código
+  (20/9) — el único consumidor del fallback es `generic.py:42`, o sea todas
+  las métricas en cm, y `CONTRATO.md` §La escala lo documenta como convención.
+- 2026-09-20 · **Del 32: no se abre encargo de producto del shaft como
+  evento.** La recomendación del informe se acepta: lo que falta no es un
+  modelo de segmentación sino un obturador más corto, que `CAPTURA.md` §Luz ya
+  pide y nadie midió. Reversible: si la pregunta 9 se contesta y Hernán ve el
+  shaft donde la sesión no lo vio, se rehace el número del impacto y se
+  reabre. Nada de esto traba el 33 ni el 34.
+- 2026-09-20 · **El selector de repetición sale del 33 y es encargo propio.**
+  Toda la pantalla es la repetición 1 porque el motor la arma así
+  (`explore.py:366`, `analysis["events"][0]`), no sólo el front
+  (`Metricas.tsx:92`): un `<select>` desincronizaría métricas, eventos,
+  overlay y tabla. El 33 la **dice**; elegirla cambia el formato de
+  `datos-eventos.json` y va aparte.
 - 2026-09-18 · **El cronómetro nunca es del usuario.** Calibra un camino
   (teléfono + modo + transferencia) una vez y queda en `capture-paths.yaml`;
   quien filma después con ese camino lo elige en la pantalla y no filma nada
@@ -178,19 +213,26 @@ una sola sesión por vez.
   rechazo de Fase 1.
 - **R4** · [hecho] **29** deriva-de-camara-censo — `83c152f`, `8faa9a6`.
   Aceptado contra la auditoría en x; en y 26–30 px; censo hasta +119 px.
-- **R5** · [en curso] **31** follow-end-en-su-repeticion — la cota del
-  candidato propio; `tol_frames` en `datos-eventos.json` y en la tabla; una
-  señal en exploración; `git rm order.py`; docstring de `gate.py`; nota de la
-  y bajo ADR-019 ∥ [en curso] **32** mascara-del-sujeto — experimento en
-  `banco/`: máscara clásica estabilizada con el 29, el shaft contra etiquetas
-  a ojo en 20 cuadros, la escala coronilla-suela contra la cadena, y la tabla
-  de licencias sólo si lo clásico no alcanza.
-- [pendiente] una-sola-escala-en-la-pantalla — la tabla por cuadro convierte
-  a cm con `body_height_px` de cada cuadro y las métricas con
-  `quality.scale_px`: dos números en cm para el mismo evento en la misma
-  pantalla; y la repetición elegida (hoy siempre la 1, y sin address el cero
-  es el cuadro 0) dicha o elegible. Inventario del 16/9.
-- **R6** · [pendiente] escala-y-altura-trazables (analysis 2.1.0).
+- **R5** · [hecho] **31** follow-end-en-su-repeticion — `513194c`, `6bea1fb`,
+  `e6fa101`. `follow_end` acotado a su candidato; `vid1` pasa de 931 a `null`
+  por el mismo bug, sin que nadie lo hubiera visto; `tol_frames` en la
+  pantalla; tres restos; 390 tests ∥ [hecho] **32** mascara-del-sujeto —
+  `83338ca`, `99acf16`. La máscara compra **el palo en el top** (0,9° de
+  mediana contra etiquetas a ojo, 10 de 10 bajo 5°) y **nada más**: en el
+  impacto 66° y 0 de 8, porque a 240 fps el shaft ya es un borrón que a ojo
+  tampoco se marca; el cuerpo entero no (cobertura 0,18–0,42) porque el
+  golfista no se corre y detrás no hay fondo; la escala da 12 % de más. Cuesta
+  68 ms/cuadro en FHD, 407 en UHD. **Nada entra al motor.**
+- **R6** · [en curso] **33** una-sola-escala-en-la-pantalla — junta la
+  «una-sola-escala» del inventario del 16/9 con «escala-y-altura-trazables»:
+  son lo mismo. `reps[i].scale_px` y `scale_source` en `analysis.json`
+  (schema **2.1.0**, minor), la tabla por cuadro dividiendo por la escala de
+  la repetición, cada cm con su procedencia, «repetición 1 de N» dicha, y el
+  comentario de las 118 columnas. Sin matar el fallback y sin selector (ver
+  Decisiones del 20/9). Front: lo prueba Hernán.
+- [pendiente] repeticion-elegible — hoy toda la pantalla es la rep 1 porque
+  `explore.py:366` la arma así; elegirla cambia el formato de
+  `datos-eventos.json`, el overlay y el `address` del CSV. Sale del 33.
 - **R7** · [pendiente] fuente-de-la-calibracion — `calibration_clip_sha256` en
   capture-paths 1.2.0, `fps_calibration.same_file` en capture 1.3.0, aviso, y
   `ingest/__main__.py:103` que lee `capture-paths.yaml` de `--data`.
@@ -262,7 +304,8 @@ los dos dejó números propios, y los informes lo dicen. Demo pública:
    acota el fin del acompañamiento a su repetición, pero qué es el finish lo
    tenés que decir vos.
 
-9. **Del 32, y traba el número del impacto:** abrí
+9. **Del 32. Traba el número del impacto y nada más** (verificado el 20/9: ni
+   el 33 ni el 34 dependen de ella, así que la cadena sigue). Abrí
    `data/incoming/cortado3-lento.kinelab/mascara/palo-local-1364.png` y decí si
    ves el shaft. La sesión marcó una estela tenue y no marcó nada en 1367 y
    1368. Si vos lo ves y ella no, el impacto se rehace.
