@@ -83,6 +83,12 @@ estado-fases.md`). **Ningún número del proyecto es hoy un juicio válido.**
 
 ## Decisiones del orquestador
 
+- 2026-09-20 · **La procedencia de la calibración se registra, no se exige**, y
+  `calibration_clip_sha256` va **fuera** de `_CALIBRATION_FIELDS` (34).
+  Exigirlo dejaría sin cargar el único camino calibrado del repo y el fixture
+  `tests/conftest.py:137`, y con él centenares de tests; y con n = 1 no hay
+  material para reemplazarlo. Se deshace el día que haya tres caminos
+  calibrados. Apoyo: verificación del prompt 34 (20/9).
 - 2026-09-20 · **El fallback de `px_to_cm` no se mata, se declara.** Del 33:
   hay tres escalas conviviendo (la cadena de estatura de la repetición, el
   `body_height_px` del cuadro en la tabla, y el mismo `body_height_px` como
@@ -223,19 +229,29 @@ una sola sesión por vez.
   tampoco se marca; el cuerpo entero no (cobertura 0,18–0,42) porque el
   golfista no se corre y detrás no hay fondo; la escala da 12 % de más. Cuesta
   68 ms/cuadro en FHD, 407 en UHD. **Nada entra al motor.**
-- **R6** · [en curso] **33** una-sola-escala-en-la-pantalla — junta la
-  «una-sola-escala» del inventario del 16/9 con «escala-y-altura-trazables»:
-  son lo mismo. `reps[i].scale_px` y `scale_source` en `analysis.json`
-  (schema **2.1.0**, minor), la tabla por cuadro dividiendo por la escala de
-  la repetición, cada cm con su procedencia, «repetición 1 de N» dicha, y el
-  comentario de las 118 columnas. Sin matar el fallback y sin selector (ver
-  Decisiones del 20/9). Front: lo prueba Hernán.
+- **R6** · [hecho] **33** una-sola-escala-en-la-pantalla — `9f8c008`,
+  `5c469e9`, `e4c44d2`, integrado en `2b0ed1b`. Junta la «una-sola-escala» del
+  inventario del 16/9 con «escala-y-altura-trazables»: eran lo mismo. **Los
+  dos cm del mismo evento diferían de 1,66 a 4,39 cm** —`pelvis_sway_impact_cm`
+  de `cortado3-lento`: 22,6 en las métricas contra 26,99 en la tabla, con un
+  MDC de 2,42— y ahora difieren ≤ 0,046 cm, que es el redondeo.
+  `reps[].scale_px` y `scale_source` en `analysis.json` (schema **2.1.0**),
+  cada cm con su procedencia, un cuadro fuera de toda repetición sin cm (en
+  `vid1`, 903 de 1066 filas), «repetición 1 de N» dicha. **Ninguna métrica de
+  `analysis.json` se movió.** 398 tests; mutación manual 8 de 8 en rojo.
+  Falta que Hernán mire el front (la celda «pelvis vs address» en el top:
+  −3,5 cm, antes −4,6).
 - [pendiente] repeticion-elegible — hoy toda la pantalla es la rep 1 porque
   `explore.py:366` la arma así; elegirla cambia el formato de
   `datos-eventos.json`, el overlay y el `address` del CSV. Sale del 33.
-- **R7** · [pendiente] fuente-de-la-calibracion — `calibration_clip_sha256` en
-  capture-paths 1.2.0, `fps_calibration.same_file` en capture 1.3.0, aviso, y
-  `ingest/__main__.py:103` que lee `capture-paths.yaml` de `--data`.
+- **R7** · [en curso] **34** fuente-de-la-calibracion — `calibration_clip_sha256`
+  en capture-paths 1.2.0, `fps_calibration.same_file` en capture 1.3.0, el
+  aviso por `analysis.warnings`, y `fps_truth` emitiendo el sha. **La premisa
+  del plan estaba mal**: no hay divergencia entre `ingest/__main__.py:103` y
+  `service/exploracion.py:277` — resuelven la misma ruta, y
+  `default_capture_paths_file()` no toma argumentos, así que usarla ahí
+  ignoraría `--data`. Queda sólo cambiar el literal por la constante.
+  Front: lo prueba Hernán.
 - **Hernán filma la sesión de validación** (ver Preguntas). Puede filmar ya: la
   lista cubre las hipótesis de la deriva; el código de R2–R6 hace falta para
   **analizarla**, no para filmarla.
