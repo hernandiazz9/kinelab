@@ -59,7 +59,14 @@ Buscá `docs/prompts/$ARGUMENTS-*.md` (o `docs/prompts/*-$ARGUMENTS.md` si es un
 slug). Si no hay exactamente uno, listá `docs/prompts/` y preguntá cuál. Si no
 vino argumento, preguntá el número. Leé el prompt entero antes de nada.
 
-Apenas sepas cuál es, **ponele nombre a esta sesión** antes de leer nada más:
+**Si sos un agente de la cadena** —te lanzó el orquestador, no te abrió una
+persona— saltá el resto de este apartado: no renombres la sesión ni la marques
+completada. No tenés sesión propia: corrés dentro de la del orquestador, y
+renombrarla le cambia el nombre a él cada vez que lanza un encargo. Pasó, y se
+vio.
+
+**Si te abrió una persona**, apenas sepas cuál es el encargo, **ponele nombre a
+esta sesión** antes de leer nada más:
 `mcp__ccd_session_mgmt__set_session_title` sobre `self`, con el título
 `kinelab · NN <slug>` (por ejemplo `kinelab · 31 follow-end-en-su-repeticion`). Es una
 llamada y cuesta nada. Sin eso la barra lateral dice «Encargo 31» y no se

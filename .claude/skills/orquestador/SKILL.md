@@ -201,7 +201,9 @@ Agent(
   isolation:     "worktree",
   run_in_background: true,
   prompt: "Corré el encargo NN de <proyecto>: invocá la skill `encargo` con el
-           argumento NN y seguila entera, §0 y §7 incluidos."
+           argumento NN y seguila entera, §0 y §7 incluidos. Sos un agente de
+           la cadena: no renombres la sesión ni la marques completada, que es
+           la mía y no la tuya."
 )
 ```
 
