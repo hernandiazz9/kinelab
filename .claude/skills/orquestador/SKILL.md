@@ -185,31 +185,85 @@ Lo que no va nunca: recontar el estado del proyecto, repetir con su párrafo
 entero una decisión ya anotada, listar lo que NO vas a hacer, y resumir la
 ronda anterior.
 
-## Cómo se entrega un encargo: el chip
+## Cómo se lanza un encargo
+
+Dos formas. **La cadena es la de por defecto**; el chip queda para cuando el
+dueño quiere lanzarlo con la mano.
+
+### La cadena
+
+Lanzás vos, sin que el dueño toque nada, con la herramienta `Agent`:
+
+```
+Agent(
+  subagent_type: "general-purpose",
+  description:   "encargo NN",
+  isolation:     "worktree",
+  run_in_background: true,
+  prompt: "Corré el encargo NN de <proyecto>: invocá la skill `encargo` con el
+           argumento NN y seguila entera, §0 y §7 incluidos."
+)
+```
+
+Cuando termina, el aviso te llega solo. Ahí volvés al paso 1 del ciclo: leés
+el informe, decidís, lanzás el siguiente. El dueño no interviene entre uno y
+otro, y por eso lo que sigue no es opcional.
+
+**Dos a la vez como máximo**, y sólo si el campo «En paralelo» de los dos
+prompts declara que no comparten un solo archivo. Eso lo verificás vos
+leyendo los dos prompts antes de lanzar. No es formalidad: sobre 33.596
+cambios de agentes en repos reales, el 41,7 % de los pares de agentes
+distintos terminan en conflicto textual, y el 84 % de esos conflictos son
+archivos de código fuente. Si dudás, van en serie.
+
+**Nunca dos encargos del mismo camino secuencial.** En tareas secuenciales,
+las cinco arquitecturas multi-agente medidas por Google/MIT empeoran entre
+39 % y 70 % — todas, sin excepción. Paralelizar es para trabajos que de verdad
+no se tocan: uno de documentos y uno de código, el front y el motor, una
+medición y una herramienta nueva.
+
+**La cadena se detiene y le avisás al dueño** cuando: la suite quedó roja, el
+agente no pudo cerrar, `integrar` dio conflicto, o el informe trae una
+decisión que es de él (ver abajo).
+
+**Cada dos o tres encargos cerrados, parás y le traés el conjunto.** No es
+burocracia: está medido que el código de un agente que extiende su propio
+trabajo se degrada de forma continua —la complejidad ciclomática media sube de
+27 a 68— y que ningún prompt frena esa pendiente. Lo único que la frena es que
+alguien mire. La cadena le saca los clics al dueño, no los ojos.
+
+### El chip
 
 Un **chip** es una tarjeta con un botón que aparece en la conversación. El
 dueño la toca y se abre una sesión nueva e independiente con el pedido ya
-adentro: lo mismo que si abriera una ventana y tipeara `/encargo NN`, pero
-sin tipear ni acordarse del número. La herramienta es `spawn_task` y es la
-forma de entregar por defecto. Un chip por encargo; se apilan en la cola de
-tareas y el dueño los lanza cuando quiere, en el orden que quiera.
+adentro. La herramienta es `spawn_task`; sirve cuando el dueño quiere mirar
+cómo corre, o cuando la cadena está parada esperándolo.
 
-- `title`: `<proyecto> · NN <slug>`, el mismo nombre que la sesión se va a
-  poner a sí misma. Nunca sólo el número: dos proyectos con el método tienen
-  los dos un encargo 27.
-- `prompt`: `/encargo NN`, y nada más.
-- `tldr`: una línea de qué va a pasar. Si este encargo espera a otro, decilo
-  acá.
+- `title`: `<proyecto> · NN <slug>`, el mismo nombre que la sesión se pone a
+  sí misma. Nunca sólo el número: dos proyectos con el método tienen los dos
+  un encargo 27.
+- `prompt`: `/encargo NN`, y nada más. El §0 de la skill del repo se encarga
+  de que la sesión se pare bien, caiga en worktree o no.
+- `tldr`: una línea de qué va a pasar.
 
-**No escribas instrucciones de `cd` ni de worktree en el prompt del chip.** El
-botón del chip ofrece worktree o no, y el dueño no tiene por qué saber cuál
-elegir: de eso se ocupa el §0 de la skill `/encargo` del repo, que hace que la
-sesión se pare sola en la carpeta correcta elija lo que elija. Si algún día un
-proyecto sí puede correr en worktree, se dice ahí, una vez, y no en cada chip.
+Si `spawn_task` no existe en la sesión, una línea de texto: «pegá `/encargo
+NN` en una sesión nueva».
 
-Dos en paralelo, dos chips, y en el bloque de cierre una línea que diga que
-pueden correr juntos. Si `spawn_task` no existe en la sesión, una línea de
-texto: «pegá `/encargo NN` en una sesión nueva».
+## Decisiones que aparecen a mitad de la cadena
+
+Si un informe trae una decisión que no era de la sesión, no pares por defecto.
+La pregunta no es cuánto importa, sino **si se puede deshacer**:
+
+- **Reversible** —un umbral que se vuelve a mover, un nombre, un orden, un
+  aviso que se apaga—: tomala vos con el criterio de «Cómo se decide»
+  (conservador y reversible), anotala en el plan con fecha, razón y el informe
+  en que te apoyás, y seguí. En tu bloque de cierre va una línea: «decidí X,
+  miralo».
+- **Irreversible, o del dominio** —qué significa un término del oficio, qué se
+  le muestra al usuario final, borrar datos, publicar, cambiar el contrato de
+  forma que rompa lo ya emitido—: no es tuya. Va a «Preguntas para el dueño»
+  en el plan, la cadena sigue con lo que no dependa de ella, y se la traés
+  junto con las demás cuando tengas varias.
 
 ## Cuidar tu contexto
 

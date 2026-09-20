@@ -1,0 +1,43 @@
+#!/bin/bash
+# Hook Stop: un encargo no cierra sin commit y sin informe.
+#
+# Existe porque el método lo pedía y no se cumplía: el 16 terminó sin
+# commitear y otra sesión tuvo que hacerlo; la mitad de `padel-coach` se
+# perdió igual. Un pedido en un documento depende de que la sesión se acuerde;
+# esto no. Sólo actúa si `/encargo` dejó su marcador, así que las sesiones
+# normales no lo notan.
+set -uo pipefail
+entrada=$(cat)
+cwd=$(printf '%s' "$entrada" | /usr/bin/python3 -c 'import json,sys; print(json.load(sys.stdin).get("cwd",""))' 2>/dev/null)
+[ -n "$cwd" ] && [ -d "$cwd" ] || exit 0
+cd "$cwd" 2>/dev/null || exit 0
+
+gitdir=$(git rev-parse --git-dir 2>/dev/null) || exit 0
+marca="$gitdir/encargo-en-curso"
+[ -f "$marca" ] || exit 0                      # no es un encargo: no me meto
+nn=$(tr -dc '0-9' < "$marca" | head -c 2)
+[ -n "$nn" ] || exit 0
+
+falta=""
+sucio=$(git status --porcelain --untracked-files=no)
+[ -n "$sucio" ] && falta="Quedan cambios sin commitear:
+$sucio"
+
+if ! ls docs/informes/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-"$nn"-*.md >/dev/null 2>&1; then
+  falta="${falta:+$falta
+}No hay informe del encargo $nn en docs/informes/ (AAAA-MM-DD-$nn-<slug>.md)."
+fi
+
+[ -z "$falta" ] && exit 0
+
+cat >&2 <<FIN
+El encargo $nn no está cerrado todavía:
+
+$falta
+
+Cerralo como dice §7 de la skill /encargo: ESTADO.md, el informe, y commit con
+rutas explícitas (git commit -m "…" -- ruta1 ruta2). Si de verdad no podés
+cerrarlo, commiteá lo que esté entero, dejá dicho en el informe qué quedó
+afuera, y borrá el marcador: rm "$marca"
+FIN
+exit 2

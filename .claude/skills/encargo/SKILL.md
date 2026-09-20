@@ -10,19 +10,47 @@ escribe código) te dejó un pedido en `docs/prompts/`. Esta skill es lo que val
 para **todos** los encargos; el prompt es lo específico de éste. Si se
 contradicen, avisá antes de empezar.
 
-## 0. Dónde estás parado, y si esto corre acá
+## 0. Dónde estás parado, y cómo se corre acá
 
-Antes de nada, `pwd`. Si no estás en `/Users/heralc/Desktop/HDDev/kinelab`,
-`cd` ahí y trabajá ahí. Un chip o una tarea pueden abrirte en un
-**worktree** —una copia del repo en otra carpeta— y un worktree no lleva
-nada que git ignore: acá faltarían `.venv`, `truth/.venv`, los pesos y
-`data/`. Los tests y cualquier corrida real fallarían ahí por falta de
-entorno, no por tu trabajo. Si ya te abriste afuera y no escribiste nada,
-mudate y seguí; si escribiste algo, llevate esos cambios y decilo en el
-informe.
+Antes de nada, `pwd` y `git rev-parse --show-toplevel`.
 
-**En la nube, no: este proyecto necesita los clips, los pesos y la Mac. Si
-te estás corriendo en un entorno remoto, pará y decilo.**
+**Si estás en el checkout principal** (`/Users/heralc/Desktop/HDDev/kinelab`),
+trabajá normal.
+
+**Si estás en un worktree** —una copia del repo en otra carpeta; un chip o un
+encargo encadenado te abren uno— **no te mudes**: el worktree es lo correcto.
+Es lo que evita que dos sesiones se pisen el índice de git, y eso está medido:
+dos procesos sobre el mismo checkout pierden el 90 % de sus commits **en
+silencio** (el archivo queda en disco y `git commit` dice «nothing added to
+commit»); ocho worktrees en paralelo no pierden ninguno.
+
+Lo que el worktree no tiene es nada de lo que git ignora. Así que todo lo que
+corras lleva estas dos líneas, medidas el 20/9 — 389 tests pasan, 1 skip,
+exit 0, sin copiar ni enlazar nada:
+
+```bash
+export KLAB=/Users/heralc/Desktop/HDDev/kinelab
+export PYTHONPATH="$PWD"
+$KLAB/.venv/bin/pytest -q
+```
+
+`PYTHONPATH` no es decorativo: sin él, `import kinelab` trae el del checkout
+principal, y estarías editando una copia y probando la otra sin que nada dé
+error. El arnés es `$KLAB/truth/.venv/bin/pytest`, desde `truth/` del
+worktree. Los clips y `data/` viven en `$KLAB`: pasá la ruta absoluta.
+
+**No hagas symlinks de `.venv` ni de `data/` dentro del worktree.** Se cuelan
+a git y un `git worktree remove` vacía el original; hay repos públicos rotos
+así. Con `PYTHONPATH` no hacen falta.
+
+**Dejá el marcador antes de empezar**, con el número de tu encargo. El hook
+`Stop` lo lee para no dejarte cerrar a medias:
+
+```bash
+echo NN > "$(git rev-parse --git-dir)/encargo-en-curso"
+```
+
+**En la nube, no:** los clips, los pesos y el arnés están en la Mac.
 
 ## 1. Encontrar el pedido
 
@@ -150,6 +178,15 @@ En este orden, y no está terminado hasta el último punto:
 5. Respuesta final a Hernán, corta: qué quedó, hashes de los commits, y si
    hay front o algo manual, la lista "probá esto, esto y esto" con lo que
    tiene que ver en cada paso.
-6. `mcp__ccd_sidebar__mark_completed` sobre `self`, para que la sesión deje
+6. Si trabajaste en un worktree, **integrá tu rama con la cola**:
+   `~/.claude/skills/orquestador/scripts/integrar <tu-rama>`. Nunca mergees a
+   mano: ocho merges simultáneos al principal dan 1 de 8, y los otros siete
+   mueren sobre `index.lock`. La cola los serializa y dan 8 de 8. Si hay
+   conflicto, el script no toca nada y lo decís en el informe: es una decisión
+   humana, no tuya.
+7. Borrá el marcador: `rm "$(git rev-parse --git-dir)/encargo-en-curso"`.
+   Hasta ese momento el hook `Stop` no te deja cerrar, y está bien: es el
+   chequeo que reemplaza a Hernán mirando, no un trámite.
+8. `mcp__ccd_sidebar__mark_completed` sobre `self`, para que la sesión deje
    de pedir atención en la barra. No la archives vos: la archiva el
    orquestador cuando ya leyó tu informe.
