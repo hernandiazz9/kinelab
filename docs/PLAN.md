@@ -129,6 +129,18 @@ estado-fases.md`). **Ningún número del proyecto es hoy un juicio válido.**
 
 ## Decisiones del orquestador
 
+- 2026-09-20 · **Decisión de Hernán: el retiro de los campos de primer nivel
+  de `datos-eventos.json` espera a R10**, el encargo que regenera todo de una
+  vez después de la sesión de validación. Retirarlos antes dejaría muda la
+  pantalla de los 19 trabajos de `data/exploracion/` y de la demo publicada,
+  que son pre-33 y no tienen `repeticiones_detalle`; regenerar ahora gastaría
+  la única regeneración permitida, que él decidió guardar. Mientras tanto el
+  front lee con respaldo. Apoyo: verificación del prompt 36 (20/9).
+- 2026-09-20 · **Delegada por Hernán en el orquestador: el pico del encabezado
+  es el de la repetición elegida.** Una pantalla que dice «repetición 2» con
+  el número de otra es lo que arreglaron el 28 y el 33. No se pierde nada: el
+  `picos` de primer nivel es el del **clip entero**, no el de la repetición 1
+  (`explore.py:599`), y se sigue publicando. Reversible.
 - 2026-09-20 · **Decisiones de Hernán, tomadas con el 34 cerrado.** (a) Elegir
   una repetición cambia **toda** la pantalla, no sólo la tabla. (b) La
   procedencia del fps **sigue siendo registro y no chequeo**: el gate no
@@ -309,13 +321,23 @@ una sola sesión por vez.
   solo de front era imposible. `analysis.json` ya tiene todas las
   repeticiones: no hay que recalcular nada. Los campos de primer nivel quedan
   como están para no romper el front, y el 36 los retira.
-- [pendiente] **36** selector-de-repeticion — el front. Siete componentes
+- **R8** · [en curso] **36** selector-de-repeticion — el front, con respaldo
+  al formato viejo, y `scale_frame` en `reps[]` (analysis **2.2.0**).
+  Verificado con tres subagentes: encontraron que **ningún trabajo en disco
+  tiene `repeticiones_detalle`** (los 19 de `data/exploracion/` y los 3 de la
+  demo son pre-33, `analysis.json` 1.2.0), que el `picos` de primer nivel es
+  **del clip** y no de la repetición 1, que `eventos_frame` de primer nivel lo
+  leen también `service/exploracion.py:151` (la lista de trabajos) y
+  `exportar_demo.py:162`, que el bump de versión arrastra `retirados.ts:57`,
+  el verificador y `data/examples/analysis.example.json`, y que cuatro
+  estados internos del front se quedan pegados al cambiar de repetición. Seis
+  de las líneas de tests que citaba el borrador estaban mal. Antes: siete
+  componentes
   (`page.tsx`, `Metricas.tsx`, `TablaEventos.tsx`, `TablaCuadros.tsx`,
   `Reproductor.tsx`, `DosCuadros.tsx`, `Avisos.tsx`), sin contexto de React:
   todo baja por props desde `page.tsx`, así que la repetición elegida es un
   `useState` ahí. **Lo prueba la sesión en el navegador** (decisión de Hernán,
-  20/9, excepción a su regla de siempre). Se escribe con el informe del 35 en
-  la mano.
+  20/9, excepción a su regla de siempre).
 - **R7** · [hecho] **34** fuente-de-la-calibracion — `b94e1be`, `b4a981e`,
   `a54718e`, integrado en `59f6b0b`. Relanzado limpio; el intento anterior
   quedó en `5423deb` (rama `worktree-agent-ad505eed8bc47c798`), descartado.
