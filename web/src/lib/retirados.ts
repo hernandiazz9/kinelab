@@ -54,7 +54,7 @@ export const AVISO_RETIRADOS = "este trabajo se calculó con un contrato anterio
 // --- la versión del contrato con la que se calculó el trabajo ------------------------
 
 /** La versión vigente de `analysis.json` (CONTRATO.md §Versionado). */
-export const CONTRATO_VIGENTE = "2.0.0";
+export const CONTRATO_VIGENTE = "2.1.0";
 
 function partes(v: string): number[] {
   return v.split(".").map((x) => Number.parseInt(x, 10));

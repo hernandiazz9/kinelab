@@ -14,7 +14,7 @@
 // muestra con su identificador.
 
 import type { EventoId, Resumen } from "@/lib/api";
-import { DURACIONES, EVENTOS, etiqueta, fmt, fmtCol, textoSubcuadro, textoTolerancia } from "@/lib/etiquetas";
+import { DURACIONES, EVENTOS, etiqueta, fmt, fmtCol, textoEscala, textoSubcuadro, textoTolerancia } from "@/lib/etiquetas";
 import { sinRetirados } from "@/lib/retirados";
 import { COLOR_EVENTO } from "./Reproductor";
 
@@ -106,9 +106,30 @@ export default function TablaEventos({ resumen, onIr }: { resumen: Resumen; onIr
     return <p className="mt-6 rounded border border-amber-700 bg-amber-950/40 p-3 text-sm">El motor no encontró ningún evento (address, top, impacto) en este video: no hay tabla por evento. La tabla por cuadro está abajo igual.</p>;
   }
 
+  // Contra qué cuadro se mide cada `*_vs_address_*` y con qué escala se
+  // convirtieron los cm, tal como los manda el motor. Sin address, `explore.py`
+  // cae al cuadro 0: los valores no cambian, pero ocho filas se llaman «vs
+  // address» y no hay address, y eso hasta hoy no se decía en ningún lado.
+  const escala = textoEscala(resumen.escala_px, resumen.escala_fuente, resumen.escala_cuadro);
+  const ref = resumen.referencia_fuente;
+  const cual = resumen.repeticion_mostrada;
+  const cuantas = resumen.repeticiones;
+
   return (
     <div>
       <h2 className={h2}>En cada evento</h2>
+      {cual && cuantas !== undefined && cuantas > 0 && (
+        <p className="mb-2 text-sm text-zinc-400">
+          Repetición {cual} de {cuantas}: todo lo de esta pantalla —los eventos, las fotos, el video con los palitos, la tabla por cuadro y las métricas— es esa repetición.
+          {cuantas > 1 && " Las otras están en analysis.json; elegir cuál se muestra todavía no se puede."}
+        </p>
+      )}
+      {(ref || escala) && (
+        <p className="mb-2 text-xs text-zinc-500">
+          {ref && `Las filas «vs address» se miden contra el ${ref === "address" ? `address (cuadro ${resumen.referencia_cuadro})` : ref}. `}
+          {escala && `Los cm salen de dividir por ${escala}.`}
+        </p>
+      )}
       <div className="overflow-x-auto rounded border border-zinc-800">
         <table className={tabla}>
           <Cabecera evs={evs} resumen={resumen} onIr={onIr} />

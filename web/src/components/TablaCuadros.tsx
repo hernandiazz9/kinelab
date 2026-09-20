@@ -1,19 +1,32 @@
 "use client";
 
 // `datos-por-cuadro.csv` entero, navegable: filtro de columnas, filas
-// virtualizadas (miles de cuadros × 118 columnas no entran en el DOM de una),
+// virtualizadas (miles de cuadros × ~116 columnas no entran en el DOM de una),
 // clic en una fila → ese cuadro en el reproductor, y la fila del cuadro actual
 // resaltada.
+//
+// El número de columnas: hoy son **116 con altura declarada del atleta y 107
+// sin ella** (las ocho en cm y `hands_speed_cm_s` salen cuando no hay altura).
+// El «118» que decía esta línea era de los CSV congelados de `web/public/demo/`,
+// anteriores a ADR-018 —que retiró tres columnas— y al encargo 33, que agregó
+// `escala_px`. La cuenta que se muestra abajo sale del archivo, no de acá.
 //
 // «Entero» menos las columnas que ADR-018 retiró (`lib/retirados.ts`), que el
 // CSV de un trabajo calculado con un contrato anterior sigue trayendo. El
 // archivo se puede descargar tal cual: lo que no se hace es mostrarlas como si
 // fueran una medición.
+//
+// Y arriba de la tabla, **con qué escala se dividieron los cm y contra qué
+// cuadro se miden los «vs address»**: hasta el encargo 33 esta tabla convertía
+// con el `body_height_px` de cada cuadro mientras las métricas usaban la escala
+// de la repetición, así que la misma pantalla mostraba dos números distintos
+// para el mismo evento —hasta 4,4 cm— y ninguno decía cuál había usado. Si el
+// motor no los manda (trabajo anterior), no se muestra nada: no se inventa.
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { bajarTexto } from "@/lib/api";
+import { bajarTexto, type Resumen } from "@/lib/api";
 import { parseCsv, type Tabla } from "@/lib/csv";
-import { etiqueta, fmt } from "@/lib/etiquetas";
+import { etiqueta, fmt, textoEscala } from "@/lib/etiquetas";
 import { esRetirado } from "@/lib/retirados";
 
 const ALTO = 26; // px por fila; fijo para poder virtualizar
@@ -23,9 +36,28 @@ interface Props {
   url: string;
   cuadroActual: number;
   onIr: (n: number) => void;
+  /** `datos-eventos.json`: de ahí salen la escala y la referencia de la cabecera. */
+  resumen?: Resumen;
 }
 
-export default function TablaCuadros({ url, cuadroActual, onIr }: Props) {
+/** La línea de arriba de la tabla: con qué escala se dividieron los cm, contra
+ *  qué cuadro se miden los «vs address», y cuál de las repeticiones es ésta.
+ *  Cada pieza se muestra sólo si el motor la mandó. */
+function Cabecera({ resumen }: { resumen?: Resumen }) {
+  if (!resumen) return null;
+  const escala = textoEscala(resumen.escala_px, resumen.escala_fuente, resumen.escala_cuadro);
+  const ref = resumen.referencia_fuente;
+  const reps = resumen.repeticiones;
+  const cual = resumen.repeticion_mostrada;
+  const partes: string[] = [];
+  if (escala) partes.push(`Los cm de esta tabla se dividieron por ${escala}.`);
+  if (ref) partes.push(`Las columnas «vs address» se miden contra el ${ref === "address" ? `address (cuadro ${resumen.referencia_cuadro})` : ref}.`);
+  if (reps !== undefined && reps > 0 && cual) partes.push(`Escala y address son los de la repetición ${cual} de ${reps}; los cuadros fuera de una repetición no tienen cm.`);
+  if (partes.length === 0) return null;
+  return <p className="text-xs text-zinc-500">{partes.join(" ")}</p>;
+}
+
+export default function TablaCuadros({ url, cuadroActual, onIr, resumen }: Props) {
   const [tabla, setTabla] = useState<Tabla | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filtro, setFiltro] = useState("");
@@ -87,6 +119,7 @@ export default function TablaCuadros({ url, cuadroActual, onIr }: Props) {
         </button>
         <span className="text-xs text-zinc-500">clic en una fila: ese cuadro en el reproductor</span>
       </div>
+      <Cabecera resumen={resumen} />
       <div ref={cajaRef} onScroll={onScroll} className="max-h-[60vh] overflow-auto rounded border border-zinc-800">
         <table className="border-collapse whitespace-nowrap text-xs tabular-nums">
           <thead className="sticky top-0 z-20 bg-zinc-900">

@@ -44,6 +44,7 @@ const FIJAS: Record<string, Etiqueta> = {
   t_s: { nombre: "tiempo", unidad: "s", dec: 3 },
   plausibility_flags: { nombre: "banderas de plausibilidad (0 = limpio)", unidad: "", dec: 0 },
   body_height_px: { nombre: "altura del cuerpo", unidad: "px", dec: 0 },
+  escala_px: { nombre: "escala usada en esta fila (divisor de los cm)", unidad: "px", dec: 1 },
   elbow_left_deg: { nombre: "codo izquierdo", unidad: "°", dec: 1 },
   elbow_right_deg: { nombre: "codo derecho", unidad: "°", dec: 1 },
   knee_left_deg: { nombre: "rodilla izquierda", unidad: "°", dec: 1 },
@@ -117,6 +118,28 @@ export function textoSubcuadro(sf: { frame_before: number | null; frame_after: n
   if (sf.fraction === null || sf.frame_before === null) return sf.null_reason ? `sin instante entre cuadros: ${sf.null_reason}` : null;
   const banda = sf.uncertainty_frames === null ? "" : ` ± ${fmt(sf.uncertainty_frames, 2)} cuadros de precisión interna del cruce`;
   return `entre el cuadro ${sf.frame_before} y el ${sf.frame_after} (${fmt(sf.fraction, 2)}${banda})`;
+}
+
+/** De dónde sale el divisor de cada cm, en palabras (CONTRATO.md §La escala).
+ *  Lo que no esté acá se muestra con su identificador: nada se esconde. */
+export const ESCALA_FUENTE: Record<string, string> = {
+  stature_chain_rep: "máximo de la cadena de la estatura en la repetición",
+  body_height_px_frame: "altura de cuerpo del cuadro (la cadena no se pudo medir)",
+};
+
+/** "1089,6 px · máximo de la cadena… (cuadro 75)" — la escala con la que se
+ *  dividió, tal como la manda el motor. Si no la mandó (trabajo anterior al
+ *  encargo 33) devuelve `null` y no se muestra nada: una escala inventada es
+ *  exactamente el problema que este rótulo vino a cerrar (cementerio 6 y 8). */
+export function textoEscala(px: number | null | undefined, fuente: string | null | undefined, cuadro?: number | null): string | null {
+  if (px === null || px === undefined || !Number.isFinite(px)) {
+    // sin número puede haber igual procedencia: es el caso del fallback, donde el
+    // divisor no es uno solo sino el del cuadro de cada métrica.
+    return fuente ? (ESCALA_FUENTE[fuente] ?? fuente) : null;
+  }
+  const f = fuente ? ` · ${ESCALA_FUENTE[fuente] ?? fuente}` : "";
+  const c = cuadro === null || cuadro === undefined ? "" : ` (cuadro ${cuadro})`;
+  return `${fmt(px, 1)} px${f}${c}`;
 }
 
 /** "± 4 cuadros" — la tolerancia del evento, tal como la escribe el motor. No se

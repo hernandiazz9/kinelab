@@ -38,6 +38,11 @@ export interface Subcuadro {
  *  `sin_verificar` = camino declarado, sin cronómetro: ADR-016. */
 export type Procedencia = "medido_aqui" | "sin_verificar";
 
+/** De dónde sale el divisor de cada cm (`CONTRATO.md` §La escala). Son dos porque
+ *  son los dos caminos de `px_to_cm`: la cadena de la estatura de la repetición,
+ *  o la caída a `body_height_px` del cuadro cuando la cadena no se pudo medir. */
+export type EscalaFuente = "stature_chain_rep" | "body_height_px_frame";
+
 /** Un camino de captura de `capture-paths.yaml`, tal como lo da `GET /api/config`. */
 export interface CaminoCaptura {
   id: string;
@@ -104,6 +109,22 @@ export interface Resumen {
    *  anterior al encargo 31. */
   eventos_tol_frames?: Partial<Record<EventoId, number>>;
   eventos_subcuadro?: Partial<Record<EventoId, Subcuadro>>;
+  /** El divisor en píxeles de las columnas en cm de la repetición que se muestra,
+   *  y de dónde sale (CONTRATO.md §La escala). Faltan en un trabajo anterior al
+   *  encargo 33: ahí no se muestra nada, no se inventa una escala. */
+  escala_px?: number | null;
+  escala_fuente?: EscalaFuente | null;
+  /** El cuadro donde la cadena de la estatura llegó a su máximo; `null` con más de
+   *  una repetición, porque entonces el cuadro publicado es el de una sola. */
+  escala_cuadro?: number | null;
+  /** Contra qué cuadro se miden las ocho columnas `*_vs_address_*`. Sin address el
+   *  motor cae al cuadro 0 — el valor no cambia, pero deja de ser mudo. */
+  referencia_cuadro?: number | null;
+  referencia_fuente?: string | null;
+  /** Toda esta pantalla es UNA repetición, la que eligió el motor. Sin selector
+   *  (elegir otra desincroniza motor y pantalla): lo que se hace es decirlo. */
+  repeticion_mostrada?: number | null;
+  repeticiones?: number;
   duraciones: Record<string, number>;
   picos: Record<string, number | null>;
   en_cada_evento: Partial<Record<EventoId, Fila>>;
@@ -240,7 +261,11 @@ export interface Metrica {
 /** Lo que la pantalla usa de `analysis.json`; el archivo tiene bastante más. */
 export interface Analysis {
   header: { schema_version: string; engine_version: string; registry_version: string; source: { fps_real: number; fps_provenance: Procedencia | null; capture_path_id: string } };
-  reps: { rep: number; frame_start: number; frame_end: number; metrics: Record<string, Metrica> }[];
+  /** `scale_px` / `scale_source` son del contrato 2.1.0 y van opcionales: un
+   *  trabajo anterior no los trae y no se le inventa ninguno. Son el divisor de
+   *  las métricas en cm de ESA repetición — `quality.scale_px` es la mediana
+   *  entre repeticiones y con dos o más no es el divisor de ninguna. */
+  reps: { rep: number; frame_start: number; frame_end: number; scale_px?: number | null; scale_source?: EscalaFuente | null; metrics: Record<string, Metrica> }[];
   warnings: string[];
 }
 
