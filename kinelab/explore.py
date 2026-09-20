@@ -248,6 +248,9 @@ def per_frame_table(pose, fps: float, height_m: float | None, address: int | Non
     ankle_y = np.nanmean(np.stack([k[:, H.LEFT_ANKLE, 1], k[:, H.RIGHT_ANKLE, 1]]), axis=0)
     hands = sig.hands_raw
     escala = _scale_per_frame(bh, reps)
+    # el tronco: ángulo cadera→hombro respecto de la vertical hacia ARRIBA, positivo = hombros hacia la derecha de la imagen
+    d_trunk = mid_sh - mid_hip
+    trunk_lean_deg = np.degrees(np.arctan2(d_trunk[:, 0], -d_trunk[:, 1]))
     with np.errstate(divide="ignore", invalid="ignore"):
         cm = (height_m * 100.0 / escala) if height_m else None  # cm por píxel, por cuadro
     ref = address if address is not None else 0
@@ -262,7 +265,7 @@ def per_frame_table(pose, fps: float, height_m: float | None, address: int | Non
         "knee_left_deg": _ang(k, H.LEFT_HIP, H.LEFT_KNEE, H.LEFT_ANKLE), "knee_right_deg": _ang(k, H.RIGHT_HIP, H.RIGHT_KNEE, H.RIGHT_ANKLE),
         "hip_left_deg": _ang(k, H.LEFT_SHOULDER, H.LEFT_HIP, H.LEFT_KNEE), "hip_right_deg": _ang(k, H.RIGHT_SHOULDER, H.RIGHT_HIP, H.RIGHT_KNEE),
         "shoulder_left_deg": _ang(k, H.LEFT_ELBOW, H.LEFT_SHOULDER, H.LEFT_HIP), "shoulder_right_deg": _ang(k, H.RIGHT_ELBOW, H.RIGHT_SHOULDER, H.RIGHT_HIP),
-        "trunk_lean_deg": -_vs_vertical_deg(np.stack([mid_hip, mid_sh], axis=1), 0, 1) + 180.0 * 0,  # tronco: cadera→hombro respecto de la vertical
+        "trunk_lean_deg": trunk_lean_deg,
         "shoulder_line_deg": _line_deg(k, H.RIGHT_SHOULDER, H.LEFT_SHOULDER), "hip_line_deg": _line_deg(k, H.RIGHT_HIP, H.LEFT_HIP),
         "arm_left_vs_vertical_deg": _vs_vertical_deg(k, H.LEFT_SHOULDER, H.LEFT_WRIST), "arm_right_vs_vertical_deg": _vs_vertical_deg(k, H.RIGHT_SHOULDER, H.RIGHT_WRIST),
         "hands_x_vs_hip_bh": (hands[:, 0] - mid_hip[:, 0]) / bh, "hands_height_pct": (ankle_y - hands[:, 1]) / bh * 100.0,
@@ -272,9 +275,6 @@ def per_frame_table(pose, fps: float, height_m: float | None, address: int | Non
     # NO están más: el arnés midió que son un artefacto del largo proyectado del
     # segmento —11110 °/s contra 139,6 verdaderos en la línea de caderas desde
     # `down_the_line`— y el front las mostraba como «rotación aparente». ADR-018.
-    # el tronco: ángulo cadera→hombro respecto de la vertical hacia ARRIBA, positivo = hombros hacia la derecha de la imagen
-    d = mid_sh - mid_hip
-    cols["trunk_lean_deg"] = np.degrees(np.arctan2(d[:, 0], -d[:, 1]))
     for name, pt in (("pelvis", mid_hip), ("thorax", mid_sh), ("head", k[:, H.HEAD]), ("hands", hands)):
         dx, dy = pt[:, 0] - pt[ref, 0], -(pt[:, 1] - pt[ref, 1])  # dy positivo = sube
         cols[f"{name}_dx_vs_address_pct"], cols[f"{name}_dy_vs_address_pct"] = dx / bh * 100.0, dy / bh * 100.0
