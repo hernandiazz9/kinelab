@@ -34,7 +34,10 @@ Deja en DIR (por defecto <video>.kinelab/):
 una entrada por repetición con sus eventos, sus tolerancias, su sub-cuadro, su
 escala, sus duraciones, sus picos y sus diferencias respecto de SU address. Los
 campos de primer nivel siguen siendo los de la repetición 1 (`repeticion_mostrada`)
-y son **transitorios**: el encargo 36 los retira cuando la pantalla sepa elegir.
+y son **transitorios**: los retira R10, el encargo que regenera todo. El 36 —que
+es el que enseñó a la pantalla a elegir repetición— **no** los retiró: hasta que
+R10 corra, son lo único que hace visible a un trabajo anterior al 35, que no trae
+el detalle (`web/src/lib/api.ts` §repeticion_mostrada).
 """
 
 from __future__ import annotations
@@ -576,9 +579,8 @@ def explore(video: Path | None, out_dir: Path, sport: SportConfig, *, height_m: 
 
     # Una entrada por repetición, con TODO lo que hasta el encargo 35 existía sólo
     # para la primera. El front del encargo 36 elige una y cambia la pantalla
-    # entera con esto; hasta entonces nada la lee y nada se rompe. Los nombres son
-    # los mismos que los de primer nivel a propósito: es el mismo dato, una
-    # repetición más abajo.
+    # entera con esto. Los nombres son los mismos que los de primer nivel a
+    # propósito: es el mismo dato, una repetición más abajo.
     repeticiones_detalle: list[dict] = []
     for r, rep_ev in zip(analysis["reps"], analysis["events"]):
         ev_f = {k: rep_ev[k]["frame"] for k in EVENT_ORDER if rep_ev.get(k)}
@@ -605,8 +607,10 @@ def explore(video: Path | None, out_dir: Path, sport: SportConfig, *, height_m: 
                "fps_provenance": capture.fps_provenance, "fps_aviso": nota_fuente or next((w for w in analysis["warnings"] if w.startswith("Tasa de cuadros sin verificar")), None),
                # TRANSITORIOS: de acá hasta `columnas`, todo lo que habla de eventos,
                # escala y referencia es la repetición 1, y está repetido en
-               # `repeticiones_detalle[0]`. Lo retira el encargo 36, cuando el front
-               # lea la repetición elegida.
+               # `repeticiones_detalle[0]`. Los retira R10, el encargo que regenera
+               # todo. El 36 enseñó a la pantalla a elegir repetición y NO los
+               # retiró: siguen siendo lo único que hace visible a un trabajo
+               # anterior al 35, que no trae el detalle.
                "fps_archivo": fps, "cuadros": len(rows), "altura_m": height_m, "gate_diria": gate_notes, "eventos_frame": events, "eventos_t_s": {k: round(f / fps, 3) for k, f in events.items()}, "eventos_tol_frames": tolerancias, "eventos_subcuadro": subframes,
                "escala_px": rep1["scale_px"] if rep1 else None, "escala_fuente": rep1["scale_source"] if rep1 else None, "escala_cuadro": escala_cuadro_de(rep1),
                "referencia_cuadro": referencia_cuadro, "referencia_fuente": referencia_fuente,

@@ -318,8 +318,14 @@ primer intento del 34 se abandonó y éste arrancó limpio desde `main`.
   `schema_version` sigue en 2.1.0), ni `kinelab/metrics/`, ni ningún umbral, ni el 717,
   ni `sports/`, ni `truth/`. No se corrió pose sobre ningún clip. No se regeneró
   `data/exploracion/` ni la demo.
-- **El bug de `--data` de `explore()` que anota `ESTADO.md` sigue abierto**: es de otro
-  encargo y no se tocó.
+- ~~**El bug de `--data` de `explore()` que anota `ESTADO.md` sigue abierto**~~
+  **Corregido el 20/9 (encargo 37): ese bug no existe.** Lo que anota `ESTADO.md` más
+  abajo, en el encargo 09, es un arreglo **ya hecho** —«la cola resuelve los caminos del
+  mismo `data/` que los trabajos»—, no un pendiente. Verificado: `Exploracion` arma
+  `self.paths_file = data_dir / CAPTURE_PATHS_FILE` y le pasa esos caminos a `explore()`
+  (`service/exploracion.py`, `capture_paths=paths`), así que el `--data` del servicio
+  manda. El `default_capture_paths_file()` de `resolve_path_id` sólo corre cuando nadie
+  pasa caminos, y `kinelab datos` —el otro llamador— **no tiene `--data`**.
 
 ### Desviaciones
 
