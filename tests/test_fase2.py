@@ -712,9 +712,12 @@ def test_metrics_in_analysis(clips, capture_paths_yaml, tmp_path):
     assert m["pelvis_thrust_top_cm"]["value"] is None and "down_the_line" in m["pelvis_thrust_top_cm"]["null_reason"]
     assert abs(m["pelvis_sway_top_cm"]["value"]) < 1.0, "la pelvis sintética no se mueve"
     assert a["summary"]["metrics"]["backswing_duration_ms"]["repeatability"]["kind"] == "sd_abs"
-    assert a["summary"]["metrics"]["hands_speed_curve_top_to_impact"]["repeatability"]["n"] == 2
+    # `hands_speed_curve_top_to_impact` no está más (encargo 37): no estaba en el
+    # registro, no tenía las seis cosas y su MDC era `null`. El resumen sólo lleva
+    # las métricas que el registro declara.
+    assert set(a["summary"]["metrics"]) == {m.id for m in GOLF.metrics.registry}, "el summary es exactamente el registro"
     # ADR-019: sin piso de ruido medido, la repetibilidad no es una medición.
-    for mid in ("backswing_duration_ms", "hands_speed_curve_top_to_impact"):
+    for mid in ("backswing_duration_ms",):
         rep = a["summary"]["metrics"][mid]["repeatability"]
         assert rep["value"] is None and rep["noise_floor"] is None and "piso de ruido" in rep["null_reason"], mid
     b = analyze_take(take, GOLF, write=False)

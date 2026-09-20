@@ -22,7 +22,7 @@ from kinelab.events.signal import butterworth_lowpass, cutoff_for_fps, hands_cen
 from kinelab.ingest.gate import DECLARED_NOTE, CaptureJson
 from kinelab.ingest.session import sha256_file
 from kinelab.metrics.core import SCALE_SOURCE_FRAME, MetricContext, evaluate
-from kinelab.metrics.generic import repeatability_curves, repeatability_scalar
+from kinelab.metrics.generic import repeatability_scalar
 from kinelab.metrics.registry import REGISTRY, Registry
 from kinelab.perception.framing import body_height_px
 from kinelab.perception.gaps import interpolate_gaps
@@ -228,7 +228,6 @@ def build_analysis(take_dir: Path, capture: CaptureJson, pose: PoseData, sport: 
         if height_m is None:
             warnings.append("Sin altura declarada del atleta: las métricas en cm quedan en null. Creá data/athletes/<slug>.yaml con altura_m o pasá --altura-m.")
         per_metric: dict[str, list] = {m.id: [] for m in registry}
-        curves: list[np.ndarray] = []
         for r, e in zip(reps, events_out):
             ev_frames = {k: e[k]["frame"] for k in ev.order if e.get(k)}
             ctx = MetricContext(keypoints=kp, scores=pose.scores, fps=fps, view=capture.view, body_height_px=sig.body_height, events=ev_frames, frame_start=r["frame_start"], frame_end=r["frame_end"], fps_provenance=capture.fps_provenance, athlete_height_m=height_m, hands_speed=sig.speed, tolerances={k: int(e[k]["tol_frames"]) for k in ev.order if e.get(k)})
@@ -236,8 +235,6 @@ def build_analysis(take_dir: Path, capture: CaptureJson, pose: PoseData, sport: 
                 out = evaluate(m, ctx, joints=sm.joints.get(m.id, ()))
                 r["metrics"][m.id] = out
                 per_metric[m.id].append(out["value"])
-            if "top" in ev_frames and "impact" in ev_frames:
-                curves.append(sig.speed[ev_frames["top"] : ev_frames["impact"] + 1])
             det = ctx.scale_detail()
             scales.append(det)
             # La escala de ESTA repetición, al lado de sus métricas. `quality.scale_px`
@@ -265,7 +262,13 @@ def build_analysis(take_dir: Path, capture: CaptureJson, pose: PoseData, sport: 
         for m in registry:
             vals = [v for v in per_metric[m.id] if v is not None]
             summary_metrics[m.id] = {"median": round(float(np.median(vals)), 3) if vals else None, "n": len(vals), "mdc": m.mdc, "unit": m.unit, "level": m.level, "repeatability": repeatability_scalar(per_metric[m.id])}
-        summary_metrics["hands_speed_curve_top_to_impact"] = {"median": None, "n": len(curves), "mdc": None, "unit": "bh/s", "level": 1, "repeatability": repeatability_curves(curves)}
+        # `hands_speed_curve_top_to_impact` salía de acá, inyectada a mano después
+        # del bucle: no estaba en el registro (`sports/golf/metrics.py`), no tenía
+        # las seis cosas que exige `AGENTS.md` —cómo se calcula, unidad, vistas,
+        # fps mínimo, MDC medido y un test con un ángulo no trivial— y su `mdc`
+        # era `null`. Se sacó el 20/9 (encargo 37). `summary.metrics` es un objeto
+        # libre en el schema, así que no se tocó el contrato ni subió ninguna
+        # versión. Si vuelve, vuelve por el registro y con las seis cosas.
         # ADR-019: dos avisos, y son dos cosas distintas a propósito. El primero
         # es la REGLA —ningún número de acá se compara contra nada— y sale de lo
         # que el archivo realmente dice, no de una constante: si alguna métrica

@@ -1213,20 +1213,6 @@
           "noise_floor": null,
           "null_reason": "sin piso de ruido medido del pipeline: una SD entre repeticiones no separa la variación del atleta de la del instrumento (CONTEXTO.md §piso de ruido, ADR-019)"
         }
-      },
-      "hands_speed_curve_top_to_impact": {
-        "median": null,
-        "n": 3,
-        "mdc": null,
-        "unit": "bh/s",
-        "level": 1,
-        "repeatability": {
-          "kind": "dtw_normalized",
-          "value": null,
-          "n": 3,
-          "noise_floor": null,
-          "null_reason": "sin piso de ruido medido del pipeline: una SD entre repeticiones no separa la variación del atleta de la del instrumento (CONTEXTO.md §piso de ruido, ADR-019)"
-        }
       }
     }
   },
