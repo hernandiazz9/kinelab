@@ -3,6 +3,116 @@
 Dónde quedó el repo al cerrar la última sesión. Se lee **después** de los seis
 documentos de `AGENTS.md` y se actualiza al cerrar cada sesión.
 
+## 20 de septiembre de 2026 — encargo 35: el motor publica todas las repeticiones
+
+Prompt: `docs/prompts/35-el-motor-publica-todas-las-repeticiones.md`. Informe:
+`docs/informes/2026-09-20-35-el-motor-publica-todas-las-repeticiones.md`. **Sin sesión
+en paralelo** (lo pedía el prompt). Commits: `4cb85a5` (motor y servicio), `3114f86`
+(tests), `5730219` (demo y contrato) y el de cierre, con este archivo y el informe.
+Hecho en un worktree, arrancado desde `main` (`f95875c`).
+
+### Qué existe ahora
+
+- **`datos-eventos.json` publica `repeticiones_detalle`**: una entrada por repetición,
+  en orden, con `rep`, `frame_start`, `frame_end`, `eventos_frame`, `eventos_t_s`,
+  `eventos_tol_frames`, `eventos_subcuadro`, `escala_px`, `escala_fuente`,
+  `escala_cuadro`, `referencia_cuadro`, `referencia_fuente`, `duraciones`, `picos`,
+  `en_cada_evento` y `diferencias_vs_address`. Los nombres son los que ya existían en
+  el primer nivel: es el mismo dato, una repetición más abajo.
+- **Los campos de primer nivel NO se movieron** y siguen diciendo
+  `repeticion_mostrada: 1`. Son **transitorios** y están marcados con un comentario:
+  los retira el encargo 36. Medido: 27 claves antes, 28 después, la nueva es
+  `repeticiones_detalle`, y ninguna de las 27 cambió de valor.
+- **`_rebasar` es el corazón del encargo.** Las columnas `*_vs_address_*` de la tabla
+  por cuadro se calculan contra **un solo** cuadro (el address de la repetición 1);
+  para otra repetición se le resta la fila de su propio address y la referencia se
+  cancela. La repetición cuyo address **es** ese cuadro pasa con `base=None` y no se
+  le toca un float: por eso el primer nivel queda idéntico **por construcción**.
+- **El overlay rotula los eventos de todas las repeticiones** (`R2 IMPACT`) y sigue
+  siendo **uno solo**. `_TEXT_TEMPLATES` suma el `R99` para que la fuente se siga
+  fijando con la línea más ancha posible.
+- **Las fotos**: la repetición 1 conserva `evento-<id>.png` y las demás salen como
+  `evento-r<N>-<id>.png` (`foto_de_evento`). La lista blanca de
+  `service/exploracion.py` las acepta **por forma** —expresión anclada, N de 1 a 3
+  cifras, el evento uno de los cuatro que ya estaban—, porque cuántas hay lo decide el
+  material. `archivos_servibles()` las lista por repetición y por evento.
+- **La demo se las lleva sola**: `exportar_fotos` junta `evento-*.png` y no tiene lista
+  de nombres. Fijado con una `evento-r2-top.png` en el trabajo sintético de su test.
+- **`CONTRATO.md` §Versionado dice que `datos-eventos.json` no es parte del contrato**
+  y no lleva `schema_version`: es la salida del modo exploración, así que agregarle un
+  campo no bumpea nada. §La escala anota que ahora la escala de cada repetición llega
+  a la pantalla.
+- **Tests nuevos**: `tests/test_todas_las_repeticiones.py` (8) y uno en
+  `tests/test_service.py`.
+
+### Medido
+
+- **Suites**: motor **457 pasados, 0 fallados, 1 salteado, exit 0** (eran 448; **+9
+  tests**). El salteado es el de los pesos de `models/`, que git ignora. Arnés **43
+  pasados, 0 fallados, exit 0**. `pnpm lint` exit 0 · `pnpm build` exit 0 ·
+  verificador de retirados exit 0, 0 fallas.
+- **Corrida real sobre el `pose.npz` guardado de `cortado3-lento`** (2977 cuadros,
+  240,15 fps) a un directorio temporal, contra el mismo script corrido sobre `f95875c`
+  extraído con `git archive`: **2 repeticiones**. Rep 1: cuadros 1052–1765, address
+  1052 / top 1284 / impacto 1364, escala **783,9 px**, 966,1 / 333,1 ms, tempo 2,90,
+  pico 4,76 bh/s. Rep 2: 2322–2970, address 2322 / top 2548 / impacto 2624, escala
+  **831,3 px** (+6,0 %), 941,1 / 316,5 ms, tempo 2,97, pico **4,85 bh/s**. `follow_end`
+  falta en las dos (viene del 31).
+- **Lo que arregla el rebase**: en la repetición 2, `pelvis_dx_vs_address_cm` daba
+  **−2,21 cm** en el top medida contra el address de la repetición 1 y da **−7,05**
+  contra el suyo, que es el número de la métrica (−7,1). En el impacto, **12,54 → 7,69**
+  contra una métrica de 7,7. **4,84 cm**, dos veces el MDC de 2,416.
+- **El pico de primer nivel (4,85 bh/s) es el de la repetición 2**, publicado en una
+  pantalla que dice «repetición 1». El detalle ya trae el de cada una.
+- **Archivos `evento-*`**: 6 contra 3 (tres por repetición, sin `follow_end`). Un solo
+  `overlay.mp4`, 16,47 → 16,48 MB. `datos-eventos.json`, **21,4 → 60,3 KB**
+  (~19 KB por repetición; casi todo es `en_cada_evento`).
+- **Mutación manual: 7 bugs inyectados, 7 en rojo, control en verde.** Dos de ellos
+  —el rótulo sin la repetición y los picos calculados sobre el clip entero— **no los
+  agarraba nada** con `synth_swing(n_reps=3)`, porque sus tres repeticiones son
+  idénticas; el clip del test pasó a ser la concatenación de tres swings con downswing
+  de 0,27 / 0,33 / 0,40 s y el golfista corrido 120 px después del primero.
+
+### Qué falta o no se probó
+
+- **Los campos de primer nivel siguen duplicando `repeticiones_detalle[0]`**, atados
+  por un test. Los retira el 36, que tiene que borrar ese test en el mismo movimiento.
+- **`escala_cuadro` sigue en `null` con más de una repetición**, también por
+  repetición: el cuadro del máximo de la cadena por repetición no está en
+  `analysis.json` (`reps[]` lleva `scale_px` y `scale_source`, no el cuadro) y
+  agregarlo es un bump de contrato que el prompt prohibía. Misma limitación que anotó
+  el 33.
+- **`picos` por repetición es el de su tramo** y el de primer nivel sigue siendo el del
+  clip: es la única clave del detalle que no vale «lo que hoy es de la rep 1», porque
+  lo que hoy hay no es de ninguna en particular.
+- **El front no se tocó y no hace falta abrirlo**: pide `evento-<evento>.png` por
+  nombre (`web/src/app/page.tsx:305`) y nunca recorre la lista de archivos, así que las
+  claves nuevas no lo rozan.
+- **El verificador de retirados hay que correrlo desde `$KLAB/web`**: lee
+  `web/public/demo/`, que git ignora, y en el worktree no existe. Ahí muere con ENOENT
+  y **exit 0** — el error no llega al código de salida, que es una trampa para cualquier
+  sesión que lo corra en un worktree y lea sólo el exit code. Los tres archivos que
+  compara son idénticos en los dos lados y esta sesión no tocó ninguno.
+- **No se tocó** `web/`, `kinelab/contract/schema.json`, `analysis.json` (sigue en
+  2.1.0), `kinelab/analysis.py`, `kinelab/metrics/`, `sports/`, `truth/`, ningún
+  umbral, ningún `metric_version` ni el `registry_version`. No se regeneró
+  `data/exploracion/` ni la demo, y no se corrió pose sobre ningún clip.
+
+### Desviaciones
+
+- **Del contrato, ninguna**, y por eso no hay entrada en §Desviaciones:
+  `datos-eventos.json` no es parte del contrato y no lleva versión, cosa que ahora
+  §Versionado dice explícitamente.
+- **Del prompt, una.** La lista de archivos que este encargo podía tocar **no incluye
+  `service/app.py`**, que es donde vive `ARCHIVOS.get(nombre)`. Para respetarla, la
+  lista blanca pasó a ser un `dict` con `get` y `in` extendidos a la familia
+  `evento-r<N>-…` (`_Servibles`, en `service/exploracion.py`), en vez de una función
+  `media_type(nombre)` con dos líneas en `app.py`, que sería lo natural. Anda, está
+  testeado y la expresión sigue anclada (no admite `/` ni `.`); queda como pregunta
+  para el orquestador.
+
+---
+
 ## 20 de septiembre de 2026 — encargo 34: de dónde sale la calibración del fps
 
 Prompt: `docs/prompts/34-fuente-de-la-calibracion.md`. Informe:
