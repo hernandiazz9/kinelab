@@ -116,6 +116,14 @@ estado-fases.md`). **Ningún número del proyecto es hoy un juicio válido.**
 
 ## Decisiones del orquestador
 
+- 2026-09-20 · **Decisiones de Hernán, tomadas con el 34 cerrado.** (a) Elegir
+  una repetición cambia **toda** la pantalla, no sólo la tabla. (b) La
+  procedencia del fps **sigue siendo registro y no chequeo**: el gate no
+  rechaza una toma que heredó la tasa (cierra la pregunta 1 del informe 34).
+  (c) **La única regeneración permitida de `data/exploracion/` y la demo no se
+  gasta ahora**: la deriva en el análisis va a mover el schema otra vez
+  después de la sesión de validación (cierra la pregunta 2 del 34). (d) El
+  front del 35/36 **lo prueba la sesión**, por esta vez.
 - 2026-09-20 · **Decisión de Hernán: la pregunta 9 se cierra.** Miró
   `palo-local-1364.png` y la marca del palo no arranca en la mano y el ángulo
   está torcido. El impacto queda como está y no se abre encargo del shaft. Con
@@ -278,9 +286,23 @@ una sola sesión por vez.
   `analysis.json` se movió.** 398 tests; mutación manual 8 de 8 en rojo.
   Falta que Hernán mire el front (la celda «pelvis vs address» en el top:
   −3,5 cm, antes −4,6).
-- [pendiente] repeticion-elegible — hoy toda la pantalla es la rep 1 porque
-  `explore.py:366` la arma así; elegirla cambia el formato de
-  `datos-eventos.json`, el overlay y el `address` del CSV. Sale del 33.
+- **R8** · [en curso] **35** el-motor-publica-todas-las-repeticiones — la
+  mitad del motor de «repeticion-elegible». Verificado con tres subagentes
+  antes de lanzarlo: **la premisa del plan estaba mal**, no es
+  `explore.py:366` sino `:428` (`analysis["events"][0]`) y `:474`
+  (`analysis["reps"][0]`); y el hallazgo que parte el encargo en dos es que
+  **el front no puede elegir nada** —overlay, fotos por evento y
+  `datos-eventos.json` los arma el motor con la rep 1—, así que un selector
+  solo de front era imposible. `analysis.json` ya tiene todas las
+  repeticiones: no hay que recalcular nada. Los campos de primer nivel quedan
+  como están para no romper el front, y el 36 los retira.
+- [pendiente] **36** selector-de-repeticion — el front. Siete componentes
+  (`page.tsx`, `Metricas.tsx`, `TablaEventos.tsx`, `TablaCuadros.tsx`,
+  `Reproductor.tsx`, `DosCuadros.tsx`, `Avisos.tsx`), sin contexto de React:
+  todo baja por props desde `page.tsx`, así que la repetición elegida es un
+  `useState` ahí. **Lo prueba la sesión en el navegador** (decisión de Hernán,
+  20/9, excepción a su regla de siempre). Se escribe con el informe del 35 en
+  la mano.
 - **R7** · [hecho] **34** fuente-de-la-calibracion — `b94e1be`, `b4a981e`,
   `a54718e`, integrado en `59f6b0b`. Relanzado limpio; el intento anterior
   quedó en `5423deb` (rama `worktree-agent-ad505eed8bc47c798`), descartado.
