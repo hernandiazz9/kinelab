@@ -155,24 +155,27 @@ Las dos se ofrecen al dueño con su costo estimado; se corren si dice que sí.
 
 ## Cómo termina tu turno
 
-El dueño no lee párrafos: lanza encargos. Tu turno termina **siempre** con
-este bloque, y no hay nada debajo de él:
+El dueño lee todos tus turnos y dirige más de un proyecto a la vez: lo que le
+cuesta no es enterarse, es leer de más. La regla no es omitir, es
+**comprimir**. Si algo importa —un número que cambia una decisión, una
+medición que salió distinta, algo que falló, una pregunta que sigue abierta—
+se menciona. Pero en una línea, no en un párrafo. Si necesita más, pregunta,
+y ahí sí lo desarrollás.
+
+Arriba va lo que pasó, una línea por cosa. El porqué largo, las tablas y el
+historial ya están en el plan y en los informes: se referencian, no se copian.
+
+Abajo, siempre, este bloque:
 
 ```
-Cerró: <NN slug — una línea con el número que importa. O «nada».>
-Va:    <NN slug — una línea de qué hace. Uno, o dos si van en paralelo.>
-De vos: <una línea de lo que necesitás de él. O «nada».>
+Cerró:  <NN slug — el número que importa. O «nada».>
+Va:     <NN slug — qué hace. Uno, o dos si van en paralelo.>
+De vos: <lo que necesitás de él. O «nada».>
 ```
 
-Arriba de ese bloque, cinco líneas como mucho, y sólo si algo cambió de
-criterio. Lo demás va al plan: el plan se lee cuando hace falta, tu respuesta
-se lee siempre. Si tu turno no entra en media pantalla, estás escribiendo el
-plan dos veces.
-
-Fuera de la respuesta, sin excepción: repetir lo que ya está en el plan o en
-un informe, volver a explicar una decisión ya anotada, listar lo que NO vas a
-hacer, resumir la ronda anterior, y las tablas de estado (para eso está el
-plan). Si el dueño quiere el detalle, lo pide.
+Lo que no va nunca: recontar el estado del proyecto, repetir con su párrafo
+entero una decisión ya anotada, listar lo que NO vas a hacer, y resumir la
+ronda anterior.
 
 ## Cómo se entrega un encargo: el chip
 
@@ -180,17 +183,21 @@ Un **chip** es una tarjeta con un botón que aparece en la conversación. El
 dueño la toca y se abre una sesión nueva e independiente con el pedido ya
 adentro: lo mismo que si abriera una ventana y tipeara `/encargo NN`, pero
 sin tipear ni acordarse del número. La herramienta es `spawn_task` y es la
-forma por defecto de entregar. Un chip por encargo.
+forma de entregar por defecto. Un chip por encargo; se apilan en la cola de
+tareas y el dueño los lanza cuando quiere, en el orden que quiera.
 
 - `title`: `<proyecto> · NN <slug>`, el mismo nombre que la sesión se va a
   poner a sí misma. Nunca sólo el número: dos proyectos con el método tienen
   los dos un encargo 27.
-- `prompt`: `/encargo NN`. **Si el proyecto necesita archivos que git ignora**
-  (entornos virtuales, modelos, datos), el prompt empieza con `cd <ruta del
-  checkout principal> y trabajá ahí, no en este worktree.`, porque el chip
-  abre la sesión en un worktree nuevo que no los tiene.
+- `prompt`: `/encargo NN`, y nada más.
 - `tldr`: una línea de qué va a pasar. Si este encargo espera a otro, decilo
   acá.
+
+**No escribas instrucciones de `cd` ni de worktree en el prompt del chip.** El
+botón del chip ofrece worktree o no, y el dueño no tiene por qué saber cuál
+elegir: de eso se ocupa el §0 de la skill `/encargo` del repo, que hace que la
+sesión se pare sola en la carpeta correcta elija lo que elija. Si algún día un
+proyecto sí puede correr en worktree, se dice ahí, una vez, y no en cada chip.
 
 Dos en paralelo, dos chips, y en el bloque de cierre una línea que diga que
 pueden correr juntos. Si `spawn_task` no existe en la sesión, una línea de

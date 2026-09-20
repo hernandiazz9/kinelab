@@ -248,9 +248,12 @@ la sesión del 18, sin informe; su punto 6 lo cierra el 27. Demo pública:
    (muestra `hip_line_rate_deg_s 3662,0`), no mostrar `cortado3` ni ninguna SD.
 6. Opcional: `git worktree remove` del worktree `wt16` de una sesión vieja
    (limpio, en `2e781be`, ya en main).
-7. **¿El chip del 29 anduvo?** Los commits están en `main` y no quedó
-   worktree: ¿lo abriste con el chip y la sesión hizo el `cd`, o lo corriste
-   por texto? Define si el chip entra a la skill como forma de entrega.
+7. ~~¿El chip del 29 anduvo?~~ **Contestada el 20/9, medida.** Un chip de
+   prueba abrió la sesión en el checkout principal, en `main`, con `.venv`,
+   `truth/.venv`, `data/` y `web/node_modules` a mano; `import kinelab`
+   funciona. El chip queda como forma de entrega por defecto y su prompt es
+   `/encargo NN` a secas: el §0 nuevo de `/encargo` hace que la sesión se
+   pare sola en la carpeta correcta, caiga en worktree o no.
 8. **Dos definiciones de entrenador siguen sin respuesta** (punto 2): el 31
    acota el fin del acompañamiento a su repetición, pero qué es el finish lo
    tenés que decir vos.

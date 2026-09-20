@@ -10,6 +10,20 @@ escribe código) te dejó un pedido en `docs/prompts/`. Esta skill es lo que val
 para **todos** los encargos; el prompt es lo específico de éste. Si se
 contradicen, avisá antes de empezar.
 
+## 0. Dónde estás parado, y si esto corre acá
+
+Antes de nada, `pwd`. Si no estás en `/Users/heralc/Desktop/HDDev/kinelab`,
+`cd` ahí y trabajá ahí. Un chip o una tarea pueden abrirte en un
+**worktree** —una copia del repo en otra carpeta— y un worktree no lleva
+nada que git ignore: acá faltarían `.venv`, `truth/.venv`, los pesos y
+`data/`. Los tests y cualquier corrida real fallarían ahí por falta de
+entorno, no por tu trabajo. Si ya te abriste afuera y no escribiste nada,
+mudate y seguí; si escribiste algo, llevate esos cambios y decilo en el
+informe.
+
+**En la nube, no: este proyecto necesita los clips, los pesos y la Mac. Si
+te estás corriendo en un entorno remoto, pará y decilo.**
+
 ## 1. Encontrar el pedido
 
 El argumento es `$ARGUMENTS`. Es el número del encargo (dos dígitos) o su slug.
