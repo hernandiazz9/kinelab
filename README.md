@@ -3,6 +3,28 @@
 Motor de medición del movimiento humano a partir de video de celular. Para un
 entrenador, en su Mac, sin nube. Agnóstico al deporte; golf primero.
 
+## In English
+
+kinelab measures human movement from a phone video, for a coach working on
+their own Mac, with no cloud. It is sport-agnostic; golf comes first.
+
+- **Capture gate:** before analysing, it checks the real frame rate, codec,
+  framing and duration, and rejects a clip with a readable reason.
+- **Pose and events:** RTMPose (through rtmlib and ONNX Runtime, Apache-2.0) on
+  every frame, swing events (address, top, impact…) and metrics per repetition.
+- **Metrics that state their limits:** each one declares the views and minimum
+  fps it is valid for, and its minimum detectable change; without them it does
+  not exist. Impact is placed between two frames, without faking precision.
+- **Local viewer:** skeleton over the video, pause, slow motion, frame by frame
+  and zoom, with tables per event and per frame and CSV, JSON and video
+  downloads.
+- **Static demo:** [the viewer with precomputed results](https://kinelab-qnm5fa60a-hernandiazz9s-projects.vercel.app).
+  Videos cannot be uploaded there.
+
+Status: the metrics have not been validated against a real filmed swing yet, so
+they describe and do not judge. Documents, comments and commit messages are in
+Spanish.
+
 **Empezá por [`AGENTS.md`](AGENTS.md).** Dice qué leer, en qué orden, y cuáles
 son las reglas de trabajo. Los seis documentos que enumera son la fuente de
 verdad; `ESTADO.md` dice dónde quedó el trabajo.
